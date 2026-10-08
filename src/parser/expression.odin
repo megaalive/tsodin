@@ -36,6 +36,22 @@ Expr_Declaration :: struct {
     initializer: int, // -1 if no initializer
 }
 
+// Source-order events: assignment roots and declarations share one dense node store.
+// No CFG branch is modeled in this first straight-line CFA slice.
+Statement_Kind :: enum {
+    Declaration,
+    Assignment,
+}
+
+Expr_Statement :: struct {
+    kind: Statement_Kind,
+    declaration_index: int, // declaration only; -1 for assignment
+    target_node: int,       // assignment only; -1 for declaration
+    expression: int,        // expression root or -1 for uninitialized declaration
+    byte_start: int,
+    byte_end: int,
+}
+
 Syntax_Issue :: enum {
     Invalid_Source,
     Unsupported_Profile,
@@ -48,6 +64,7 @@ Syntax_Issue :: enum {
     Expected_Close_Paren,
     Expected_Semicolon,
     Nesting_Limit,
+    Expected_Equals, // append only: keep syntax issue ordinals stable
 }
 
 Syntax_Diagnostic :: struct {
@@ -61,6 +78,7 @@ Syntax_Report :: struct {
     generation: u32,
     nodes: [dynamic]Expr_Node,
     declarations: [dynamic]Expr_Declaration,
+    statements: [dynamic]Expr_Statement,
     diagnostics: [dynamic]Syntax_Diagnostic,
     complete: bool, // MUST be false if any diagnostic or fatal scanner state exists
     fatal: bool, // unsupported source/profile/lexeme: no recovery claim
@@ -69,6 +87,7 @@ Syntax_Report :: struct {
 syntax_report_destroy :: proc(report: ^Syntax_Report) {
     delete(report.nodes)
     delete(report.declarations)
+    delete(report.statements)
     delete(report.diagnostics)
     report^ = Syntax_Report{}
 }
@@ -315,7 +334,48 @@ syntax_declaration :: proc(p: ^Syntax_State) -> bool {
     if p.fatal {
         return false
     }
+    declaration_index := len(p.report.declarations)
     append(&p.report.declarations, decl)
+    append(&p.report.statements, Expr_Statement{
+        kind=.Declaration, declaration_index=declaration_index,
+        target_node=-1, expression=decl.initializer,
+        byte_start=decl.byte_start, byte_end=decl.byte_end,
+    })
+    return true
+}
+
+// Limited, statement-position assignment: identifier = expression ;
+// Arbitrary expressions, destructuring, chained assignments, operators and
+// block statements remain unsupported. The target is a normal binder Name.
+syntax_assignment :: proc(p: ^Syntax_State) -> bool {
+    start := p.current
+    target := syntax_node(p, Expr_Node{
+        kind=.Name, operator=.Identifier,
+        byte_start=start.byte_start, byte_end=start.byte_end,
+        left=-1, right=-1,
+    })
+    syntax_advance(p)
+    if p.fatal { return false }
+    if p.current.kind != .Equals {
+        syntax_issue(p, .Expected_Equals)
+        return false
+    }
+    syntax_advance(p)
+    expression, ok := syntax_expression(p, 0)
+    if !ok { return false }
+    if p.fatal { return false }
+    if p.current.kind != .Semicolon {
+        syntax_issue(p, .Expected_Semicolon)
+        return false
+    }
+    finish := p.current.byte_end
+    syntax_advance(p)
+    if p.fatal { return false }
+    append(&p.report.statements, Expr_Statement{
+        kind=.Assignment, declaration_index=-1,
+        target_node=target, expression=expression,
+        byte_start=start.byte_start, byte_end=finish,
+    })
     return true
 }
 
@@ -343,7 +403,12 @@ parse_expression_program :: proc(version: ^source.Source_Version, profile: compa
     syntax_advance(&p)
     for !p.fatal && p.current.kind != .End_Of_File {
         before := len(report.nodes)
-        ok := syntax_declaration(&p)
+        ok := false
+        if p.current.kind == .Identifier {
+            ok = syntax_assignment(&p)
+        } else {
+            ok = syntax_declaration(&p)
+        }
         if !ok {
             // Never retain nodes from a declaration that did not parse.
             resize(&report.nodes, before)

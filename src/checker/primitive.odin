@@ -30,6 +30,7 @@ Check_Issue :: enum {
     Disjoint_Literal_Comparison,
     // Independent proof: base primitive domains cannot overlap under ===/!==.
     Disjoint_Primitive_Domains,
+    Unsupported_Assignment_Target, // fail closed on const/var and unknown flow
 }
 
 Diagnostic :: struct {
@@ -43,6 +44,7 @@ Report :: struct {
     generation: u32,
     diagnostics: [dynamic]Diagnostic,
     checked_declarations: int,
+    checked_assignments: int,
     complete: bool,
     fatal: bool,
 }
@@ -179,30 +181,83 @@ check_file :: proc(
 
     text := version.owned_text
     node_cursor := 0
-    for decl, declaration_index in syntax.declarations {
-        if decl.name_start < 0 || decl.name_start >= decl.name_end ||
-           decl.name_end > len(text) {
-            fail(&result, .Invalid_Input, decl.byte_start, decl.byte_end, true)
-            return result
+    for event in syntax.statements {
+        assignment := event.kind == .Assignment
+        // An assignment has no declaration index of its own. References in
+        // its RHS may only see declarations already processed in source order.
+        declaration_index := event.declaration_index
+        if assignment {
+            declaration_index = result.checked_declarations
         }
-        declared_type := annotation_type(decl.type_kind)
-        if decl.initializer < 0 {
-            if declared_type == .Unknown {
-                fail(&result, .Unsupported_Implicit_Any, decl.name_start, decl.name_end, true)
+        target_index := -1
+        decl: parser.Expr_Declaration
+        declared_type := Primitive.Unknown
+        if assignment {
+            if event.target_node != node_cursor ||
+               event.target_node < 0 || event.target_node >= len(syntax.nodes) {
+                fail(&result, .Invalid_Expression_Node,
+                     event.byte_start, event.byte_end, true)
                 return result
             }
-            declared[declaration_index]=declared_type
-            result.checked_declarations += 1
-            continue
+            target := syntax.nodes[event.target_node]
+            ref := references[event.target_node]
+            if target.kind != .Name || ref <= 0 || ref > len(symbols.symbols) {
+                fail(&result, .Invalid_Expression_Node,
+                     event.byte_start, event.byte_end, true)
+                return result
+            }
+            symbol := symbols.symbols[ref-1]
+            target_index = symbol.declaration_index
+            if target_index < 0 || target_index >= len(declared) ||
+               target_index >= len(syntax.declarations) {
+                fail(&result, .Invalid_Input, target.byte_start, target.byte_end, true)
+                return result
+            }
+            // A deliberately restricted flow subset: initialized let only.
+            // Const, var, and definite-assignment reasoning remain unsupported.
+            original := syntax.declarations[target_index]
+            if symbol.kind != .Let || original.initializer < 0 ||
+               original.byte_start >= event.byte_start ||
+               declared[target_index] == .Unknown {
+                fail(&result, .Unsupported_Assignment_Target,
+                     target.byte_start, target.byte_end, true)
+                return result
+            }
+            declared_type = declared[target_index]
+        } else {
+            if event.kind != .Declaration || declaration_index < 0 ||
+               declaration_index >= len(syntax.declarations) {
+                fail(&result, .Invalid_Input, event.byte_start, event.byte_end, true)
+                return result
+            }
+            decl = syntax.declarations[declaration_index]
+            if decl.name_start < 0 || decl.name_start >= decl.name_end ||
+               decl.name_end > len(text) {
+                fail(&result, .Invalid_Input, decl.byte_start, decl.byte_end, true)
+                return result
+            }
+            declared_type = annotation_type(decl.type_kind)
+            if decl.initializer < 0 {
+                if declared_type == .Unknown {
+                    fail(&result, .Unsupported_Implicit_Any,
+                         decl.name_start, decl.name_end, true)
+                    return result
+                }
+                declared[declaration_index] = declared_type
+                result.checked_declarations += 1
+                continue
+            }
         }
-        if decl.initializer < node_cursor || decl.initializer >= len(syntax.nodes) {
-            fail(&result, .Invalid_Expression_Node, decl.byte_start, decl.byte_end, true)
+        expression_root := event.expression
+        if expression_root < node_cursor || expression_root >= len(syntax.nodes) {
+            fail(&result, .Invalid_Expression_Node,
+                 event.byte_start, event.byte_end, true)
             return result
         }
 
         // The parser writes child nodes before their parent and appends each
         // declaration's expression nodes consecutively.
-        for i in node_cursor..=decl.initializer {
+        for i in node_cursor..=expression_root {
             node := syntax.nodes[i]
             if node.byte_start < 0 || node.byte_end > len(text) ||
                node.byte_start >= node.byte_end {
@@ -354,25 +409,50 @@ check_file :: proc(
             }
             inferred[i]=kind
         }
-        expression_type := inferred[decl.initializer]
-        node_cursor = decl.initializer+1
-        if declared_type != .Unknown && expression_type != declared_type {
-            // TS7 reports a variable-declaration type mismatch at the
-            // declared name. Keep full name bytes for UTF-16 projection.
-            fail(&result, .Assignment_Type_Mismatch,
-                 decl.name_start, decl.name_end, false)
-        }
-        declared[declaration_index] = declared_type
-        if declared_type == .Unknown {
-            declared[declaration_index] = expression_type
-            if decl.kind == .Const {
-                // Alias chains such as const copy = first preserve the
-                // inferred literal; mutable bindings and annotations do not.
-                literal_decls[declaration_index] = literal_nodes[decl.initializer]
-                wide_decls[declaration_index] = wide_nodes[decl.initializer]
+        expression_type := inferred[expression_root]
+        node_cursor = expression_root + 1
+        if assignment {
+            result.checked_assignments += 1
+            if expression_type != declared_type {
+                // Native TS7 starts TS2322 at the assignment target;
+                // supplemental TS6 structured diagnostics cover precisely
+                // the target identifier, not the entire RHS expression.
+                target := syntax.nodes[event.target_node]
+                fail(&result, .Assignment_Type_Mismatch,
+                     target.byte_start, target.byte_end, false)
+                literal_decls[target_index] = Literal_Fact{}
+                wide_decls[target_index] = false
+            } else {
+                // This is the first linear flow transfer. Reassignment
+                // replaces the earlier narrowed fact; nothing persists
+                // across unsupported branches or mutation paths.
+                if declared_type == .Number || declared_type == .Text {
+                    // A mutable number/string retains its widened base domain:
+                    // assigning a literal does not make it a singleton type.
+                    literal_decls[target_index] = Literal_Fact{}
+                    wide_decls[target_index] = true
+                } else {
+                    // Boolean flow is deliberately a separate restricted case.
+                    literal_decls[target_index] = literal_nodes[expression_root]
+                    wide_decls[target_index] = wide_nodes[expression_root]
+                }
             }
+        } else {
+            if declared_type != .Unknown && expression_type != declared_type {
+                // TS7 anchors declaration type mismatches at the name.
+                fail(&result, .Assignment_Type_Mismatch,
+                     decl.name_start, decl.name_end, false)
+            }
+            declared[declaration_index] = declared_type
+            if declared_type == .Unknown {
+                declared[declaration_index] = expression_type
+                if decl.kind == .Const {
+                    literal_decls[declaration_index] = literal_nodes[expression_root]
+                    wide_decls[declaration_index] = wide_nodes[expression_root]
+                }
+            }
+            result.checked_declarations += 1
         }
-        result.checked_declarations += 1
     }
     if node_cursor != len(syntax.nodes) {
         fail(&result, .Invalid_Expression_Node, 0, 0, true)

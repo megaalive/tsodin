@@ -207,3 +207,47 @@ expression_comparison_logical_precedence :: proc(t: ^testing.T) {
                    report.nodes[equal_group.left].operator == .Equals_Equals_Equals,
                    "parenthesized equality retained")
 }
+
+
+@(test)
+expression_statements_preserve_assignment_event_order :: proc(t: ^testing.T) {
+    input := "let total: number = 1; total = 2; const copy = total;"
+    v, ok := source.source_version_create(source.File_Id(730), 1, input)
+    testing.expect(t, ok, "source accepted")
+    defer source.source_version_destroy(&v)
+    ast := parse_expression_program(&v, compat.ts7_profile())
+    defer syntax_report_destroy(&ast)
+    testing.expect(t, ast.complete && len(ast.declarations) == 2 &&
+                   len(ast.statements) == 3 && len(ast.nodes) == 4,
+                   "assignments are ordered events, not new declarations")
+    if len(ast.statements) == 3 {
+        first := ast.statements[0]
+        assign := ast.statements[1]
+        third := ast.statements[2]
+        testing.expect(t, first.kind == .Declaration && first.declaration_index == 0 &&
+                       assign.kind == .Assignment && assign.declaration_index == -1 &&
+                       third.kind == .Declaration && third.declaration_index == 1,
+                       "source order and declaration indices remain stable")
+        testing.expect(t, input[ast.nodes[assign.target_node].byte_start:ast.nodes[assign.target_node].byte_end] == "total" &&
+                       input[ast.nodes[assign.expression].byte_start:ast.nodes[assign.expression].byte_end] == "2",
+                       "target and RHS are separately source-spanned nodes")
+    }
+}
+
+@(test)
+expression_assignment_syntax_fails_closed :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let n = 1; n + 2;",
+        "let n = 1; n = ;",
+        "let n = 1; n = 2",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(731), 1, input)
+        testing.expect(t, ok, "UTF-8 source accepted")
+        ast := parse_expression_program(&v, compat.ts7_profile())
+        testing.expect(t, !ast.complete && len(ast.diagnostics) > 0,
+                       "unsupported/invalid assignment syntax never passes")
+        syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
