@@ -207,9 +207,11 @@ a new declaration/symbol on assignment.
 
 The primitive checker executes events in source order. For an already
 initialized `let` whose target type is known, `name = expression;` first
-checks the RHS against the declared/inferred primitive domain, then replaces
-its current source-backed literal or computed-wide fact. This allows a later
-strict-equality comparison to observe the most recent assignment. The
+checks the RHS against the declared/inferred primitive domain. Mutable
+number/string bindings retain their widened base types even after assignment
+of a literal; TypeScript 7 does *not* report TS2367 merely because the last
+number assignment differs from a compared numeric literal. Boolean literal
+flow is limited to the tested cases, not general control-flow narrowing. The
 checker records `checked_assignments` separately; source-to-diagnostics
 `checktrace` keeps its existing external SUMMARY protocol unchanged.
 
@@ -217,7 +219,7 @@ checker records `checked_assignments` separately; source-to-diagnostics
 let count: number = 1;
 count = 2;
 const okay: boolean = count === 2;
-const impossible = count === 3; // candidate TS2367
+const possible = count === 3; // valid: widened number
 count = 1 + 2;
 const broad: boolean = count === 9;
 ```
@@ -231,6 +233,8 @@ not yet a control-flow graph or conditional type narrowing.
 `checker-flow-assign-valid` and `checker-flow-assign-errors` extend the
 native pinned TS7.0.2 diagnostic-code/UTF-16-start assertions. The TS6.0.2
 structured end-span lane remains separately labeled as supplemental.
-An incompatible `let` RHS produces candidate TS2322 at the RHS expression;
-disjoint proven current literals produce candidate TS2367 with the
-comparison-expression span. No official conformance score is published.
+An incompatible `let` RHS produces candidate TS2322 starting at the
+assignment target and spanning the assignment expression (pending structured
+TS6 verification); disjoint immutable `const` literals produce candidate
+TS2367. No permanent numeric/string singleton fact is inferred from a
+mutable assignment. No official conformance score is published.

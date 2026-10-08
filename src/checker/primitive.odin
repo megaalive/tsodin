@@ -414,11 +414,11 @@ check_file :: proc(
         if assignment {
             result.checked_assignments += 1
             if expression_type != declared_type {
-                // Unlike a declaration initializer, TS2322 on a simple
-                // assignment points to its RHS expression.
-                rhs := syntax.nodes[expression_root]
+                // TS7 locates TS2322 on the assignment expression at
+                // the target's start, not at the start of the RHS literal.
+                // Preserve source-backed spans for TS6 structured checks.
                 fail(&result, .Assignment_Type_Mismatch,
-                     rhs.byte_start, rhs.byte_end, false)
+                     event.byte_start, event.byte_end-1, false)
                 literal_decls[target_index] = Literal_Fact{}
                 wide_decls[target_index] = false
             } else {
