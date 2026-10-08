@@ -508,6 +508,12 @@ check_file :: proc(
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
             }
+            if len(entry_literals) == 0 {
+                entry_literals = make([]Literal_Fact, len(declared))
+                then_literals = make([]Literal_Fact, len(declared))
+                entry_wide = make([]bool, len(declared))
+                then_wide = make([]bool, len(declared))
+            }
             copy(entry_literals, literal_decls)
             copy(entry_wide, wide_decls)
             literal_decls[guard] = literal_fact_from_node(rhs)
