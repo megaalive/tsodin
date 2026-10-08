@@ -165,6 +165,24 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": true
+    },
+    {
+      "id": "checker-logic-valid",
+      "path": "tests/oracle/checker-logic-valid",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "checker-logic-errors",
+      "path": "tests/oracle/checker-logic-errors",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
     }
   ]
 }
