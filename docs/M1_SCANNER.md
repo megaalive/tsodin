@@ -47,6 +47,15 @@ syntax correctness. This scanner is not yet TS7 lexical parity or C0. Future
 M1 work will compare specific lexical fixtures with a captured TS7 oracle and
 add contextual re-scan entry points.
 
+## Auxiliary lexical witness (not C0)
+
+The dedicated `src/scantrace` developer tool consumes file paths and
+emits tab-separated token-kind ordinals with exact UTF-16 start/end
+positions. Its lexical spans are compared to a pinned TypeScript 6
+scanner API on known TS7-accepted fixtures; TypeScript 7's actual CLI
+is verified separately. This tests a specific common lexical subset,
+not full TypeScript 7 scanner parity.
+
 ## Tests
 
 Pinned CI runs `odin test src/source`, then `odin test src/scanner`.

@@ -6,6 +6,10 @@ on:
       - ".github/workflows/oracle.yml"
       - "tools/oracle/**"
       - "tests/oracle/**"
+      - "src/scanner/**"
+      - "src/scantrace/**"
+      - "src/source/**"
+      - "src/compat/**"
       - "bench/manifests/baselines.json"
   workflow_dispatch:
 
@@ -50,3 +54,32 @@ jobs:
           name: oracle-${{ matrix.profile }}-raw
           path: ${{ runner.temp }}/oracle-results/
           retention-days: 14
+
+  lexical-witness:
+    name: Auxiliary TS6 lexical witness (not TS7 parity)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install exact Odin toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/odin.tar.gz"
+          root="$RUNNER_TEMP/odin"
+          curl --fail --location --retry 3 --output "$archive" \
+            https://github.com/odin-lang/Odin/releases/download/dev-2026-10/odin-linux-amd64-dev-2026-10.tar.gz
+          echo "c3c8b095621fd0c75f7f73e3a0829f1b4d45324225f20ba11ed8dc4da310a8ab  $archive" | sha256sum --check -
+          mkdir -p "$root"
+          tar -xzf "$archive" -C "$root" --strip-components=1
+          "$root/odin" version
+          echo "$root" >> "$GITHUB_PATH"
+      - name: Build Odin source-token tracer
+        run: odin build src/scantrace -out:"$RUNNER_TEMP/scantrace"
+      - name: Install pinned supplementary lexical API
+        run: npm install --prefix "$RUNNER_TEMP/ts6-lex" --no-save --no-audit --no-fund @typescript/typescript6@6.0.2
+      - name: Compare scanner token kinds and UTF-16 spans
+        env:
+          TSODIN_SCANTRACE: ${{ runner.temp }}/scantrace
+          TSODIN_TS6_API: ${{ runner.temp }}/ts6-lex/node_modules/@typescript/typescript6/lib/typescript.js
+        run: node tools/oracle/compare-scanner.mjs
