@@ -194,6 +194,11 @@ check_file :: proc(
     node_cursor := 0
     inside_if := false
     else_seen := false
+    // COMPAT: !== only proves equality on the ELSE arm; do not subtract
+    // literal identities from a broad primitive domain on the true arm.
+    negative_guard := false
+    guard_index := -1
+    guard_fact: Literal_Fact
     for event in syntax.statements {
         if event.kind == .Else {
             if !inside_if || else_seen || event.expression != -1 {
@@ -206,6 +211,15 @@ check_file :: proc(
             copy(then_wide, wide_decls)
             copy(literal_decls, entry_literals)
             copy(wide_decls, entry_wide)
+            if negative_guard {
+                // The false arm of x !== literal proves x === literal.
+                if guard_index < 0 || guard_index >= len(declared) {
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
+                }
+                literal_decls[guard_index] = guard_fact
+                wide_decls[guard_index] = false
+            }
             else_seen = true
             continue
         }
@@ -234,6 +248,9 @@ check_file :: proc(
             }
             inside_if = false
             else_seen = false
+            negative_guard = false
+            guard_index = -1
+            guard_fact = Literal_Fact{}
             continue
         }
         condition_event := event.kind == .If
@@ -483,11 +500,12 @@ check_file :: proc(
         expression_type := inferred[expression_root]
         node_cursor = expression_root + 1
         if condition_event {
-            // Only a direct equality (initialized mutable number/string ===
-            // matching source literal) is admitted. The Name MUST resolve to
-            // a proven wide domain, so TS2367 isn't silently skipped.
+            // Only direct strict equality/inequality with a proven-wide
+            // initialized mutable number/string and matching source literal.
             root := syntax.nodes[expression_root]
-            if root.kind != .Binary || root.operator != .Equals_Equals_Equals ||
+            if root.kind != .Binary ||
+               (root.operator != .Equals_Equals_Equals &&
+                root.operator != .Exclamation_Equals_Equals) ||
                expression_type != .Boolean || root.left < 0 || root.right < 0 {
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
@@ -516,8 +534,14 @@ check_file :: proc(
             }
             copy(entry_literals, literal_decls)
             copy(entry_wide, wide_decls)
-            literal_decls[guard] = literal_fact_from_node(rhs)
-            wide_decls[guard] = false
+            negative_guard = root.operator == .Exclamation_Equals_Equals
+            guard_index = guard
+            guard_fact = literal_fact_from_node(rhs)
+            // === narrows then; !== narrows else. All opposite paths stay wide.
+            if !negative_guard {
+                literal_decls[guard] = guard_fact
+                wide_decls[guard] = false
+            }
             inside_if = true
             else_seen = false
             continue

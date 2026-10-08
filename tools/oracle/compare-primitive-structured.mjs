@@ -43,6 +43,8 @@ const fixtures=[
   ["checker-flow-assign-errors",2],
   ["checker-flow-branch-valid",0],
   ["checker-flow-branch-errors",2],
+  ["checker-flow-negative-valid",0],
+  ["checker-flow-negative-errors",3],
 ];
 
 function structuredReference(cwd) {
