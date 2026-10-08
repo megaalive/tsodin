@@ -169,15 +169,15 @@ check_file :: proc(
     defer delete(wide_nodes)
     wide_decls := make([]bool, len(syntax.declarations))
     defer delete(wide_decls)
-    // A single if/else needs just two snapshots of live facts. These arrays
-    // are dense and reused; the grammar forbids nested control flow.
-    entry_literals := make([]Literal_Fact, len(syntax.declarations))
+    // PERF: Ordinary straight-line files pay no snapshot allocation cost.
+    // Allocate at the first proven guard, then reuse for flat conditionals.
+    entry_literals: []Literal_Fact
     defer delete(entry_literals)
-    then_literals := make([]Literal_Fact, len(syntax.declarations))
+    then_literals: []Literal_Fact
     defer delete(then_literals)
-    entry_wide := make([]bool, len(syntax.declarations))
+    entry_wide: []bool
     defer delete(entry_wide)
-    then_wide := make([]bool, len(syntax.declarations))
+    then_wide: []bool
     defer delete(then_wide)
 
     for ref in symbols.references {
