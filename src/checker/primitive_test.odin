@@ -194,3 +194,53 @@ primitive_checker_rejects_unsupported_boolean_arithmetic :: proc(t: ^testing.T) 
     parser.syntax_report_destroy(&ast)
     source.source_version_destroy(&v)
 }
+
+
+@(test)
+primitive_checker_comparisons_and_boolean_logic :: proc(t: ^testing.T) {
+    valid_sources := [?]string{
+        "const less: boolean = 1 + 2 < 4; const max: boolean = 5 >= 4; const either = !false || true && false;",
+        "const n: number = 2; const equal: boolean = n === n; const different: boolean = 1 !== 1;",
+        "const label: string = 'hi'; const same = label === label; const boolEqual = true === true;",
+    }
+    for input in valid_sources {
+        v, ok := source.source_version_create(source.File_Id(713), 1, input)
+        testing.expect(t, ok, "valid source created")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                       !checked.fatal && len(checked.diagnostics) == 0,
+                       "bounded comparisons/equality/boolean logic accepted")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_refuses_unproven_literal_overlap :: proc(t: ^testing.T) {
+    bad_sources := [?]string{
+        "const bad = 1 === 2;",
+        "const bad = true !== false;",
+        "const bad = 1 && true;",
+        "const bad = !2;",
+        "const bad = 'hi' < 'there';",
+    }
+    for input in bad_sources {
+        v, ok := source.source_version_create(source.File_Id(714), 1, input)
+        testing.expect(t, ok, "valid source created")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                       !checked.complete && len(checked.diagnostics) > 0 &&
+                       checked.diagnostics[0].issue == .Incompatible_Operator,
+                       "unsupported semantic case must fail closed")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}

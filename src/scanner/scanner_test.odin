@@ -296,3 +296,42 @@ scanner_boolean_literal_keywords_are_distinct :: proc(t: ^testing.T) {
                        "boolean keywords require complete lexeme match")
     }
 }
+
+
+@(test)
+scanner_comparison_and_logical_longest_tokens :: proc(t: ^testing.T) {
+    input := "a < b <= c > d >= e === f !== g && h || !i;"
+    v, ok := source.source_version_create(source.File_Id(710), 1, input)
+    testing.expect(t, ok, "valid token source")
+    defer source.source_version_destroy(&v)
+    s := scanner_init(&v)
+    expected := [?]Token_Kind{
+        .Identifier, .Less_Than, .Identifier, .Less_Than_Equals,
+        .Identifier, .Greater_Than, .Identifier, .Greater_Than_Equals,
+        .Identifier, .Equals_Equals_Equals, .Identifier, .Exclamation_Equals_Equals,
+        .Identifier, .Ampersand_Ampersand, .Identifier, .Bar_Bar,
+        .Exclamation, .Identifier, .Semicolon, .End_Of_File,
+    }
+    for wanted in expected {
+        token := scanner_next(&s)
+        testing.expect(t, token.kind == wanted && token.error == .None,
+                       "longest token match and stable ordering")
+    }
+}
+
+@(test)
+scanner_rejects_unimplemented_loose_equality :: proc(t: ^testing.T) {
+    cases := [?]string{"a == b;", "a != b;", "a & b;", "a | b;"}
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(711), 1, input)
+        testing.expect(t, ok, "valid UTF-8 source")
+        s := scanner_init(&v)
+        _ = scanner_next(&s)
+        token := scanner_next(&s)
+        testing.expect(t, token.kind == .Invalid && token.error == .Unsupported_Syntax,
+                       "unsupported punctuation fails closed")
+        testing.expect(t, scanner_next(&s).error == .Previous_Failure,
+                       "failure must remain sticky")
+        source.source_version_destroy(&v)
+    }
+}

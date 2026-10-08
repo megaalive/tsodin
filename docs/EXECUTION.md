@@ -1,6 +1,6 @@
 # tsodin execution plan — bootstrap and vertical checker slice
 
-Status: M0 CLOSED / M1 ACTIVE (scanner oracle gate open) / M2-A–C SYNTAX SUBSET / M3-A–C BINDING/BOUNDARY + M4-A–E PRIMITIVE CHECKER + BOOLEAN LITERALS + TS7 CODE/START + TS6 STRUCTURED WITNESS; full modules/checker not yet implemented  
+Status: M0 CLOSED / M1 ACTIVE (scanner oracle gate open) / M2-A–C SYNTAX SUBSET / M3-A–C BINDING/BOUNDARY + M4-A–F PRIMITIVE CHECKER + BOOLEAN LITERALS + BOUNDED COMPARISONS/LOGIC + TS7 CODE/START + TS6 STRUCTURED WITNESS; full modules/checker not yet implemented  
 Baseline: tsodin main 775bb0c5c53f4d6ed9544942cb7e28a56eeed3a2  
 Architecture: Odin-native; historical language-selection benchmarks are not tsodin product measurements.
 

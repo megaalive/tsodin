@@ -176,3 +176,34 @@ parser_boolean_literals_keep_source_spans :: proc(t: ^testing.T) {
     testing.expect(t, name.kind == .Name && input[name.byte_start:name.byte_end] == "off",
                    "ordinary boolean variable reference stays a Name")
 }
+
+
+@(test)
+expression_comparison_logical_precedence :: proc(t: ^testing.T) {
+    input := "const result: boolean = !false || 1 + 2 * 3 >= 7 && (4 === 4);"
+    v, ok := source.source_version_create(source.File_Id(712), 1, input)
+    testing.expect(t, ok, "expression source valid")
+    defer source.source_version_destroy(&v)
+    report := parse_expression_program(&v, compat.ts7_profile())
+    defer syntax_report_destroy(&report)
+    testing.expect(t, report.complete && len(report.declarations) == 1,
+                   "comparison and logical program parsed")
+    root := report.nodes[report.declarations[0].initializer]
+    testing.expect(t, root.operator == .Bar_Bar, "logical or is lowest precedence")
+    lhs := report.nodes[root.left]
+    testing.expect(t, lhs.kind == .Unary && lhs.operator == .Exclamation,
+                   "logical negation parsed before logical or")
+    rhs := report.nodes[root.right]
+    testing.expect(t, rhs.operator == .Ampersand_Ampersand, "logical and precedes or")
+    relation := report.nodes[rhs.left]
+    testing.expect(t, relation.operator == .Greater_Than_Equals,
+                   "comparison precedes logical and")
+    arithmetic := report.nodes[relation.left]
+    testing.expect(t, arithmetic.operator == .Plus &&
+                   report.nodes[arithmetic.right].operator == .Asterisk,
+                   "arithmetic takes precedence over comparison")
+    equal_group := report.nodes[rhs.right]
+    testing.expect(t, equal_group.kind == .Group &&
+                   report.nodes[equal_group.left].operator == .Equals_Equals_Equals,
+                   "parenthesized equality retained")
+}

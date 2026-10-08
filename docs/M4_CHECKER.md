@@ -70,3 +70,23 @@ Two independent TypeScript 7.0.2 CLI projects test a valid boolean program
 and two `TS2322` primitive mismatches. The Odin trace is checked against
 the same fixtures for type errors. This is a bounded semantic extension,
 not full conformance.
+
+## M4-F — bounded relational, strict equality and logical operators
+
+The scanner now recognizes `<`, `>`, `<=`, `>=`, `===`, `!==`, `&&`, `||` and unary `!`.
+New token variants are appended so earlier lexical witness ordinals stay unchanged.
+Unsupported loose `==`/`!=` and standalone `&`/`|` fail closed.
+The expression parser preserves the TS ordering of unary, arithmetic, relational,
+equality, logical conjunction, and logical disjunction precedence.
+
+The primitive checker accepts numeric relational comparisons; boolean-only logical
+operands and negation; and demonstrably overlapping strict equality (identical
+source-backed literal spellings or the same bound name on both sides). Coarse
+primitive types cannot yet represent TS literal/flow narrowing; accepting
+`1 === 2` as a valid program would incorrectly suppress TS2367.
+More complete truthiness, strict equality and literal narrowing remain future work.
+
+Two independently pinned TS7.0.2 oracle projects exercise valid expressions and
+TS2322 assignment mismatches. Native TS7 code + UTF-16 start positions are
+compared separately from auxiliary TS6 structured full spans. These are scoped
+witnesses, not full TypeScript conformance. Public `tsodin check` stays disabled.
