@@ -4,15 +4,11 @@
 
 tsodin is an experimental, performance-first TypeScript checker/compiler implemented in Odin.
 
+It is not a mechanical port of a Go, Rust, C++, or other existing implementation. Existing compilers are references for behavior, compatibility, and benchmarking; tsodin's internal design should be native to Odin and exploit Odin's own data, allocator, context, and low-level programming model.
+
 The project is intentionally early. There are no compatibility, conformance, or performance claims yet.
 
 ## Engineering doctrine
-
-The core rule is:
-
-> **Readable invariants, aggressive implementation.**
-
-A slightly longer version:
 
 > **Make semantics obvious. Make data compact. Make hot paths ruthless. Document every non-obvious reason. Measure everything.**
 
