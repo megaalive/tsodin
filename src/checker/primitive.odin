@@ -199,12 +199,19 @@ check_file :: proc(
                     fail(&result, .Invalid_Expression_Node, node.byte_start, node.byte_end, true)
                     return result
                 }
-                if node.kind == .Unary && (child != .Number ||
-                   (node.operator != .Plus && node.operator != .Minus)) {
-                    fail(&result, .Incompatible_Operator, node.byte_start, node.byte_end, true)
-                    return result
+                if node.kind == .Unary {
+                    if node.operator == .Exclamation && child == .Boolean {
+                        kind = .Boolean
+                    } else if (node.operator == .Plus || node.operator == .Minus) &&
+                              child == .Number {
+                        kind = .Number
+                    } else {
+                        fail(&result, .Incompatible_Operator, node.byte_start, node.byte_end, true)
+                        return result
+                    }
+                } else {
+                    kind = child
                 }
-                kind = child
             } else if node.kind == .Binary {
                 left, left_ok := operand_type(syntax.nodes[:], inferred, node.left, i)
                 right, right_ok := operand_type(syntax.nodes[:], inferred, node.right, i)
@@ -225,6 +232,33 @@ check_file :: proc(
                            node.operator == .Slash) &&
                           left == .Number && right == .Number {
                     kind = .Number
+                }
+                if (node.operator == .Less_Than || node.operator == .Greater_Than ||
+                    node.operator == .Less_Than_Equals || node.operator == .Greater_Than_Equals) &&
+                   left == .Number && right == .Number {
+                    kind = .Boolean
+                } else if (node.operator == .Ampersand_Ampersand || node.operator == .Bar_Bar) &&
+                          left == .Boolean && right == .Boolean {
+                    // Logical operators return operand values in TypeScript.
+                    // Restrict to boolean-only cases until truthiness is modeled.
+                    kind = .Boolean
+                } else if (node.operator == .Equals_Equals_Equals ||
+                           node.operator == .Exclamation_Equals_Equals) &&
+                          left == right {
+                    // Coarse primitive types lose literal/flow narrowing.
+                    // Constant comparisons may emit TS2367.
+                    lhs := syntax.nodes[node.left]
+                    rhs := syntax.nodes[node.right]
+                    same_name := lhs.kind == .Name && rhs.kind == .Name &&
+                                 references[node.left] > 0 &&
+                                 references[node.left] == references[node.right]
+                    same_literal := (lhs.kind == .Integer || lhs.kind == .Text ||
+                                     lhs.kind == .Boolean) && lhs.kind == rhs.kind &&
+                                    text[lhs.byte_start:lhs.byte_end] ==
+                                    text[rhs.byte_start:rhs.byte_end]
+                    if same_name || same_literal {
+                        kind = .Boolean
+                    }
                 }
                 if kind == .Unknown {
                     fail(&result, .Incompatible_Operator, node.byte_start, node.byte_end, true)
