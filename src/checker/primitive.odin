@@ -231,6 +231,11 @@ check_file :: proc(
     node_cursor := 0
     flow_depth := 0
     else_seen: [parser.FLOW_NEST_LIMIT]bool
+    // A proven-impossible arm remains syntax-checked but cannot be
+    // interpreted with today's singleton flow representation. It must be
+    // empty, and cannot participate in a reachable-path join.
+    dead_then: [parser.FLOW_NEST_LIMIT]bool
+    dead_else: [parser.FLOW_NEST_LIMIT]bool
     // Per-depth split metadata prevents child conditionals from corrupting
     // parent guard facts. The live literal_decls/wide_decls arrays represent
     // the current path and are the only state consumed by expressions.
@@ -278,23 +283,32 @@ check_file :: proc(
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
             }
-            // Join preserves a singleton only if both paths prove it.
-            // Child joins operate on the parent's current arm and then pop.
-            for i in 0..<len(declared) {
-                identical, same := literal_overlap(then_literals[level][i], literal_decls[i], text)
-                if identical && same && !then_wide[level][i] && !wide_decls[i] {
-                    literal_decls[i] = then_literals[level][i]
-                    wide_decls[i] = false
-                } else if then_wide[level][i] || wide_decls[i] ||
-                          then_literals[level][i].kind != literal_decls[i].kind ||
-                          (identical && !same) {
-                    literal_decls[i] = Literal_Fact{}
-                    wide_decls[i] = true
-                } else {
-                    literal_decls[i] = Literal_Fact{}
-                    wide_decls[i] = false
+            // An unreachable, *empty* arm has no runtime predecessor.
+            // Joining it would erase facts from the only reachable path.
+            if dead_else[level] {
+                copy(literal_decls, then_literals[level])
+                copy(wide_decls, then_wide[level])
+            } else if !dead_then[level] {
+                // Both live arms: retain only singleton facts proved on both.
+                for i in 0..<len(declared) {
+                    identical, same := literal_overlap(then_literals[level][i], literal_decls[i], text)
+                    if identical && same && !then_wide[level][i] && !wide_decls[i] {
+                        literal_decls[i] = then_literals[level][i]
+                        wide_decls[i] = false
+                    } else if then_wide[level][i] || wide_decls[i] ||
+                              then_literals[level][i].kind != literal_decls[i].kind ||
+                              (identical && !same) {
+                        literal_decls[i] = Literal_Fact{}
+                        wide_decls[i] = true
+                    } else {
+                        literal_decls[i] = Literal_Fact{}
+                        wide_decls[i] = false
+                    }
                 }
             }
+            // If THEN is impossible, live ELSE is already in the current arrays.
+            dead_then[level] = false
+            dead_else[level] = false
             else_seen[level] = false
             guard_count[level] = 0
             for slot in 0..<2 {
@@ -306,6 +320,17 @@ check_file :: proc(
             continue
         }
         condition_event := event.kind == .If
+        if flow_depth > 0 {
+            enclosing := flow_depth-1
+            if (!else_seen[enclosing] && dead_then[enclosing]) ||
+               (else_seen[enclosing] && dead_else[enclosing]) {
+                // The source still has to be typechecked like TypeScript;
+                // a dead branch with statements cannot yet be represented
+                // safely as `never`. Reject instead of silently skipping it.
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
+            }
+        }
         if condition_event && flow_depth >= parser.FLOW_NEST_LIMIT {
             fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
             return result
@@ -711,6 +736,10 @@ check_file :: proc(
             guard_count[level] = 0
             leaf_then: [2]Literal_Fact
             leaf_else: [2]Literal_Fact
+            leaf_is_bare_boolean: [2]bool
+            contradiction := false
+            dead_then[level] = false
+            dead_else[level] = false
             for slot in 0..<part_count {
                 leaf_node := part_nodes[slot]
                 leaf_flipped := !compound && flipped
@@ -799,6 +828,8 @@ check_file :: proc(
                 }
                 leaf_then[slot] = then_fact
                 leaf_else[slot] = else_fact
+                leaf_is_bare_boolean[slot] = leaf.kind == .Name &&
+                                             declared[guard] == .Boolean
                 // Same-target paths are accepted only when both operands
                 // prove one identical singleton on the decisive path.
                 // Contradictory predicates and uncertain intersections remain
@@ -812,7 +843,13 @@ check_file :: proc(
                     next_fact := then_fact
                     if root.operator == .Bar_Bar { next_fact = else_fact }
                     known, same := literal_overlap(first_fact, next_fact, text)
-                    if !known || !same {
+                    if known && !same && leaf_is_bare_boolean[0] &&
+                       leaf_is_bare_boolean[1] {
+                        // Opposite Boolean truth values on the same binding:
+                        // AND can never be true; OR can never be false.
+                        // Pure !name and name leaves do not introduce TS2367.
+                        contradiction = true
+                    } else if !known || !same {
                         fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                         return result
                     }
@@ -840,7 +877,17 @@ check_file :: proc(
                 }
                 guard_count[level] += 1
             }
-            if compound && guard_indices[level][0] == guard_indices[level][1] {
+            if compound && contradiction {
+                if root.operator == .Ampersand_Ampersand {
+                    if flipped { dead_else[level] = true
+                    } else { dead_then[level] = true }
+                } else {
+                    if flipped { dead_then[level] = true
+                    } else { dead_else[level] = true }
+                }
+                // No singleton from an impossible decisive path may escape.
+                guard_count[level] = 0
+            } else if compound && guard_indices[level][0] == guard_indices[level][1] {
                 // Same Boolean predicate on both sides is idempotent:
                 // a&&a and a||a each prove a on BOTH output arms.
                 // Never deduce the complement for open number/string domains.

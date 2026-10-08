@@ -485,3 +485,29 @@ pinned TS7.0.2 diagnostic-code and UTF-16-start comparisons and
 supplemental TS6.0.2 structured full-span witnesses. This is not
 general TypeScript flow, official conformance or a performance claim.
 Public `tsodin check` remains disabled.
+
+## M4-G5F3 — bounded Boolean contradiction-aware reachability
+
+Two complementary *bare Boolean* predicates on the same initialized,
+proven-wide `let` now establish a **dead arm**:
+`flag && !flag` cannot enter its true arm, and `flag || !flag`
+cannot enter its false arm. An enclosing unary `!` swaps those arms.
+The accepted unreachable arm **must be empty**. Its flow snapshot is not
+joined with the only reachable arm, so assignments in the live arm
+remain effective. Two per-depth Boolean reachability flags add no heap
+allocation and preserve the existing depth-two bound.
+
+Statements inside an unreachable arm remain **fatal unsupported**, not
+silently ignored: TypeScript still typechecks unreachable statements,
+and this bounded checker cannot yet represent its `never` state.
+Nested unreachable conditionals, unrelated primitive or numeric
+contradictions, equality expressions that may produce TS2367 during
+short-circuit checking, and complex Boolean formulas are not accepted.
+The RHS retains G5F2's temporary left-operand context and is restored
+before the fork. No general CFG or global unreachable-code elision
+has been introduced.
+
+`checker-flow-contradiction-{valid,errors}` add pinned TS7.0.2
+diagnostic-code and UTF-16-start witnesses and TS6.0.2 supplemental
+structured-span checks. This is narrowly scoped checker evidence,
+not official conformance. Public `tsodin check` remains disabled.

@@ -381,6 +381,24 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": true
+    },
+    {
+      "id": "checker-flow-contradiction-valid",
+      "path": "tests/oracle/checker-flow-contradiction-valid",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "checker-flow-contradiction-errors",
+      "path": "tests/oracle/checker-flow-contradiction-errors",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
     }
   ]
 }
