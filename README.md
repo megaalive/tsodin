@@ -8,14 +8,14 @@ tsodin is an experimental, performance-first TypeScript checker/compiler designe
 
 ## Status
 
-M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. **M3-A–C are implemented**: a one-file binder, cross-file script-global binding, and explicit rejection of unsupported external modules. **M4-A–G1 are implemented as a narrow semantic slice**: primitive number/string/boolean expression checking (including bounded comparisons, strict equality and logical operators), selected TS2322/TS2367 code/UTF-16-start comparisons against native TypeScript 7, and separate supplemental TS6 structured full-span checks. A complete parser, module-aware binder, full type checker, official C0/C1 conformance, native TS7 end-span/message parity and end-to-end performance are **not yet established**.
+M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. **M3-A–C are implemented**: a one-file binder, cross-file script-global binding, and explicit rejection of unsupported external modules. **M4-A–G2 are implemented as a narrow semantic slice**: primitive number/string/boolean expression checking (including bounded comparisons, strict equality and logical operators), selected TS2322/TS2367 code/UTF-16-start comparisons against native TypeScript 7, and separate supplemental TS6 structured full-span checks. A complete parser, module-aware binder, full type checker, official C0/C1 conformance, native TS7 end-span/message parity and end-to-end performance are **not yet established**.
 
 - [M1-A: source-version/index contract](docs/M1_SOURCE.md)
 - [M1-B–E: scanner and contextual witness](docs/M1_SCANNER.md)
 - [M2-A: declaration-parser subset](docs/M2_PARSER.md)
 - [M2-B/C: expression syntax, recovery, and diagnostic trace](docs/M2_EXPRESSION.md)
 - [M3-A–C: symbols, script globals, and module safety boundary](docs/M3_BINDER.md)
-- [M4-A–G1: primitive checker, logical expressions, and narrow literal overlap](docs/M4_CHECKER.md)
+- [M4-A–G2: primitive checker, logic, and inferred const literal identity](docs/M4_CHECKER.md)
 - [M4-B–E: expanded TS7 code/start and separate TS6 full-span witnesses](docs/M4_CODE_WITNESS.md)
 - [Official TypeScript conformance strategy](docs/OFFICIAL_CONFORMANCE.md)
 

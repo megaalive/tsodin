@@ -111,3 +111,33 @@ This is NOT general TypeScript literal-type inference or control-flow
 narrowing. Variable references, computed expressions, numeric spelling
 edge cases and different primitive types remain conservatively bounded.
 Official Microsoft conformance remains NOT RUN.
+
+## M4-G2 — inferred const literal identity across references
+
+A direct integer, unescaped string, or boolean literal carries its immutable
+source span as a temporary `Literal_Fact` in the checker. When a `const`
+without an explicit primitive annotation is initialized with such a literal,
+the checker retains its *inferred literal identity* as a declaration fact.
+Subsequent references and immutable `const` alias chains propagate that same
+fact through the compact indexed binder and grouped expressions.
+
+Example supported witnesses:
+
+```ts
+const low = 1;
+const alias = low;
+const high = 2;
+const different = alias === high; // candidate TS2367
+```
+
+Disjoint proven literal facts emit nonfatal internal issue 11; equal facts
+yield a boolean result. The pinned TS7.0.2 CLI still checks actual diagnostic
+codes and UTF-16 start positions, with TS6.0.2 structured spans as supplemental
+evidence. The new oracle fixtures are `checker-const-literal-valid` and
+`checker-const-literal-disjoint`.
+
+`let`/`var`, explicit annotations (which can widen the inferred literal
+type), computed values, general type relations and flow narrowing are **not**
+claimed. They do not acquire speculative facts. No public `tsodin check` or
+official Microsoft conformance score is enabled. Two extra dense scratch
+arrays store source spans; no per-node strings or object allocation is added.
