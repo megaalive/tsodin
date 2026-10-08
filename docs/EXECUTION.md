@@ -41,7 +41,7 @@ Do not transfer microbenchmark-specific optimization decisions. Every tsodin hot
 
 Milestones are gates, not a promise that a compiler can be completed in a fixed number of days. A 21-day vertical-slice checkpoint is an aggressive review target, not a reason to weaken semantics.
 
-M1-A source lifetime and line indexing: [implemented](M1_SOURCE.md). M1-B scanner subset: [implemented](M1_SCANNER.md). These are not TS7 conformance claims; M1 oracle and full scanner exit gates remain open.
+Compatibility profile architecture: [versioned and fail-closed](COMPATIBILITY.md). M1-A source lifetime and line indexing: [implemented](M1_SOURCE.md). M1-B scanner subset: [implemented](M1_SCANNER.md). These are not TS7 conformance claims; M1 oracle and full scanner exit gates remain open.
 
 ## Immediate sequence
 

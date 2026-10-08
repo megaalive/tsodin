@@ -18,6 +18,7 @@ There are **no TypeScript compatibility or compiler performance claims**.
 - [Execution plan and gates](docs/EXECUTION.md)
 - [Architectural decision](docs/RESEARCH_TRANSFER.md)
 - [Compatibility/oracle contract](docs/ORACLE.md)
+- [TypeScript version policy (including future TS8)](docs/COMPATIBILITY.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Memory model](docs/MEMORY.md)
 - [Performance doctrine](docs/PERFORMANCE.md)

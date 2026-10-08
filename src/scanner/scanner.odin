@@ -1,6 +1,7 @@
 package scanner
 
 import "../source"
+import "../compat"
 
 // M1-B explicitly limited ASCII lexical subset. Context-sensitive slash,
 // template, JSX, Unicode identifiers, number formats and escaped strings
@@ -37,6 +38,7 @@ Scan_Error :: enum {
     Unterminated_String,
     Unterminated_Block_Comment,
     Previous_Failure,
+    Unsupported_Profile,
 }
 
 Token :: struct {
@@ -49,12 +51,19 @@ Token :: struct {
 Scanner :: struct {
     // INVARIANT: the owning immutable Source_Version must outlive this scanner.
     version: ^source.Source_Version,
+    profile: compat.Profile,
     offset: int,
     failed: bool,
 }
 
+// Existing callers use the pinned profile, but every scanner instance
+// explicitly carries the selected compatibility contract.
 scanner_init :: proc(version: ^source.Source_Version) -> Scanner {
-    return Scanner{version=version}
+    return scanner_init_with_profile(version, compat.ts7_profile())
+}
+
+scanner_init_with_profile :: proc(version: ^source.Source_Version, profile: compat.Profile) -> Scanner {
+    return Scanner{version=version, profile=profile}
 }
 
 ascii_identifier_start :: proc(b: u8) -> bool {
@@ -77,6 +86,11 @@ scanner_next :: proc(s: ^Scanner) -> Token {
     }
     if s.version == nil || !s.version.initialized {
         return scanner_error(s, 0, .Invalid_Source)
+    }
+
+    // Never parse a future TS edition using an unreviewed older policy.
+    if !compat.profile_is_registered(s.profile) {
+        return scanner_error(s, s.offset, .Unsupported_Profile)
     }
 
     text := s.version.owned_text
