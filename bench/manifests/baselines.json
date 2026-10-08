@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "epoch": "tsodin-m0-2026-10-08",
+  "status": "bootstrap-candidates-not-headline-eligible",
+  "primaryOracle": {
+    "name": "TypeScript",
+    "version": "7.0.2",
+    "repository": "https://github.com/microsoft/TypeScript",
+    "ref": "v7.0.2",
+    "commit": "1e4744d68260a7cb91b62b12edc3f6a2187faaf1"
+  },
+  "rustChecker": {
+    "name": "tsz",
+    "repository": "https://github.com/tsz-org/tsz",
+    "commit": "153b25adb393f134c61ddde7a14cc1ff1954fc2a",
+    "eligibility": "pending reproducible build, compatibility and locked corpus"
+  },
+  "parseOnly": [
+    {
+      "name": "oxc",
+      "repository": "https://github.com/oxc-project/oxc",
+      "commit": "25122137c0cc9809b135f77f8eacb4a6ba74d23c",
+      "eligibility": "pending reproducible adapter"
+    }
+  ],
+  "odin": {
+    "version": "dev-2026-10",
+    "commit": "84bc3fc2100b0f7880a3af37f71bccdcda41c6f9",
+    "release": "https://github.com/odin-lang/Odin/releases/download/dev-2026-10/odin-linux-amd64-dev-2026-10.tar.gz",
+    "linuxAmd64Sha256": "c3c8b095621fd0c75f7f73e3a0829f1b4d45324225f20ba11ed8dc4da310a8ab",
+    "ciTarget": "linux-amd64",
+    "benchmarkOptimization": "-o:speed"
+  },
+  "provenance": {
+    "source": "megaalive/ts-fp/bench/manifests/phase0-baselines.json",
+    "sourceCommit": "6306143660eac352fdbfe37be60f41f5b9e6b740",
+    "policy": "reverify exact binaries, corpus and reference compatibility before formal comparisons"
+  },
+  "headlinePerformanceAllowed": false
+}
