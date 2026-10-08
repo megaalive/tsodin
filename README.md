@@ -8,7 +8,10 @@ tsodin is an experimental, performance-first TypeScript checker/compiler designe
 
 ## Status
 
-The M0 bootstrap includes a versioned CLI that intentionally rejects `check` until a real semantic checker exists, a UTF-8/UTF-16 source position reference, tests, a pinned toolchain and CI. Source/scanner and the end-to-end checker remain active future work.
+M0 is **closed**: the pinned CLI intentionally rejects `check`, with source UTF-8/UTF-16 reference tests and green CI. **M1 is active**: the first immutable source-version line index and a deliberately bounded, fail-closed ASCII scanner are implemented and tested. Scanner oracle parity, a parser, binder, and type checker are **not yet implemented or proven**.
+
+- [M1-A: source-version/index contract](docs/M1_SOURCE.md)
+- [M1-B: scanner subset and its limits](docs/M1_SCANNER.md)
 
 There are **no TypeScript compatibility or compiler performance claims**.
 
