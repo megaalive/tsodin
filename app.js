@@ -253,6 +253,9 @@ function glyph(character){return ({" ":"␠","\n":"↵","\r":"␍","\t":"⇥"})[
 function codePointLabel(point){return "U+"+point.toString(16).toUpperCase().padStart(4,"0");}
 function updatePosition(){
   const byte=Number(slider.value);
+  // Keep the custom blue rail synchronized with slider clicks, presets and source edits.
+  const percent=inspection.bytes>0?Math.max(0,Math.min(100,byte/inspection.bytes*100)):0;
+  slider.style.setProperty("--range-progress",percent.toFixed(2)+"%");
   const units=utf16AtByteOffset(inspection,byte);
   $("byte-offset-label").textContent=byte+" / "+inspection.bytes;
   $("position-label").textContent=units===null?"Inside UTF-8 scalar":"UTF-16 prefix length";

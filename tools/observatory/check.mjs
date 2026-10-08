@@ -54,7 +54,7 @@ assert.equal(workflowOutcome({status:"completed",conclusion:"success"}).label,"P
 const html=get("index.html");
 assert.match(html, /<title>tsodin — Compiler Observatory<\/title>/);
 assert.match(html, /href="\.\/live\.css"/);
-assert.match(html, /href="\.\/soft-glass\.css"/);
+assert.match(html, /href="\.\/soft-glass\.css\?v=20261008-blue-controls"/);
 assert.match(html, /GITHUB · CURRENT STATE/);
 assert.match(html, /data-panel="conformance" hidden/);
 assert.match(html, /data-view="overview"/);
@@ -74,6 +74,20 @@ assert.match(js,/Promise\.allSettled/);
 assert.match(js,/source tree/);
 assert.match(js,/Cannot confirm CI for current HEAD/);
 assert.match(js,/selectView/);
+assert.match(html, /src="\.\/app\.js\?v=20261008-blue-controls"/);
+const theme=get("soft-glass.css");
+assert.match(theme,/\.state-pill\.neutral,\s*\.state-pill\.pending\s*\{[^}]*background:\s*rgba\(54,121,180/s,
+  "Neutral and pending badges must use muted blue glass rather than inherited gray");
+assert.match(theme,/button\.quiet-link\s*\{[^}]*appearance:\s*none/s,
+  "Secondary action must not use a native gray button skin");
+assert.match(theme,/input\.byte-slider\s*\{[^}]*--range-progress:\s*0%/s,
+  "X-Ray slider uses an explicit blue rail with a progress variable");
+assert.match(theme,/input\.byte-slider::-webkit-slider-thumb/,
+  "Blink/WebKit thumb must use the theme");
+assert.match(theme,/input\.byte-slider::-moz-range-thumb/,
+  "Firefox thumb must use the theme");
+assert.match(js,/slider\.style\.setProperty\("--range-progress"/,
+  "X-Ray control must update its filled track when position changes");
 assert.match(js,/publishedConformance/);
 assert.match(get("styles.css"),/prefers-reduced-motion:reduce/);
 const footerCss=get("live.css");
