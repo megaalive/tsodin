@@ -53,6 +53,13 @@ jobs:
       - name: Validate expression precedence and syntax recovery
         run: odin test src/parser
 
+      - name: Validate developer syntax diagnostic trace
+        shell: bash
+        run: |
+          set -euo pipefail
+          odin build src/syntaxtrace -out:"$RUNNER_TEMP/syntaxtrace"
+          TSODIN_SYNTAXTRACE="$RUNNER_TEMP/syntaxtrace" node tools/oracle/check-syntaxtrace.mjs
+
       - name: Build bootstrap CLI
         shell: bash
         run: |

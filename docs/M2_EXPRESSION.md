@@ -60,3 +60,24 @@ Contiguous storage and source spans are design hypotheses, not measured
 wins. We do not reuse legacy microbenchmark scores: performance comparisons
 are allowed only after real source-to-diagnostics work and a locked
 correctness-equivalent corpus, with paired time/RSS/counters.
+
+## Developer-only source-to-syntax-diagnostics trace (M2-C)
+
+A separate `src/syntaxtrace` executable reads an actual TypeScript source
+file and emits one `DIAG` record for each **internal** parser issue, with
+zero-based line and UTF-16 column start/end coordinates, followed by a
+`SUMMARY` containing recovered declaration count, diagnostic count, and
+process status.
+
+- Exit **0**: source fully accepted by the intentionally small grammar.
+- Exit **1**: recoverable syntax errors, with a non-empty diagnostics list.
+- Exit **2**: malformed UTF-8, unsupported lexical forms, I/O failure, or
+  another fatal condition.
+- The developer tool is not the public `tsodin check` command, does not
+  perform symbol binding or type checking, and does not use actual TS7 error
+  codes. Its issue ordinals are explicitly internal implementation details.
+
+`tools/oracle/check-syntaxtrace.mjs` asserts the textual trace on the
+successful and erroneous pinned fixtures, an emoji+CRLF source and a fatal
+unsupported-token source. The reference TS7 CLI still runs independently
+and does **not** yet compare normalized diagnostics with this developer tool.

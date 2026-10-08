@@ -12,6 +12,7 @@ on:
       - "src/compat/**"
       - "src/context/**"
       - "src/parser/**"
+      - "src/syntaxtrace/**"
       - "src/contexttrace/**"
       - "tests/lexical/**"
       - "bench/manifests/baselines.json"
