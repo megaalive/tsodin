@@ -245,7 +245,7 @@ check_file :: proc(
         // An assignment has no declaration index of its own. References in
         // its RHS may only see declarations already processed in source order.
         declaration_index := event.declaration_index
-        if assignment {
+        if assignment || condition_event {
             declaration_index = result.checked_declarations
         }
         target_index := -1
