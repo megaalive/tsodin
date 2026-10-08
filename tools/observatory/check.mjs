@@ -76,6 +76,15 @@ assert.match(js,/Cannot confirm CI for current HEAD/);
 assert.match(js,/selectView/);
 assert.match(js,/publishedConformance/);
 assert.match(get("styles.css"),/prefers-reduced-motion:reduce/);
+const footerCss=get("live.css");
+assert.match(html,/<footer class="site-footer">/,"semantic footer remains in document flow");
+assert.match(footerCss,/min-height:100dvh/,"short views fill dynamic viewport");
+assert.match(footerCss,/body > main\s*\{[^}]*flex:1 0 auto/s,"main occupies remaining height");
+assert.match(footerCss,/body > \.site-footer\s*\{[^}]*margin-top:auto/s,"footer stays at bottom");
+assert.match(footerCss,/body > \.site-footer\s*\{[^}]*padding:12px 0/s,"desktop footer is compact");
+assert.doesNotMatch(footerCss,/\.site-footer\s*\{[^}]*(?:position:\s*fixed|position:\s*sticky)/s,
+  "footer must never obscure page content");
+
 for(const path of ["index.html","app.js","live.css","lib/observatory-core.mjs","preview/index.html","preview/soft/index.html","preview/neon/index.html"]) {
  assert.doesNotMatch(get(path),/megaalive\/ts-fp|odin-hotpath|HOTPATH_P6|0\.821656|P1.?P6|synthetic microkernel/i,path+" leaked old research");
 }
