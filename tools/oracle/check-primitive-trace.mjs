@@ -43,4 +43,11 @@ assert.deepEqual(boolBad.summary,["SUMMARY","2","2","1"]);
 assert.deepEqual(boolBad.diags.map(x=>x[1]),["10","10"],"boolean mismatches use TS2322 candidate");
 assert.deepEqual(boolBad.diags.map(x=>x.slice(2,4)),[["0","6"],["1","6"]],
   "boolean declaration-name source spans in zero-based UTF-16");
-console.log("PASS: Odin source → parse → bind → primitive type diagnostics; TS7 semantic parity not yet established");
+const logicValid=read("checker-logic-valid");
+assert.equal(logicValid.status,0,"supported comparisons and logic must succeed");
+assert.deepEqual(logicValid.summary,["SUMMARY","7","0","0"]);
+const logicBad=read("checker-logic-errors");
+assert.equal(logicBad.status,1,"assignment mismatches must fail");
+assert.deepEqual(logicBad.summary,["SUMMARY","2","2","1"]);
+assert.deepEqual(logicBad.diags.map(x=>x[1]),["10","10"]);
+console.log("PASS: Odin bounded semantic checker; native TS7 equivalence requires separate pinned witness");
