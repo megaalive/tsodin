@@ -244,3 +244,45 @@ primitive_checker_refuses_unproven_literal_overlap :: proc(t: ^testing.T) {
         source.source_version_destroy(&v)
     }
 }
+
+
+@(test)
+primitive_checker_literal_value_identity_and_disjoint_diagnostics :: proc(t: ^testing.T) {
+    good := "const sameText: boolean = 'same' === \"same\"; const sameNumber = 3 !== 3; const sameFlag = false === false;"
+    v, ok := source.source_version_create(source.File_Id(715), 1, good)
+    testing.expect(t, ok, "valid UTF-8 literal source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   len(checked.diagnostics) == 0 && checked.checked_declarations == 3,
+                   "equal literal values preserve primitive boolean result")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+
+    bad := "const a = 1 === 2; const b = true !== false; const c = 'red' === \"blue\";"
+    v2, ok2 := source.source_version_create(source.File_Id(716), 1, bad)
+    testing.expect(t, ok2, "valid mismatch source")
+    ast2 := parser.parse_expression_program(&v2, compat.ts7_profile())
+    bound2 := binder.bind_program(&v2, &ast2)
+    checked2 := check_file(&v2, &ast2, &bound2)
+    testing.expect(t, ast2.complete && bound2.complete && !checked2.complete &&
+                   !checked2.fatal && len(checked2.diagnostics) == 3 &&
+                   checked2.checked_declarations == 3,
+                   "all disjoint literal comparisons reported without fatal stop")
+    for issue in checked2.diagnostics {
+        testing.expect(t, issue.issue == .Disjoint_Literal_Comparison &&
+                       issue.byte_start < issue.byte_end,
+                       "disjoint literal comparison has a source-backed span")
+    }
+    testing.expect(t, bad[checked2.diagnostics[0].byte_start:checked2.diagnostics[0].byte_end] == "1 === 2" &&
+                   bad[checked2.diagnostics[1].byte_start:checked2.diagnostics[1].byte_end] == "true !== false" &&
+                   bad[checked2.diagnostics[2].byte_start:checked2.diagnostics[2].byte_end] == "'red' === \"blue\"",
+                   "diagnostics cover comparison expressions")
+    report_destroy(&checked2)
+    binder.binding_report_destroy(&bound2)
+    parser.syntax_report_destroy(&ast2)
+    source.source_version_destroy(&v2)
+}
