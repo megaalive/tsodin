@@ -1,6 +1,6 @@
 # tsodin execution plan — bootstrap and vertical checker slice
 
-Status: M0 CLOSED / M1 ACTIVE (scanner oracle gate open) / M2-A–C SYNTAX SUBSET / M3-A SINGLE-FILE BINDER IMPLEMENTED; type checker not yet implemented  
+Status: M0 CLOSED / M1 ACTIVE (scanner oracle gate open) / M2-A–C SYNTAX SUBSET / M3-A/B SINGLE-FILE + SCRIPT-GLOBAL BINDERS IMPLEMENTED; modules/checker not yet implemented  
 Baseline: tsodin main 775bb0c5c53f4d6ed9544942cb7e28a56eeed3a2  
 Architecture: Odin-native; historical language-selection benchmarks are not tsodin product measurements.
 
@@ -33,7 +33,7 @@ Do not transfer microbenchmark-specific optimization decisions. Every tsodin hot
 | M0 — foundation (closed) | Pinned Odin, honest CLI, source byte/UTF-16 reference function, unit tests, benchmark/oracle contracts, lightweight CI | CI builds and tests at exact toolchain; unsupported `check` returns nonzero; no compatibility claim |
 | M1 — source and scanner (active) | Source identity and version lifetime; line index; checked Unicode mapping; pull scanner with contextual rescan design; token fixtures | Locked scanner cases match the syntax oracle for the declared subset; malformed input is categorized; UTF-16 positions verified |
 | M2 — syntax (M2-A–C subset, recovery and diagnostic trace implemented; full gate open) | Narrow expressions/statements/declarations/type grammar, parser recovery, compact node store | C0 subset passes structural/syntax diagnostics fixtures; parser-only perf may be diagnostic, not product claim |
-| M3 — symbols/modules (M3-A one-file binder implemented; multi-file gate open) | Binder, scopes, FileId/ModuleId, imports/exports, simple module resolution | Deterministic bound program; small multi-file fixture matches reference outcomes |
+| M3 — symbols/modules (M3-A/B script-global binder implemented; module-resolution gate open) | Binder, scopes, FileId/ModuleId, imports/exports, simple module resolution | Deterministic bound program; small multi-file fixture matches reference outcomes |
 | M4 — first vertical checker | Primitives, variables, function signatures, simple assignability, compact diagnostic records | One real small project runs end-to-end with explicit supported scope; diagnostic parity or every gap reported; benchmark only equivalent work |
 | M5 — conformance expansion | Generic relations/inference, control flow, module edge cases, declaration files, failure clustering | C1 grows against pinned upstream corpus; no unexplained differences on any claimed project |
 | M6 — performance and parallelism | Real-profile optimizations and T1 first, then TD/TN; bounded shared-state experiments | Stable end-to-end results with compatibility fingerprints, RSS, raw samples, and no regression |
@@ -41,7 +41,7 @@ Do not transfer microbenchmark-specific optimization decisions. Every tsodin hot
 
 Milestones are gates, not a promise that a compiler can be completed in a fixed number of days. A 21-day vertical-slice checkpoint is an aggressive review target, not a reason to weaken semantics.
 
-Compatibility profile architecture: [versioned and fail-closed](COMPATIBILITY.md). M1-A source lifetime and line indexing: [implemented](M1_SOURCE.md). M1-B–E bounded scanning, contextual tokens and supplemental lexical witnesses: [implemented](M1_SCANNER.md). M2-A narrow declaration parser: [implemented](M2_PARSER.md). M2-B/C expression parsing, recovery and a developer-only UTF-16 syntax diagnostic tracer: [implemented](M2_EXPRESSION.md). M3-A single-file symbol collection and reference resolution: [implemented](M3_BINDER.md). The official upstream TypeScript suite adoption strategy is [documented](OFFICIAL_CONFORMANCE.md). These are **not** TS7 C0/C1 claims; scanner parity, syntax diagnostics, binder and checker exit gates remain open.
+Compatibility profile architecture: [versioned and fail-closed](COMPATIBILITY.md). M1-A source lifetime and line indexing: [implemented](M1_SOURCE.md). M1-B–E bounded scanning, contextual tokens and supplemental lexical witnesses: [implemented](M1_SCANNER.md). M2-A narrow declaration parser: [implemented](M2_PARSER.md). M2-B/C expression parsing, recovery and a developer-only UTF-16 syntax diagnostic tracer: [implemented](M2_EXPRESSION.md). M3-A/B single-file and multi-file script-global symbol collection/reference resolution: [implemented](M3_BINDER.md). The official upstream TypeScript suite adoption strategy is [documented](OFFICIAL_CONFORMANCE.md). These are **not** TS7 C0/C1 claims; scanner parity, syntax diagnostics, binder and checker exit gates remain open.
 
 ## Immediate sequence
 
