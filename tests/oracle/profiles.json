@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "defaultProfile": "ts7",
+  "profiles": [
+    {
+      "id": "ts7",
+      "language": "TypeScript",
+      "version": "7.0.2",
+      "npmSpec": "typescript@7.0.2",
+      "executable": "tsc",
+      "upstreamCommit": "1e4744d68260a7cb91b62b12edc3f6a2187faaf1",
+      "manifest": "tests/oracle/manifest.json",
+      "projectArguments": [
+        "-p",
+        "tsconfig.json",
+        "--noEmit",
+        "--pretty",
+        "false",
+        "--incremental",
+        "false",
+        "--singleThreaded"
+      ],
+      "authority": "primary-semantic-cli"
+    }
+  ]
+}

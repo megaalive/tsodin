@@ -1,4 +1,4 @@
-name: Pinned TypeScript 7 oracle capture
+name: Pinned TypeScript oracle capture
 
 on:
   pull_request:
@@ -14,27 +14,39 @@ permissions:
 
 jobs:
   oracle:
-    name: TypeScript 7.0.2 diagnostic capture
+    name: Pinned TypeScript CLI capture / ${{ matrix.profile }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      # When another TypeScript version is approved, add its registered ID
+      # here; the capture script and compiler architecture remain unchanged.
+      matrix:
+        profile: [ts7]
     steps:
       - uses: actions/checkout@v7
-      - name: Install pinned TypeScript CLI in temporary prefix
+      - name: Validate profile registry
+        run: node tools/oracle/profile.test.mjs
+      - name: Install exact reference compiler for profile
         shell: bash
+        env:
+          TSODIN_ORACLE_PROFILE: ${{ matrix.profile }}
         run: |
           set -euo pipefail
-          npm install --prefix "$RUNNER_TEMP/ts7" --no-save --no-audit --no-fund typescript@7.0.2
-          "$RUNNER_TEMP/ts7/node_modules/.bin/tsc" --version
-
-      - name: Capture raw oracle diagnostics
+          spec="$(node tools/oracle/profile.mjs npmSpec "$TSODIN_ORACLE_PROFILE")"
+          executable="$(node tools/oracle/profile.mjs executable "$TSODIN_ORACLE_PROFILE")"
+          npm install --prefix "$RUNNER_TEMP/ts-oracle" --no-save --no-audit --no-fund "$spec"
+          binary="$RUNNER_TEMP/ts-oracle/node_modules/.bin/$executable"
+          "$binary" --version
+          echo "TSODIN_TSC=$binary" >> "$GITHUB_ENV"
+      - name: Capture raw CLI diagnostics
         env:
-          TSODIN_TSC: ${{ runner.temp }}/ts7/node_modules/.bin/tsc
+          TSODIN_ORACLE_PROFILE: ${{ matrix.profile }}
           TSODIN_ORACLE_OUTPUT: ${{ runner.temp }}/oracle-results
         run: node tools/oracle/capture.mjs
-
-      - name: Upload oracle evidence
+      - name: Upload scoped oracle evidence
         uses: actions/upload-artifact@v6
         with:
-          name: ts7-oracle-raw
+          name: oracle-${{ matrix.profile }}-raw
           path: ${{ runner.temp }}/oracle-results/
           retention-days: 14

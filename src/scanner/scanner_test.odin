@@ -2,6 +2,7 @@ package scanner
 
 import "core:testing"
 import "../source"
+import "../compat"
 
 @(test)
 scanner_ascii_declaration_subset :: proc(t: ^testing.T) {
@@ -101,4 +102,26 @@ scanner_unterminated_comment_and_invalid_version :: proc(t: ^testing.T) {
     blank: Scanner
     token = scanner_next(&blank)
     testing.expect(t, token.error == .Invalid_Source, "uninitialized scanner rejects input")
+}
+
+@(test)
+scanner_requires_explicitly_registered_edition :: proc(t: ^testing.T) {
+    version, ok := source.source_version_create(source.File_Id(31), 1, "const x = 42;")
+    testing.expect(t, ok, "valid fixture")
+    defer source.source_version_destroy(&version)
+
+    unknown := compat.Profile {
+        version = compat.Version{8, 0, 0},
+        scanner_edition = .ASCII_Subset_V1,
+    }
+    future := scanner_init_with_profile(&version, unknown)
+    token := scanner_next(&future)
+    testing.expect(t, token.kind == .Invalid && token.error == .Unsupported_Profile,
+                   "unreviewed TypeScript 8 edition fails closed")
+    token = scanner_next(&future)
+    testing.expect(t, token.error == .Previous_Failure, "unsupported profile failure is sticky")
+
+    pinned := scanner_init_with_profile(&version, compat.ts7_profile())
+    token = scanner_next(&pinned)
+    testing.expect(t, token.kind == .Const, "explicit registered TS7 profile scans")
 }

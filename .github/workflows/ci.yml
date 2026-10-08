@@ -38,6 +38,12 @@ jobs:
       - name: Run source reference tests
         run: odin test src/source
 
+      - name: Run compatibility profile tests
+        run: odin test src/compat
+
+      - name: Validate pinned oracle configuration
+        run: node tools/oracle/profile.test.mjs
+
       - name: Run scanner subset tests
         run: odin test src/scanner
 

@@ -28,6 +28,15 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": true
+    },
+    {
+      "id": "scanner-ascii",
+      "path": "tests/oracle/scanner-ascii",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
     }
   ]
 }

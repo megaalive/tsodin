@@ -4,6 +4,20 @@ This is an intentionally limited first scanner. It proves the iterator interface
 token spans, trivia handling, immutable source-version integration, and *explicit
 unsupported syntax* rather than silently accepting TypeScript we cannot handle.
 
+## Version-aware compatibility boundary
+
+`src/compat/profile.odin` owns the registry for approved compiler
+compatibility profiles. The scanner receives a concrete profile, and
+`scanner_init_with_profile` rejects an unregistered version at the
+next token request with `Unsupported_Profile` (sticky failure).
+`scanner_init` is the convenience entry for the pinned TypeScript 7
+profile only. A future TS8 adapter must explicitly register a new
+scanner edition if its lexical semantics differ; unknown versions are
+never inferred to be compatible.
+
+The independently pinned TypeScript CLI oracle is configured via
+`tests/oracle/profiles.json`; see `docs/COMPATIBILITY.md`.
+
 ## API / lifetime
 - Package `src/scanner` imports `../source`.
 - `scanner_init(^Source_Version)` borrows an initialized immutable version.
