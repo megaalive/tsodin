@@ -47,6 +47,9 @@ jobs:
       - name: Run scanner subset tests
         run: odin test src/scanner
 
+      - name: Validate parser-side lexical context
+        run: odin test src/context
+
       - name: Build bootstrap CLI
         shell: bash
         run: |

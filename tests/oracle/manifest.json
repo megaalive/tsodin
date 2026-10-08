@@ -46,6 +46,15 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": false
+    },
+    {
+      "id": "contextual-basic",
+      "path": "tests/oracle/contextual-basic",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
     }
   ]
 }
