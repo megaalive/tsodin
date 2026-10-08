@@ -155,4 +155,10 @@ const threeNestedBad=read("checker-flow-three-nested-errors");
 assert.equal(threeNestedBad.status,1,"nested diagnostics cannot be lost at joins");
 assert.deepEqual(threeNestedBad.diags.map(x=>x[1]),["11","11","11","10","11"],
   "nested TS2367 and TS2322 candidates follow lexical order");
-console.log("PASS: G5F6 nested three-guard mutation/join oracle witnesses");
+const mixedValid=read("checker-flow-mixed-rhs-valid");
+assert.equal(mixedValid.status,0,"mixed RHS conditional guards prove outer-left only");
+const mixedBad=read("checker-flow-mixed-rhs-errors");
+assert.equal(mixedBad.status,1,"mixed RHS decisive-arm diagnostics remain");
+assert.deepEqual(mixedBad.diags.map(x=>x[1]),["11","10","11","11"],
+  "mixed RHS ordered disjoint and mismatch witness codes");
+console.log("PASS: G5F7A mixed RHS Boolean guards and TS7 witnesses");

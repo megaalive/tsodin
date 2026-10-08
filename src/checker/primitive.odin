@@ -780,6 +780,70 @@ check_file :: proc(
                     part_nodes[1] = inner.right
                     part_nodes[2] = root.right
                 }
+                // M4-G5F7A: exactly a && (b || c), or a || (b && c).
+                // In the decisive arm only 'a' is certain; neither 'b'
+                // nor 'c' can be narrowed individually. Inner operands
+                // must be independent, proven-wide Boolean names with no
+                // potential side effects or equality diagnostics.
+                if part_count == 2 && syntax.nodes[root.left].kind == .Name {
+                    right_idx := root.right
+                    right_wrap := syntax.nodes[right_idx]
+                    if right_wrap.kind == .Group &&
+                       right_wrap.left > root.left &&
+                       right_wrap.left < right_idx {
+                        right_idx = right_wrap.left
+                    }
+                    rhs_inner := syntax.nodes[right_idx]
+                    if rhs_inner.kind == .Binary &&
+                       ((rhs_inner.operator == .Ampersand_Ampersand &&
+                         root.operator == .Bar_Bar) ||
+                        (rhs_inner.operator == .Bar_Bar &&
+                         root.operator == .Ampersand_Ampersand)) {
+                        if rhs_inner.left <= root.left ||
+                           rhs_inner.right <= rhs_inner.left ||
+                           rhs_inner.right >= right_idx ||
+                           syntax.nodes[rhs_inner.left].kind != .Name ||
+                           syntax.nodes[rhs_inner.right].kind != .Name {
+                            fail(&result, .Unsupported_Condition,
+                                 event.byte_start, event.byte_end, true)
+                            return result
+                        }
+                        lhs_ref := references[root.left]
+                        first_ref := references[rhs_inner.left]
+                        second_ref := references[rhs_inner.right]
+                        if lhs_ref <= 0 || first_ref <= 0 || second_ref <= 0 ||
+                           lhs_ref > len(symbols.symbols) ||
+                           first_ref > len(symbols.symbols) ||
+                           second_ref > len(symbols.symbols) {
+                            fail(&result, .Unsupported_Condition,
+                                 event.byte_start, event.byte_end, true)
+                            return result
+                        }
+                        lhs := symbols.symbols[lhs_ref-1]
+                        first := symbols.symbols[first_ref-1]
+                        second := symbols.symbols[second_ref-1]
+                        a := lhs.declaration_index
+                        b := first.declaration_index
+                        d := second.declaration_index
+                        if lhs.kind != .Let || first.kind != .Let ||
+                           second.kind != .Let ||
+                           a < 0 || b < 0 || d < 0 ||
+                           a >= result.checked_declarations ||
+                           b >= result.checked_declarations ||
+                           d >= result.checked_declarations ||
+                           a == b || a == d || b == d ||
+                           declared[a] != .Boolean ||
+                           declared[b] != .Boolean ||
+                           declared[d] != .Boolean ||
+                           !wide_decls[a] || !wide_decls[b] || !wide_decls[d] {
+                            fail(&result, .Unsupported_Condition,
+                                 event.byte_start, event.byte_end, true)
+                            return result
+                        }
+                        // The outer left predicate is the ONLY branch fact.
+                        part_count = 1
+                    }
+                }
             }
             level := flow_depth
             // Do not carry metadata from an earlier conditional at this depth.
