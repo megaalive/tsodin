@@ -11,6 +11,7 @@ on:
       - "src/source/**"
       - "src/compat/**"
       - "src/context/**"
+      - "src/parser/**"
       - "src/contexttrace/**"
       - "tests/lexical/**"
       - "bench/manifests/baselines.json"

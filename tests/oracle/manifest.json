@@ -55,6 +55,15 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": false
+    },
+    {
+      "id": "parser-subset",
+      "path": "tests/oracle/parser-subset",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
     }
   ]
 }
