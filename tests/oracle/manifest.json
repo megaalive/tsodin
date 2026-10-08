@@ -201,6 +201,24 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": true
+    },
+    {
+      "id": "checker-const-literal-valid",
+      "path": "tests/oracle/checker-const-literal-valid",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "checker-const-literal-disjoint",
+      "path": "tests/oracle/checker-const-literal-disjoint",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
     }
   ]
 }
