@@ -12,6 +12,7 @@ on:
       - "src/compat/**"
       - "src/context/**"
       - "src/parser/**"
+      - "src/binder/**"
       - "src/syntaxtrace/**"
       - "src/contexttrace/**"
       - "tests/lexical/**"

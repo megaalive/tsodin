@@ -27,3 +27,26 @@ rejects requests until real checker compatibility is established.
 Validation: `odin test src/binder` covers forward names, symbol IDs,
 var merging, lexical duplicates, unresolved names, stale source
 versions and refusal to bind incomplete syntax.
+
+## M3-B — selected multi-file script-global binding
+
+The `bind_script_project` entry point groups multiple explicitly selected
+**script files** into one shared top-level scope. It is deliberately NOT a
+tsconfig/module-resolution implementation. The caller provides a list of
+individually complete parser reports and corresponding immutable source
+versions, with unique File_Id values and matching generations.
+
+The collector runs one declaration pass across all files before a second
+reference-resolution pass. Symbol identities are dense indices in stable
+file/declaration order, with a temporary open-addressed hash table. Symbols
+retain a (file index, source span) identity; no name strings are copied.
+
+Repeated `var` declarations may merge across script files; lexical
+declaration collisions and unknown names are recorded with file-local spans.
+Any incomplete source or version mismatch prevents binding entirely. This
+does not implement imports, exports, ambient globals, modules, node resolution,
+block scopes, or TypeScript's complete global declaration-merging rules.
+
+Unit tests validate cross-file forward references and conflicts. Two
+independent pinned TypeScript 7 CLI projects provide acceptance and diagnostic
+existence evidence, NOT matching internal tsodin diagnostics.
