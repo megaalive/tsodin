@@ -1222,7 +1222,7 @@ primitive_checker_three_guard_fail_closed_boundaries :: proc(t: ^testing.T) {
     cases := [?]string {
         prefix + "if (a && b && a) { out = true; } else { out = false; }",
         prefix + "if (a || b || b) { out = true; } else { out = false; }",
-        prefix + "if (a && (b || c)) { out = true; } else { out = false; }",
+        prefix + "if (a && (b || (c && a))) { out = true; } else { out = false; }",
         prefix + "if (a && b && (c === true)) { out = true; } else { out = false; }",
         prefix + "if (a && b && c && a) { out = true; } else { out = false; }",
     }

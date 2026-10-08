@@ -554,8 +554,9 @@ Snapshots and compact per-depth guard slots extend from two to three;
 straight-line source still allocates no branch snapshots.
 
 The three-operand case excludes equality leaves, repeated bindings,
-mixed/chained operator trees, four-or-more operands, side effects and
-unproved expressions. It is not a general Boolean formula evaluator.
+complex/mixed-left operator trees, four-or-more operands, side effects and
+unproved expressions. G5F7A separately permits two restricted mixed-RHS
+forms; this G5F5 rule does not imply general mixed-form support. It is not a general Boolean formula evaluator.
 Two-operand idempotence and contradiction behavior are preserved as-is.
 
 `checker-flow-three-guards-{valid,errors}` extend pinned TS7.0.2
