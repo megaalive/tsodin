@@ -160,6 +160,12 @@ check_file :: proc(
     defer delete(literal_nodes)
     literal_decls := make([]Literal_Fact, len(syntax.declarations))
     defer delete(literal_decls)
+    // A computed expression can have a widened primitive result while
+    // direct literals still carry precise identities. No flow guessing.
+    wide_nodes := make([]bool, len(syntax.nodes))
+    defer delete(wide_nodes)
+    wide_decls := make([]bool, len(syntax.declarations))
+    defer delete(wide_decls)
 
     for ref in symbols.references {
         if ref.node_index < 0 || ref.node_index >= len(syntax.nodes) ||
@@ -240,6 +246,7 @@ check_file :: proc(
                 // Only inferred const declarations retain the literal type.
                 // An explicit annotation widens it; let/var flow is untracked.
                 literal_nodes[i] = literal_decls[symbol.declaration_index]
+                wide_nodes[i] = wide_decls[symbol.declaration_index]
                 if kind == .Unknown {
                     fail(&result, .Unsupported_Expression, node.byte_start, node.byte_end, true)
                     return result
@@ -263,6 +270,7 @@ check_file :: proc(
                 } else {
                     kind = child
                     literal_nodes[i] = literal_nodes[node.left]
+                    wide_nodes[i] = wide_nodes[node.left]
                 }
             } else if node.kind == .Binary {
                 left, left_ok := operand_type(syntax.nodes[:], inferred, node.left, i)
@@ -285,10 +293,19 @@ check_file :: proc(
                           left == .Number && right == .Number {
                     kind = .Number
                 }
+                // Basic arithmetic and plain concatenation produce a base
+                // primitive, not an inferred literal type. Keep this fact
+                // independent of the operands' known literal identities.
+                if kind != .Unknown && (node.operator == .Plus ||
+                   node.operator == .Minus || node.operator == .Asterisk ||
+                   node.operator == .Slash) {
+                    wide_nodes[i] = true
+                }
                 if (node.operator == .Less_Than || node.operator == .Greater_Than ||
                     node.operator == .Less_Than_Equals || node.operator == .Greater_Than_Equals) &&
                    left == .Number && right == .Number {
                     kind = .Boolean
+                    wide_nodes[i] = true
                 } else if (node.operator == .Ampersand_Ampersand || node.operator == .Bar_Bar) &&
                           left == .Boolean && right == .Boolean {
                     // Logical operators return operand values in TypeScript.
@@ -314,7 +331,11 @@ check_file :: proc(
                                      references[node.left] == references[node.right]
                         both_literals, same_value := literal_overlap(
                             literal_nodes[node.left], literal_nodes[node.right], text)
-                        if same_name || (both_literals && same_value) {
+                        if same_name || (both_literals && same_value) ||
+                           wide_nodes[node.left] || wide_nodes[node.right] {
+                            // At least one operand is proven to have a broad
+                            // base primitive type, which overlaps all values
+                            // of the matching primitive domain.
                             kind = .Boolean
                         } else if both_literals {
                             fail(&result, .Disjoint_Literal_Comparison,
@@ -348,6 +369,7 @@ check_file :: proc(
                 // Alias chains such as const copy = first preserve the
                 // inferred literal; mutable bindings and annotations do not.
                 literal_decls[declaration_index] = literal_nodes[decl.initializer]
+                wide_decls[declaration_index] = wide_nodes[decl.initializer]
             }
         }
         result.checked_declarations += 1
