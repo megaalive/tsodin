@@ -8,9 +8,9 @@
   <title>tsodin — Compiler Observatory</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
-  <link rel="stylesheet" href="./soft-glass.css?v=20261008-blue-controls">
+  <link rel="stylesheet" href="./soft-glass.css?v=20261008-xray-editor">
   <link rel="stylesheet" href="./live.css">
-  <script src="./app.js?v=20261008-blue-controls" type="module"></script>
+  <script src="./app.js?v=20261008-xray-editor" type="module"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -116,9 +116,10 @@
     <section id="xray" class="section shell" data-panel="xray" hidden>
       <div class="section-heading"><div><p class="section-kicker">03 / BROWSER REFERENCE LAB</p><h2>Source <span class="accent-text">X-Ray.</span></h2><p class="section-subtitle">Explore the UTF-8 ↔ UTF-16 position boundary used by TypeScript diagnostics. It responds to your input locally.</p></div><span class="lab-tag">REFERENCE TOOL · NOT ODIN EXECUTION</span></div>
       <div class="xray-layout">
-        <div class="panel editor-panel"><div class="editor-top"><div class="editor-tab"><span class="ts-icon">TS</span> source.ts</div><span class="micro-label">EDIT ANY TIME</span></div>
-          <label class="sr-only" for="source-input">Source text for Unicode reference</label>
-          <textarea id="source-input" spellcheck="false" autocomplete="off" autocapitalize="off" rows="6">const emoji = "😀";
+        <div class="panel editor-panel" id="source-editor-panel"><div class="editor-top"><div class="editor-tab"><span class="ts-icon">TS</span> source.ts</div><button id="edit-source" class="editor-edit-action" type="button" aria-controls="source-input"><span aria-hidden="true">✎</span> Edit code</button></div>
+          <p class="source-edit-hint" id="source-edit-hint"><span class="edit-hint-icon" aria-hidden="true">⌨</span><span id="source-edit-hint-text">Click Edit code or tap the editor to type. X-Ray updates instantly.</span></p>
+          <label class="sr-only" for="source-input">Editable TypeScript source for the local Unicode reference</label>
+          <textarea id="source-input" aria-describedby="source-edit-hint" spellcheck="false" autocomplete="off" autocapitalize="off" rows="6">const emoji = "😀";
 const count: number = "wrong";</textarea>
           <div class="preset-row" role="group" aria-label="Unicode examples"><button type="button" data-preset="emoji" class="active" aria-pressed="true">Emoji</button><button type="button" data-preset="ascii">ASCII</button><button type="button" data-preset="crlf">CRLF</button></div>
           <div class="editor-bottom"><span><span class="status-dot" aria-hidden="true"></span> Browser encoding reference</span><span id="input-length">—</span></div>

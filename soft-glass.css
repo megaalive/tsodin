@@ -251,3 +251,90 @@ input.byte-slider:disabled {opacity:.5;cursor:not-allowed}
   button.quiet-link {transition:none}
   button.quiet-link:hover {transform:none}
 }
+
+/* X-Ray: unmistakably editable source, with a functional focus action.
+   Keep the visual cue restrained; this is a Unicode reference, not a TS checker. */
+.editor-panel {
+  transition:border-color .16s ease,box-shadow .16s ease;
+}
+.editor-panel:focus-within,
+.editor-panel.is-editing {
+  border-color:rgba(153,222,255,.68);
+  box-shadow:0 0 0 1px rgba(122,208,255,.25),0 20px 65px rgba(0,31,67,.24),inset 0 1px 0 rgba(235,249,255,.17);
+}
+.editor-edit-action {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:38px;
+  padding:8px 13px;
+  border:1px solid rgba(194,234,255,.72);
+  border-radius:9px;
+  -webkit-appearance:none;
+  appearance:none;
+  background:linear-gradient(145deg,#bfeaff,#7ac6ff);
+  color:#102f4c;
+  box-shadow:0 5px 16px rgba(31,122,192,.17),inset 0 1px 0 rgba(255,255,255,.6);
+  font-family:inherit;
+  font-size:12px;
+  font-weight:750;
+  line-height:1.2;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.editor-edit-action:hover {
+  background:linear-gradient(145deg,#e0f6ff,#9cdaff);
+  border-color:#f3fcff;
+}
+.editor-edit-action:focus-visible {
+  outline:2px solid #d8f4ff;
+  outline-offset:3px;
+}
+.source-edit-hint {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin:0;
+  padding:11px 20px 8px;
+  color:#c8e5f7;
+  background:rgba(69,143,204,.12);
+  font-size:11px;
+  line-height:1.5;
+}
+.edit-hint-icon {
+  display:inline-grid;
+  place-items:center;
+  flex:none;
+  width:23px;
+  height:23px;
+  border:1px solid rgba(152,214,255,.37);
+  border-radius:6px;
+  background:rgba(80,161,222,.17);
+  color:#a8dfff;
+  font-size:14px;
+}
+.editor-panel.is-editing .source-edit-hint {
+  color:#e3f5ff;
+  background:rgba(82,164,228,.20);
+}
+#source-input {
+  cursor:text;
+  caret-color:#bdeaff;
+  transition:background .16s ease;
+}
+#source-input:hover {background:rgba(79,156,216,.07)}
+#source-input:focus {
+  background:rgba(64,140,201,.10);
+  outline:2px solid rgba(148,218,255,.6);
+  outline-offset:-3px;
+}
+@media (max-width:460px) {
+  .editor-top {padding:12px 14px 0;}
+  .editor-edit-action {min-height:40px;padding:8px 11px;}
+  .source-edit-hint {padding:10px 14px;font-size:11px;}
+  #source-input {font-size:16px;line-height:1.6;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .editor-panel,#source-input {transition:none}
+}

@@ -247,7 +247,26 @@ const examples={
   crlf:'const emoji = "😀";\r\nconst next: boolean = 123;\r\n'
 };
 const input=$("source-input");
+const editSource=$("edit-source");
+const editHintText=$("source-edit-hint-text");
+const editorPanel=$("source-editor-panel");
 const slider=$("byte-offset");
+const idleEditHint="Click Edit code or tap the editor to type. X-Ray updates instantly.";
+function setEditorEditing(editing){
+  editorPanel.classList.toggle("is-editing",editing);
+  editHintText.textContent=editing
+    ?"Editing live · change any character to update the Unicode mapping."
+    :idleEditHint;
+}
+editSource.addEventListener("click",()=>{
+  input.focus();
+  // A real focus target, not a decorative action. Keep existing code intact.
+  if(document.activeElement===input){
+    input.setSelectionRange(input.value.length,input.value.length);
+  }
+});
+input.addEventListener("focus",()=>setEditorEditing(true));
+input.addEventListener("blur",()=>setEditorEditing(false));
 let inspection=inspectSource(input.value);
 function glyph(character){return ({" ":"␠","\n":"↵","\r":"␍","\t":"⇥"})[character]||character;}
 function codePointLabel(point){return "U+"+point.toString(16).toUpperCase().padStart(4,"0");}
