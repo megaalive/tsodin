@@ -149,4 +149,10 @@ const threeBad=read("checker-flow-three-guards-errors");
 assert.equal(threeBad.status,1,"all decisive-arm comparisons retain diagnostics");
 assert.deepEqual(threeBad.diags.map(x=>x[1]),["11","11","11","10","11","11","11"],
   "three-way TS2367 and TS2322 candidate order remains source-backed");
-console.log("PASS: G5F5 three-guard bounded flow and pinned witnesses");
+const threeNestedValid=read("checker-flow-three-nested-valid");
+assert.equal(threeNestedValid.status,0,"three-way parent facts survive nested mutation");
+const threeNestedBad=read("checker-flow-three-nested-errors");
+assert.equal(threeNestedBad.status,1,"nested diagnostics cannot be lost at joins");
+assert.deepEqual(threeNestedBad.diags.map(x=>x[1]),["11","11","11","10","11"],
+  "nested TS2367 and TS2322 candidates follow lexical order");
+console.log("PASS: G5F6 nested three-guard mutation/join oracle witnesses");

@@ -562,3 +562,18 @@ Two-operand idempotence and contradiction behavior are preserved as-is.
 diagnostic-code/UTF-16-start comparison and TS6.0.2 structured-span
 supplementary witness. Public `tsodin check` remains disabled, and no
 official conformance or competitive benchmark result is claimed.
+
+## M4-G5F6 — nested mutation/join evidence for three-way guards
+
+The depth-two checker, previously proved for one- and two-part guards, is
+now explicitly regression-tested with a three-part parent guard and an
+independent inner Boolean `if/else`. Assigning a computed wide Boolean
+value to one parent binding inside a child arm must widen that binding
+at the child join; the other two parent singleton facts must remain
+intact until their own enclosing join. Both TS2367 path-local errors
+and TS2322 assignment mismatches are asserted in their source order.
+
+`checker-flow-three-nested-{valid,errors}` are pinned native TS7.0.2
+code/start UTF-16 differential fixtures with TS6.0.2 supplementary
+structured spans. This is a correctness regression milestone, **not**
+additional grammar support, official conformance, or a speed claim.

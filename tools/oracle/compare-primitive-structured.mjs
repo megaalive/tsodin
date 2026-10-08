@@ -59,6 +59,8 @@ const fixtures=[
   ["checker-flow-dead-assign-errors",3],
   ["checker-flow-three-guards-valid",0],
   ["checker-flow-three-guards-errors",7],
+  ["checker-flow-three-nested-valid",0],
+  ["checker-flow-three-nested-errors",5],
 ];
 
 function structuredReference(cwd) {

@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "types": [],
+    "lib": [
+      "es2022"
+    ],
+    "skipLibCheck": true,
+    "incremental": false
+  },
+  "files": [
+    "index.ts"
+  ]
+}
