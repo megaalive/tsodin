@@ -153,3 +153,26 @@ expression_profile_and_depth_fail_closed :: proc(t: ^testing.T) {
                    report.diagnostics[0].issue == .Nesting_Limit,
                    "recursion limit is an explicit diagnostic")
 }
+
+
+@(test)
+parser_boolean_literals_keep_source_spans :: proc(t: ^testing.T) {
+    input := "const enabled: boolean = true; let off = false; const next: boolean = off;"
+    version, ok := source.source_version_create(source.File_Id(611), 1, input)
+    testing.expect(t, ok, "source valid")
+    defer source.source_version_destroy(&version)
+    result := parse_expression_program(&version, compat.ts7_profile())
+    defer syntax_report_destroy(&result)
+    testing.expect(t, result.complete && !result.fatal &&
+                   len(result.declarations) == 3, "boolean declarations parsed")
+    first := result.nodes[result.declarations[0].initializer]
+    second := result.nodes[result.declarations[1].initializer]
+    testing.expect(t, first.kind == .Boolean && second.kind == .Boolean,
+                   "true and false are literal nodes, not free names")
+    testing.expect(t, input[first.byte_start:first.byte_end] == "true" &&
+                   input[second.byte_start:second.byte_end] == "false",
+                   "boolean literal source spellings are preserved")
+    name := result.nodes[result.declarations[2].initializer]
+    testing.expect(t, name.kind == .Name && input[name.byte_start:name.byte_end] == "off",
+                   "ordinary boolean variable reference stays a Name")
+}

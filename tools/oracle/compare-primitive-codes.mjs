@@ -15,6 +15,8 @@ const fixtures=[
   {id:"checker-primitives-valid",expectedCount:0},
   {id:"checker-primitives-errors",expectedCount:2},
   {id:"checker-primitives-utf16",expectedCount:1},
+  {id:"checker-boolean-valid",expectedCount:0},
+  {id:"checker-boolean-errors",expectedCount:2},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});

@@ -27,6 +27,8 @@ const fixtures=[
   ["checker-primitives-valid",0],
   ["checker-primitives-errors",2],
   ["checker-primitives-utf16",1],
+  ["checker-boolean-valid",0],
+  ["checker-boolean-errors",2],
 ];
 
 function structuredReference(cwd) {

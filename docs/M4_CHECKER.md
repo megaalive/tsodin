@@ -53,3 +53,20 @@ M4-B must turn captured TS7 diagnostics into strict differential assertions
 with explicit unsupported cases. Expand lexical/grammar handling and type
 relations only after keeping the complete supported slice correct.
 Real-project benchmarking is premature while C1 parity remains open.
+
+## M4-E — boolean literal vertical slice
+
+Both `true` and `false` now have appended stable scanner token kinds,
+a dedicated source-spanned boolean expression node and `Primitive.Boolean`
+in the non-recursive checker. Previous scanner token ordinals remain intact.
+Boolean literal inference and assignment to `boolean` declarations are
+supported within the exact existing single-file grammar.
+
+Operations such as `true + 1` are **not** accepted. Full TypeScript boolean
+flow analysis, literal narrowing, truthiness, logical operators and
+control-flow semantics are not implemented. Unsupported work remains fatal.
+
+Two independent TypeScript 7.0.2 CLI projects test a valid boolean program
+and two `TS2322` primitive mismatches. The Odin trace is checked against
+the same fixtures for type errors. This is a bounded semantic extension,
+not full conformance.

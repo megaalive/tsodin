@@ -52,3 +52,12 @@ is *not* proof of native TS7 end-span parity. Messages are not compared.
 No score is added to official Microsoft conformance; the Pages panel remains
 NOT RUN. Future work must expose or reproduce TS7's exact structured
 diagnostic semantics before full TS7 parity can be claimed.
+
+## M4-E — additional boolean fixture coverage
+
+The existing pinned native TS7 code+UTF-16-start differential and separate
+TS6 structured-span auxiliary checks now also include
+`checker-boolean-valid` (0 issues) and `checker-boolean-errors`
+(2 primitive TS2322 mismatches). The same strict count, code, and source
+span assertions apply: no unsupported or skipped test is counted as a
+success. This expands fixture coverage, **not** official conformance.
