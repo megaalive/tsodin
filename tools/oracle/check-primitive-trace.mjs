@@ -143,4 +143,10 @@ const deadErrors=read("checker-flow-dead-assign-errors");
 assert.equal(deadErrors.status,1,"mismatches inside dead and live arms never vanish");
 assert.deepEqual(deadErrors.diags.map(x=>x[1]),["10","10","10"],
   "dead-arm TS2322 candidates are emitted in source order");
-console.log("PASS: G5F4 dead-arm literal typechecking and pinned witnesses");
+const threeValid=read("checker-flow-three-guards-valid");
+assert.equal(threeValid.status,0,"three-way same-operator Boolean branches typecheck");
+const threeBad=read("checker-flow-three-guards-errors");
+assert.equal(threeBad.status,1,"all decisive-arm comparisons retain diagnostics");
+assert.deepEqual(threeBad.diags.map(x=>x[1]),["11","11","11","10","11","11","11"],
+  "three-way TS2367 and TS2322 candidate order remains source-backed");
+console.log("PASS: G5F5 three-guard bounded flow and pinned witnesses");

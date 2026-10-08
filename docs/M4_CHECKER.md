@@ -541,3 +541,24 @@ reference/computed expressions (still unsupported), while the newly
 supported direct-literal assignments have their own positive and
 TS2322-negative witnesses. Contradiction identity is retained per depth
 for rejection of writes to the impossible branch's guard target.
+
+## M4-G5F5 — homogeneous three-operand Boolean guard chains
+
+The checker now accepts **exactly three** independent proven-wide Boolean
+`let` names (including grouped or `!`-negated names) in a
+left-associative homogeneous `a && b && c` or `a || b || c` guard.
+For conjunction, only the true arm inherits all three implied facts;
+for disjunction, only the false arm inherits all three. Outer `!`
+reverses the arms. No implication is assigned to the other arm.
+Snapshots and compact per-depth guard slots extend from two to three;
+straight-line source still allocates no branch snapshots.
+
+The three-operand case excludes equality leaves, repeated bindings,
+mixed/chained operator trees, four-or-more operands, side effects and
+unproved expressions. It is not a general Boolean formula evaluator.
+Two-operand idempotence and contradiction behavior are preserved as-is.
+
+`checker-flow-three-guards-{valid,errors}` extend pinned TS7.0.2
+diagnostic-code/UTF-16-start comparison and TS6.0.2 structured-span
+supplementary witness. Public `tsodin check` remains disabled, and no
+official conformance or competitive benchmark result is claimed.

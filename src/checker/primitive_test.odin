@@ -1170,3 +1170,74 @@ primitive_checker_dead_arm_unsupported_semantics_fail_closed :: proc(t: ^testing
         source.source_version_destroy(&v)
     }
 }
+
+@(test)
+primitive_checker_three_independent_boolean_guard_paths :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let n: number = 1; n = 1 + 2;" +
+        "let a: boolean = false; a = n === 2;" +
+        "let b: boolean = false; b = n === 3;" +
+        "let c: boolean = false; c = n === 4;" +
+        "let out: boolean = false;" +
+        "if (a && b && c) {" +
+        "out = a === true; out = b === true; out = c === true;" +
+        "} else { out = a === false; }" +
+        "if (a || b || c) { out = a === false; }" +
+        "else { out = a === false; out = b === false; out = c === false; }" +
+        "const after: boolean = c === false;",
+        "let n: number = 1; n = 1 + 2;" +
+        "let a: boolean = false; a = n === 2;" +
+        "let b: boolean = false; b = n === 3;" +
+        "let c: boolean = false; c = n === 4;" +
+        "let out: boolean = false;" +
+        "if (!(a && !b && c)) { out = b === true; }" +
+        "else { out = a === true; out = b === false; out = c === true; }" +
+        "if (!(a || b || c)) {" +
+        "out = a === false; out = b === false; out = c === false;" +
+        "} else { out = b === true; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(800), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                       !checked.fatal && len(checked.diagnostics)==0,
+                       "three independent pure names narrow only decisive arm")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_three_guard_fail_closed_boundaries :: proc(t: ^testing.T) {
+    prefix :: "let n: number = 1; n = 1 + 2;" +
+              "let a: boolean = false; a = n === 2;" +
+              "let b: boolean = false; b = n === 3;" +
+              "let c: boolean = false; c = n === 4;" +
+              "let out: boolean = false;"
+    cases := [?]string {
+        prefix + "if (a && b && a) { out = true; } else { out = false; }",
+        prefix + "if (a || b || b) { out = true; } else { out = false; }",
+        prefix + "if (a && (b || c)) { out = true; } else { out = false; }",
+        prefix + "if (a && b && (c === true)) { out = true; } else { out = false; }",
+        prefix + "if (a && b && c && a) { out = true; } else { out = false; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(801), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                       !checked.complete && len(checked.diagnostics)>0,
+                       "repeated, mixed, computed or four-way chains stay unsupported")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}

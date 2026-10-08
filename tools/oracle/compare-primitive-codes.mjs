@@ -45,6 +45,8 @@ const fixtures=[
   {id:"checker-flow-contradiction-errors",expectedCount:2},
   {id:"checker-flow-dead-assign-valid",expectedCount:0},
   {id:"checker-flow-dead-assign-errors",expectedCount:3},
+  {id:"checker-flow-three-guards-valid",expectedCount:0},
+  {id:"checker-flow-three-guards-errors",expectedCount:7},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});
