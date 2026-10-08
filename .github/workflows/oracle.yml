@@ -136,3 +136,9 @@ jobs:
           echo "TSODIN_CHECKTRACE=$RUNNER_TEMP/checktrace" >> "$GITHUB_ENV"
       - name: Compare TypeScript 7 codes and UTF-16 starts on a tiny supported slice
         run: node tools/oracle/compare-primitive-codes.mjs
+      - name: Install pinned supplemental TypeScript 6 structured API
+        run: npm install --prefix "$RUNNER_TEMP/ts6-structured" --no-save --no-audit --no-fund @typescript/typescript6@6.0.2
+      - name: Compare full error spans to supplementary TS6 structured diagnostics
+        env:
+          TSODIN_TS6_API: ${{ runner.temp }}/ts6-structured/node_modules/@typescript/typescript6/lib/typescript.js
+        run: node tools/oracle/compare-primitive-structured.mjs
