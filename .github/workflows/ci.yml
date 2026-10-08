@@ -56,6 +56,16 @@ jobs:
       - name: Validate single-file binder and symbol references
         run: odin test src/binder
 
+      - name: Validate primitive semantic checker
+        run: odin test src/checker
+
+      - name: Run source-to-type-diagnostics smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          odin build src/checktrace -out:"$RUNNER_TEMP/checktrace"
+          TSODIN_CHECKTRACE="$RUNNER_TEMP/checktrace" node tools/oracle/check-primitive-trace.mjs
+
       - name: Validate developer syntax diagnostic trace
         shell: bash
         run: |
