@@ -240,12 +240,13 @@ check_file :: proc(
     // Per-depth split metadata prevents child conditionals from corrupting
     // parent guard facts. The live literal_decls/wide_decls arrays represent
     // the current path and are the only state consumed by expressions.
-    // At most two independent, effect-free guards per conditional.
+    // Up to three *bare Boolean* operands in a homogeneous chain;
+    // mixed/complex chains still fail closed without general CFG logic.
     // A short-circuit arm only receives facts logically implied by that arm.
     guard_count: [parser.FLOW_NEST_LIMIT]int
-    guard_indices: [parser.FLOW_NEST_LIMIT][2]int
-    guard_then_facts: [parser.FLOW_NEST_LIMIT][2]Literal_Fact
-    guard_else_facts: [parser.FLOW_NEST_LIMIT][2]Literal_Fact
+    guard_indices: [parser.FLOW_NEST_LIMIT][3]int
+    guard_then_facts: [parser.FLOW_NEST_LIMIT][3]Literal_Fact
+    guard_else_facts: [parser.FLOW_NEST_LIMIT][3]Literal_Fact
     for event in syntax.statements {
         if event.kind == .Else {
             if flow_depth == 0 || event.declaration_index != -1 ||
@@ -313,7 +314,7 @@ check_file :: proc(
             contradiction_guard[level] = -1
             else_seen[level] = false
             guard_count[level] = 0
-            for slot in 0..<2 {
+            for slot in 0..<3 {
                 guard_indices[level][slot] = -1
                 guard_then_facts[level][slot] = Literal_Fact{}
                 guard_else_facts[level][slot] = Literal_Fact{}
@@ -751,7 +752,7 @@ check_file :: proc(
                         (root.operator == .Ampersand_Ampersand ||
                          root.operator == .Bar_Bar)
             part_count := 1
-            part_nodes: [2]int
+            part_nodes: [3]int
             part_nodes[0] = guard_node
             if compound {
                 if root.left < 0 || root.left >= guard_node ||
@@ -762,13 +763,30 @@ check_file :: proc(
                 part_count = 2
                 part_nodes[0] = root.left
                 part_nodes[1] = root.right
+                // Parser precedence is left-associative. Support precisely
+                // (a && b) && c or (a || b) || c, not arbitrary formulae.
+                // Only independent bare Boolean names (possibly !/groups)
+                // can form a three-part chain. This keeps RHS conditional
+                // semantics free of disjoint comparison diagnostics.
+                inner := syntax.nodes[root.left]
+                if inner.kind == .Binary && inner.operator == root.operator {
+                    if inner.left < 0 || inner.left >= root.left ||
+                       inner.right <= inner.left || inner.right >= root.left {
+                        fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                        return result
+                    }
+                    part_count = 3
+                    part_nodes[0] = inner.left
+                    part_nodes[1] = inner.right
+                    part_nodes[2] = root.right
+                }
             }
             level := flow_depth
             // Do not carry metadata from an earlier conditional at this depth.
             guard_count[level] = 0
-            leaf_then: [2]Literal_Fact
-            leaf_else: [2]Literal_Fact
-            leaf_is_bare_boolean: [2]bool
+            leaf_then: [3]Literal_Fact
+            leaf_else: [3]Literal_Fact
+            leaf_is_bare_boolean: [3]bool
             contradiction := false
             dead_then[level] = false
             dead_else[level] = false
@@ -791,6 +809,12 @@ check_file :: proc(
                     }
                 }
                 leaf := syntax.nodes[leaf_node]
+                if part_count == 3 && leaf.kind != .Name {
+                    // No comparisons or computed operators on RHS of a
+                    // three-way chain until contextual evaluation is proven.
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
+                }
                 guard_ref := -1
                 then_fact: Literal_Fact
                 else_fact: Literal_Fact
@@ -863,11 +887,21 @@ check_file :: proc(
                 leaf_else[slot] = else_fact
                 leaf_is_bare_boolean[slot] = leaf.kind == .Name &&
                                              declared[guard] == .Boolean
-                // Same-target paths are accepted only when both operands
-                // prove one identical singleton on the decisive path.
-                // Contradictory predicates and uncertain intersections remain
-                // fail closed until unreachable-path analysis exists.
-                if slot > 0 && guard == guard_indices[level][0] {
+                // Three-way chains require distinct bindings, even in
+                // non-decisive arms; do not generalize idempotent predicates
+                // without explicit multi-path intersection semantics.
+                if part_count == 3 {
+                    for prior in 0..<slot {
+                        if guard == guard_indices[level][prior] {
+                            fail(&result, .Unsupported_Condition,
+                                 event.byte_start, event.byte_end, true)
+                            return result
+                        }
+                    }
+                }
+                // Two-way same-target predicates preserve G5F2/G5F3 logic.
+                if part_count == 2 && slot > 0 &&
+                   guard == guard_indices[level][0] {
                     first_fact := guard_then_facts[level][0]
                     if (root.operator == .Ampersand_Ampersand && flipped) ||
                        (root.operator == .Bar_Bar && !flipped) {
@@ -922,7 +956,8 @@ check_file :: proc(
                 // rejection, even though no singleton flow fact may escape.
                 contradiction_guard[level] = guard_indices[level][0]
                 guard_count[level] = 0
-            } else if compound && guard_indices[level][0] == guard_indices[level][1] {
+            } else if compound && part_count == 2 &&
+                      guard_indices[level][0] == guard_indices[level][1] {
                 // Same Boolean predicate on both sides is idempotent:
                 // a&&a and a||a each prove a on BOTH output arms.
                 // Never deduce the complement for open number/string domains.
