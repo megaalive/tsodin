@@ -1,0 +1,151 @@
+/* Preview only — Odin Blue Glass / Soft. No changes to live Pages. */
+:root {
+  --bg:#0b1d32;
+  --surface:#15304a;
+  --surface-2:#173952;
+  --surface-3:#234865;
+  --line:rgba(153,210,255,.23);
+  --soft-line:rgba(150,206,249,.17);
+  --text:#f6fbff;
+  --muted:#b7cce0;
+  --subtle:#90b1ce;
+  --green:#85d0ff;
+  --green-dim:#25618f;
+  --blue:#a7e1ff;
+  --orange:#ffc994;
+  --glass-surface:linear-gradient(145deg,rgba(121,188,240,.17) 0%,rgba(46,94,145,.14) 55%,rgba(35,84,131,.20) 100%);
+  --glass-edge:rgba(182,226,255,.28);
+  --glass-shadow:0 22px 90px rgba(0,22,61,.30),inset 0 1px 0 rgba(224,246,255,.13);
+}
+html{color-scheme:dark}
+body{
+  background:
+    radial-gradient(ellipse 950px 620px at 84% 3%,rgba(57,153,239,.29),transparent 67%),
+    radial-gradient(ellipse 880px 650px at -16% 39%,rgba(44,121,197,.18),transparent 68%),
+    linear-gradient(145deg,#102a49 0%,#0b1d32 36%,#0b2037 78%,#081a31 100%);
+  background-attachment:fixed;
+}
+.site-grid{
+  background:
+    radial-gradient(ellipse at 81% 15%,rgba(82,182,253,.24),transparent 44%),
+    repeating-linear-gradient(0deg,transparent,transparent 63px,rgba(169,211,245,.075) 64px,transparent 65px),
+    repeating-linear-gradient(90deg,transparent,transparent 63px,rgba(169,211,245,.069) 64px,transparent 65px);
+}
+.site-header{
+  background:rgba(17,41,68,.64);
+  border-bottom:1px solid rgba(165,217,253,.28);
+  box-shadow:0 8px 38px rgba(0,24,51,.12),inset 0 1px 0 rgba(255,255,255,.07);
+  backdrop-filter:blur(24px) saturate(155%);
+  -webkit-backdrop-filter:blur(24px) saturate(155%);
+}
+.brand-mark{
+  background:linear-gradient(145deg,#c3ebff,#60bdff);
+  box-shadow:0 0 30px rgba(70,169,245,.37);
+  color:#123858;
+}
+.brand-suffix,.top-nav a,.github-link{color:#bbd5e9}
+.top-nav a:hover,.github-link:hover{color:#e0f6ff}
+.github-link{
+  background:rgba(140,209,255,.10);
+  border-color:rgba(169,217,255,.34);
+  box-shadow:inset 0 1px 0 rgba(238,249,255,.11);
+}
+.eyebrow{color:#b6e4ff}
+.pulse{background:#7fcdff;box-shadow:0 0 0 4px rgba(114,203,255,.2)}
+.hero h1 em,.accent-text{color:#9cd9ff;text-shadow:0 4px 45px rgba(69,173,255,.13)}
+.hero-lead,.section-subtitle{color:#c3d5e6}
+.primary-link{
+  background:linear-gradient(145deg,#c1eaff,#76c4ff);
+  color:#0c3151;
+  border-color:rgba(255,255,255,.55);
+  box-shadow:0 15px 45px rgba(23,132,224,.25),inset 0 1px 0 #fff9;
+}
+.primary-link:hover{box-shadow:0 18px 55px rgba(41,159,247,.37)}
+.quiet-link,.section-link{color:#e6f5ff}
+.honesty-line{color:#a8c1d5}
+.panel,.hero-instrument,.next-card{
+  background:var(--glass-surface);
+  border-color:var(--glass-edge);
+  box-shadow:var(--glass-shadow);
+  backdrop-filter:blur(26px) saturate(155%);
+  -webkit-backdrop-filter:blur(26px) saturate(155%);
+}
+.hero-instrument{
+  background:
+    radial-gradient(circle at 55% 35%,rgba(100,193,253,.21),transparent 59%),
+    var(--glass-surface);
+  border-radius:22px;
+}
+.hero-instrument::before{border-top:1px solid rgba(233,248,255,.48)}
+.dial{
+  background:conic-gradient(from -90deg,#91d6ff 0 295.8deg,rgba(127,190,236,.17) 295.8deg 360deg);
+  box-shadow:0 0 90px rgba(63,171,252,.24),0 0 25px rgba(133,210,255,.09);
+}
+.dial::before{background:linear-gradient(135deg,rgba(18,49,82,.96),rgba(12,35,64,.99))}
+.dial::after{border-color:rgba(144,210,255,.32)}
+.dial-caption,.instrument-good{color:#9edaff}
+.instrument-top,.instrument-meta{color:#c0def1}
+.instrument-warning{
+  background:rgba(19,55,91,.39);
+  border-color:rgba(155,209,249,.23);
+  color:#a8c8dd;
+}
+.mini-bar{border-color:rgba(157,209,250,.22)}
+.mini-key,.micro-label{color:#a7c8de}
+.panel-head h3,.mini-bar strong{color:#f5fbff}
+.state-pill.good{
+  background:rgba(56,128,183,.29);
+  border-color:rgba(137,209,255,.55);
+  color:#c0edff;
+}
+.round-select button,.preset-row button{
+  background:rgba(38,79,120,.39);
+  border-color:rgba(162,216,253,.3);
+  color:#c6e1f3;
+}
+.round-select button:hover,.round-select button.active,
+.preset-row button:hover,.preset-row button.active{
+  background:linear-gradient(145deg,#b9e9ff,#7ac7ff);
+  border-color:#afe3ff;
+  color:#123a5a;
+}
+.chart-scale{color:#a1c0d7}
+.chart-scale span:nth-child(3){color:#a5e0ff}
+.bar-track{
+  background:repeating-linear-gradient(90deg,rgba(150,216,255,.09),rgba(150,216,255,.09) 1px,transparent 1px,transparent 20%),rgba(12,36,65,.28);
+}
+.bar-value{background:linear-gradient(90deg,#277bbd 0%,#4eaef1 40%,#a9e4ff 100%);box-shadow:0 0 20px rgba(68,166,244,.22)}
+.bar-title strong,.chart-summary div:first-child strong,.xray-stats strong,.position-result strong{color:#a6e2ff}
+.chart-summary,.evidence-stat{border-color:rgba(146,205,245,.18)}
+.evidence-explain,.source-note p,.chart-footnote,.lab-disclaimer p{color:#b1cbdc}
+.evidence-stat > span{color:#b9d4e5}
+.evidence-stat strong.na{color:#8facbf}
+.inline-link,.chart-footnote a,.lab-disclaimer a{color:#c5edff;border-color:#8cbad8}
+.editor-top,.editor-bottom{border-color:rgba(170,215,247,.22)}
+.editor-tab{border-color:#8bd0ff}
+.ts-icon{background:linear-gradient(150deg,#4d9de4,#2a75b9)}
+#source-input{color:#e3f5ff}
+.xray-stats>div{border-color:rgba(158,207,246,.22)}
+.position-result{
+  background:rgba(60,126,176,.21);
+  border-color:rgba(158,215,251,.38);
+}
+.character-sequence button{
+  background:rgba(63,121,165,.26);
+  border-color:rgba(157,209,244,.36);
+  color:#ddf3ff;
+}
+.character-sequence button:hover,.character-sequence button.selected{background:#9cddff;color:#133751;border-color:#d5f4ff}
+.timeline-item{
+  background:rgba(52,98,142,.17);
+  border-color:rgba(145,195,234,.26);
+  backdrop-filter:blur(18px);
+}
+.timeline-item:hover,.timeline-item.active{background:rgba(72,145,204,.24);border-color:#8cd2ff}
+.timeline-step,.timeline-item.active .timeline-step,.timeline-item.active>span:last-child{color:#b0e4ff}
+.next-card{background:linear-gradient(115deg,rgba(74,158,219,.24),rgba(57,111,170,.18))}
+.status-line{background:rgba(125,193,241,.15)}
+.status-line span{background:linear-gradient(90deg,#4aaff8,#b1e7ff)}
+.status-line-inprogress{background:repeating-linear-gradient(90deg,#4c9dd2 0 10px,rgba(116,191,239,.16) 10px 18px)}
+.site-footer{background:rgba(9,31,53,.64);border-top-color:rgba(163,211,244,.23)}
+.footer-links a{color:#c4e5f7}
