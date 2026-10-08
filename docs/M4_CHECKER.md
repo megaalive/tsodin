@@ -445,7 +445,7 @@ two-element per-depth metadata array; the existing lazy, dense snapshots
 retain independent nested fork/join state. Assignments still replace
 singleton facts, and joins preserve only values proven along both paths.
 
-Repeated guard bindings (`a && a`), chained/nested compound operators,
+Repeated guard bindings (until G5F2), chained/nested compound operators,
 unproved operands, and side-effecting syntax remain fail-closed rather than
 claiming contradiction resolution, conditional evaluation of effects, or
 full TypeScript flow behavior. The depth-two bound and public CLI restriction
@@ -455,3 +455,33 @@ remain unchanged.
 extend pinned TS7.0.2 diagnostic-code and UTF-16-start parity, with
 independent TS6.0.2 structured-span supplementary witnesses.
 No official TypeScript suite or build-time competitive benchmark is claimed.
+
+## M4-G5F2 — RHS conditional analysis and idempotent guards
+
+The right expression of a pure short-circuit conditional is *analyzed*
+under a temporary snapshot of what evaluating the left side proves:
+`&&` assumes the left side is true; `||` assumes it is false.
+Only a source-backed singleton or the previously documented synthetic
+Boolean fact may enter this temporary state. Postorder syntax guarantees
+that the right subtree occupies the contiguous node interval immediately
+following the left root. The checker restores the original flow slot after
+the right subtree, *before* branch entry and parent fork/join logic.
+This is static checking of a potentially-executed path, not eager
+execution of mutations; the accepted condition grammar has no calls,
+assignments or property effects.
+
+Two repeated guards of the **same mutable binding** are now legal only
+when the decisive path proves the *same literal value* in both operands.
+Idempotent Boolean predicates such as `flag && flag` or
+`flag || flag` also infer the complementary Boolean singleton
+on the other arm. Contradictory guards (`a && !a`), inconsistent literal
+intersections, unproved chained/nested compounds and side-effecting
+conditions remain fail-closed until reachability and conditional effects
+are explicitly represented. Numeric/string domains never gain a
+complementary singleton from an exclusion.
+
+The new `checker-flow-rhs-{valid,errors}` fixtures extend strict
+pinned TS7.0.2 diagnostic-code and UTF-16-start comparisons and
+supplemental TS6.0.2 structured full-span witnesses. This is not
+general TypeScript flow, official conformance or a performance claim.
+Public `tsodin check` remains disabled.

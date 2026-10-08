@@ -39,6 +39,8 @@ const fixtures=[
   {id:"checker-flow-nested-errors",expectedCount:5},
   {id:"checker-flow-compound-valid",expectedCount:0},
   {id:"checker-flow-compound-errors",expectedCount:5},
+  {id:"checker-flow-rhs-valid",expectedCount:0},
+  {id:"checker-flow-rhs-errors",expectedCount:5},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});

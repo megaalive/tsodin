@@ -125,4 +125,10 @@ const compoundErrors=read("checker-flow-compound-errors");
 assert.equal(compoundErrors.status,1,"compound guard disjoint facts are rejected");
 assert.deepEqual(compoundErrors.diags.map(row=>row[1]),["11","11","10","11","11"],
   "only implied branch facts produce disjointness diagnostics");
-console.log("PASS: compound boolean short-circuit fork/join smoke and scoped witnesses");
+const rhsValid=read("checker-flow-rhs-valid");
+assert.equal(rhsValid.status,0,"RHS contextual facts and idempotent guards");
+const rhsErrors=read("checker-flow-rhs-errors");
+assert.equal(rhsErrors.status,1,"disjoint facts on idempotent guard paths");
+assert.deepEqual(rhsErrors.diags.map(row=>row[1]),["11","11","11","11","10"],
+  "stable code candidates and a later mismatch");
+console.log("PASS: RHS conditional flow and scoped TS7 witnesses");

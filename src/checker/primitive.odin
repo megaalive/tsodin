@@ -394,9 +394,110 @@ check_file :: proc(
             return result
         }
 
+        // M4-G5F2: the RHS of a pure logical guard is checked under the
+        // left predicate's success (&&) or failure (||) state. The syntax is
+        // postorder: the right subtree begins immediately after left's root.
+        // This is *static conditional analysis*, NOT eager runtime execution.
+        // Only proven singleton facts from the supported leaf grammar apply.
+        rhs_context_begin := -1
+        rhs_context_end := -1
+        rhs_context_guard := -1
+        rhs_context_fact: Literal_Fact
+        rhs_saved_fact: Literal_Fact
+        rhs_saved_wide := false
+        if condition_event {
+            root_idx := expression_root
+            for {
+                outer := syntax.nodes[root_idx]
+                if outer.kind != .Group &&
+                   !(outer.kind == .Unary && outer.operator == .Exclamation) {
+                    break
+                }
+                if outer.left < node_cursor || outer.left >= root_idx { break }
+                root_idx = outer.left
+            }
+            logical := syntax.nodes[root_idx]
+            if logical.kind == .Binary &&
+               (logical.operator == .Ampersand_Ampersand ||
+                logical.operator == .Bar_Bar) &&
+               logical.left >= node_cursor && logical.left < logical.right &&
+               logical.right < root_idx {
+                lhs_idx := logical.left
+                lhs_flipped := false
+                for {
+                    lhs := syntax.nodes[lhs_idx]
+                    if lhs.kind != .Group &&
+                       !(lhs.kind == .Unary && lhs.operator == .Exclamation) {
+                        break
+                    }
+                    if lhs.left < node_cursor || lhs.left >= lhs_idx { break }
+                    if lhs.kind == .Unary { lhs_flipped = !lhs_flipped }
+                    lhs_idx = lhs.left
+                }
+                lhs := syntax.nodes[lhs_idx]
+                lhs_ref := -1
+                lhs_then: Literal_Fact
+                lhs_else: Literal_Fact
+                if lhs.kind == .Name {
+                    lhs_ref = references[lhs_idx]
+                    lhs_then = branch_boolean_fact(!lhs_flipped)
+                    lhs_else = branch_boolean_fact(lhs_flipped)
+                } else if lhs.kind == .Binary &&
+                          (lhs.operator == .Equals_Equals_Equals ||
+                           lhs.operator == .Exclamation_Equals_Equals) &&
+                          lhs.left >= node_cursor && lhs.right > lhs.left &&
+                          lhs.right < lhs_idx {
+                    left_name := syntax.nodes[lhs.left]
+                    rhs_literal := syntax.nodes[lhs.right]
+                    if left_name.kind == .Name {
+                        lhs_ref = references[lhs.left]
+                        fact := literal_fact_from_node(rhs_literal)
+                        negative := (lhs.operator == .Exclamation_Equals_Equals) != lhs_flipped
+                        if rhs_literal.kind == .Boolean {
+                            value, known := boolean_fact_value(fact, text)
+                            if known {
+                                if negative {
+                                    lhs_then = branch_boolean_fact(!value)
+                                    lhs_else = fact
+                                } else {
+                                    lhs_then = fact
+                                    lhs_else = branch_boolean_fact(!value)
+                                }
+                            }
+                        } else if negative {
+                            lhs_else = fact
+                        } else {
+                            lhs_then = fact
+                        }
+                    }
+                }
+                if lhs_ref > 0 && lhs_ref <= len(symbols.symbols) {
+                    binding := symbols.symbols[lhs_ref-1]
+                    guard := binding.declaration_index
+                    if binding.kind == .Let && guard >= 0 &&
+                       guard < result.checked_declarations &&
+                       guard < len(declared) && wide_decls[guard] {
+                        rhs_literal := lhs_then
+                        if logical.operator == .Bar_Bar { rhs_literal = lhs_else }
+                        if rhs_literal.kind != .Name {
+                            rhs_context_guard = guard
+                            rhs_context_fact = rhs_literal
+                            rhs_context_begin = logical.left+1
+                            rhs_context_end = logical.right
+                        }
+                    }
+                }
+            }
+        }
         // The parser writes child nodes before their parent and appends each
         // declaration's expression nodes consecutively.
         for i in node_cursor..=expression_root {
+            if i == rhs_context_begin {
+                rhs_saved_fact = literal_decls[rhs_context_guard]
+                rhs_saved_wide = wide_decls[rhs_context_guard]
+                literal_decls[rhs_context_guard] = rhs_context_fact
+                wide_decls[rhs_context_guard] = false
+            }
             node := syntax.nodes[i]
             if node.byte_start < 0 || node.byte_end > len(text) ||
                node.byte_start >= node.byte_end {
@@ -554,6 +655,12 @@ check_file :: proc(
                 return result
             }
             inferred[i]=kind
+            // The contextual fact is scoped to the RHS subtree only.
+            // Branch entry snapshots must see the original pre-condition state.
+            if i == rhs_context_end {
+                literal_decls[rhs_context_guard] = rhs_saved_fact
+                wide_decls[rhs_context_guard] = rhs_saved_wide
+            }
         }
         expression_type := inferred[expression_root]
         node_cursor = expression_root + 1
@@ -602,6 +709,8 @@ check_file :: proc(
             level := flow_depth
             // Do not carry metadata from an earlier conditional at this depth.
             guard_count[level] = 0
+            leaf_then: [2]Literal_Fact
+            leaf_else: [2]Literal_Fact
             for slot in 0..<part_count {
                 leaf_node := part_nodes[slot]
                 leaf_flipped := !compound && flipped
@@ -688,11 +797,25 @@ check_file :: proc(
                         return result
                     }
                 }
-                // Repeated symbols need intersection/contradiction semantics
-                // across short-circuit paths; never pretend they are independent.
+                leaf_then[slot] = then_fact
+                leaf_else[slot] = else_fact
+                // Same-target paths are accepted only when both operands
+                // prove one identical singleton on the decisive path.
+                // Contradictory predicates and uncertain intersections remain
+                // fail closed until unreachable-path analysis exists.
                 if slot > 0 && guard == guard_indices[level][0] {
-                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
-                    return result
+                    first_fact := guard_then_facts[level][0]
+                    if (root.operator == .Ampersand_Ampersand && flipped) ||
+                       (root.operator == .Bar_Bar && !flipped) {
+                        first_fact = guard_else_facts[level][0]
+                    }
+                    next_fact := then_fact
+                    if root.operator == .Bar_Bar { next_fact = else_fact }
+                    known, same := literal_overlap(first_fact, next_fact, text)
+                    if !known || !same {
+                        fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                        return result
+                    }
                 }
                 guard_indices[level][slot] = guard
                 guard_then_facts[level][slot] = Literal_Fact{}
@@ -716,6 +839,31 @@ check_file :: proc(
                     }
                 }
                 guard_count[level] += 1
+            }
+            if compound && guard_indices[level][0] == guard_indices[level][1] {
+                // Same Boolean predicate on both sides is idempotent:
+                // a&&a and a||a each prove a on BOTH output arms.
+                // Never deduce the complement for open number/string domains.
+                t_known, t_same := literal_overlap(leaf_then[0], leaf_then[1], text)
+                f_known, f_same := literal_overlap(leaf_else[0], leaf_else[1], text)
+                if declared[guard_indices[level][0]] == .Boolean &&
+                   t_known && t_same && f_known && f_same {
+                    if root.operator == .Ampersand_Ampersand {
+                        if flipped {
+                            guard_then_facts[level][0] = leaf_else[0]
+                        } else {
+                            guard_else_facts[level][0] = leaf_else[0]
+                        }
+                    } else {
+                        if flipped {
+                            guard_else_facts[level][0] = leaf_then[0]
+                        } else {
+                            guard_then_facts[level][0] = leaf_then[0]
+                        }
+                    }
+                }
+                // One declaration slot, not two competing mutations.
+                guard_count[level] = 1
             }
             if len(entry_literals[level]) == 0 {
                 entry_literals[level] = make([]Literal_Fact, len(declared))
