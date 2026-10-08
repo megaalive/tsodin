@@ -105,3 +105,34 @@ scanner parity are **not** claimed.
 Next: TypeScript-oracle-backed contextual fixtures with specifically
 documented behavior and parser-owned nested mode tracking; no entire
 compiler work should be inferred from lexical tests.
+
+## M1-E — nested template context and external evidence
+
+`src/context/reader.odin` adds a fixed-capacity (32-level), allocation-free
+lexical context reader used by a future parser. It tracks **only**
+template-interpolation curly brace depth and nested template frames;
+it does not parse TypeScript expressions. A matching interpolation
+closing brace is explicitly rescanned into TemplateMiddle/TemplateTail,
+while ordinary nested object braces remain plain punctuation.
+An unmatched template at EOF is an error, not a successful token stream.
+The reader exposes an explicit `reader_rescan_regex` request;
+it never infers whether a slash is a division operator or a regexp.
+
+`src/contexttrace` drives two **fixture-scoped** token streams and
+writes Odin token kinds and byte-to-UTF-16 spans.
+`tools/oracle/compare-context.mjs` compares those streams with the
+independently pinned TypeScript 6 JavaScript scanner and its documented
+rescan functions. The pinned TypeScript 7 *CLI* independently accepts
+a basic regex+template project (`contextual-basic`).
+
+These are three **different** forms of evidence:
+1. Odin's own nested-context unit tests;
+2. TS6 supplementary lexical token/span equivalence on exactly two fixtures;
+3. TS7 native CLI project acceptance.
+
+There is still no TS7-native token parity, no JSX grammar/parser, and no
+diagnostic parity. Context drivers are not a complete statement parser.
+
+Future performance must be evaluated on true source-to-diagnostics project
+workloads after compatibility gates. Token benchmark wins do not imply that
+whole-program checking beats any previous prototype or competing checker.

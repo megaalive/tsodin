@@ -10,6 +10,9 @@ on:
       - "src/scantrace/**"
       - "src/source/**"
       - "src/compat/**"
+      - "src/context/**"
+      - "src/contexttrace/**"
+      - "tests/lexical/**"
       - "bench/manifests/baselines.json"
   workflow_dispatch:
 
@@ -76,6 +79,8 @@ jobs:
           echo "$root" >> "$GITHUB_PATH"
       - name: Build Odin source-token tracer
         run: odin build src/scantrace -out:"$RUNNER_TEMP/scantrace"
+      - name: Build contextual token tracer
+        run: odin build src/contexttrace -out:"$RUNNER_TEMP/contexttrace"
       - name: Install pinned supplementary lexical API
         run: npm install --prefix "$RUNNER_TEMP/ts6-lex" --no-save --no-audit --no-fund @typescript/typescript6@6.0.2
       - name: Compare scanner token kinds and UTF-16 spans
@@ -83,3 +88,8 @@ jobs:
           TSODIN_SCANTRACE: ${{ runner.temp }}/scantrace
           TSODIN_TS6_API: ${{ runner.temp }}/ts6-lex/node_modules/@typescript/typescript6/lib/typescript.js
         run: node tools/oracle/compare-scanner.mjs
+      - name: Compare contextual rescans and UTF-16 spans
+        env:
+          TSODIN_CONTEXTTRACE: ${{ runner.temp }}/contexttrace
+          TSODIN_TS6_API: ${{ runner.temp }}/ts6-lex/node_modules/@typescript/typescript6/lib/typescript.js
+        run: node tools/oracle/compare-context.mjs
