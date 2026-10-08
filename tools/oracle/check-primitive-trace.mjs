@@ -90,4 +90,11 @@ assert.equal(flowBad.status,1,"incorrect flow facts and assignments fail");
 assert.deepEqual(flowBad.summary,["SUMMARY","6","2","1"]);
 assert.deepEqual(flowBad.diags.map(row=>row[1]),["11","10"],
   "TS2367-candidate mismatches and TS2322 assignment type errors are distinct");
-console.log("PASS: Odin checker with source-ordered let assignment flows; TS7 parity checked separately");
+const branchValid=read("checker-flow-branch-valid");
+assert.equal(branchValid.status,0,"bounded if/else and joined facts must succeed");
+assert.deepEqual(branchValid.summary,["SUMMARY","4","0","0"]);
+const branchBad=read("checker-flow-branch-errors");
+assert.equal(branchBad.status,1,"branch-local disjointness and type mismatch fail");
+assert.deepEqual(branchBad.summary,["SUMMARY","4","2","1"]);
+assert.deepEqual(branchBad.diags.map(row=>row[1]),["11","10"]);
+console.log("PASS: bounded conditional narrowing with a pinned TS7 oracle");

@@ -238,3 +238,42 @@ assignment target identifier, supported by the TS7 start and TS6 complete
 structured span witnesses; disjoint immutable `const` literals produce
 candidate TS2367. No permanent numeric/string singleton fact is inferred from a
 mutable assignment. No official conformance score is published.
+
+## M4-G5B — bounded conditional narrowing and flow join
+
+This gate admits a **flat, explicit** `if (name === literal) { assignments; }
+else { assignments; }`. The guard must compare an already initialized
+mutable `let` (number or string) whose primitive domain has been proved
+broad with a matching source literal.
+
+Three source-order events (`If`, `Else`, `End_If`) form a small
+fork/join. Entry facts are copied into dense temporary arrays; the true arm
+narrows the guard to its literal. The false arm starts from entry facts, not
+the previous arm's mutations. After the join, only singleton identities
+independently proved on both arms survive; otherwise changed values widen.
+There is no per-node heap allocation or general CFG graph.
+
+```ts
+let code: number = 1;
+code = 1 + 2;
+let verdict: boolean = false;
+if (code === 2) {
+    verdict = code === 2;
+} else {
+    verdict = code === 3;
+}
+const merged: boolean = verdict === true;
+const possible: boolean = code === 9;
+```
+
+The guard subset is intentionally narrower than TypeScript. Unsupported
+conditions (including `!==`, relational conditions, truthiness), negative
+branch exclusions, nested branches, branch-local declarations and scopes,
+`else if`, implicit else, loops, switch and closures **fail closed**.
+Multiple independent flat conditionals can reuse the same dense snapshots.
+
+`checker-flow-branch-valid` and `checker-flow-branch-errors`
+are checked against pinned **TypeScript 7.0.2** CLI diagnostic codes and
+UTF-16 start coordinates. Internal issue 11 maps to TS2367; 10 to TS2322.
+Auxiliary TS6.0.2 structured full spans remain separately labeled. No
+public checker readiness or official conformance is claimed.
