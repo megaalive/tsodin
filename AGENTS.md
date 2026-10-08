@@ -6,9 +6,9 @@ This is the fast onboarding map for human contributors and coding agents.
 
 tsodin is a performance-first TypeScript checker/compiler in Odin.
 
-Core rule:
+Project doctrine:
 
-> **Readable invariants, aggressive implementation.**
+> **Make semantics obvious. Make data compact. Make hot paths ruthless. Document every non-obvious reason. Measure everything.**
 
 Do not "clean up" unusual code merely because it differs from ordinary application code. Smart or hacky code is welcome when it is correct, measurable, and explainable.
 
@@ -39,6 +39,8 @@ This map may evolve, but changes must be documented.
 ## Contributor rules
 
 - Correctness is a gate, not a benchmark variable.
+- Do not mechanically port another compiler's architecture. Use other implementations as semantic references and test oracles, then design the implementation in an Odin-native way.
+- Do not preserve Go/Rust/C++/JavaScript-specific ownership, abstraction, or control-flow patterns unless they are independently justified for Odin.
 - Do not remove work, weaken semantics, alter inputs, or change expected outputs to win a benchmark.
 - Prefer explicit cost over hidden cost.
 - Prefer compact data and stable integer IDs over pointer-rich object graphs when measured or structurally justified.

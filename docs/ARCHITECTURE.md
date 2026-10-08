@@ -34,6 +34,26 @@ Guiding rule:
 
 The exact boundaries are not frozen. They must evolve from correctness, profiling, and TypeScript semantics rather than framework habits.
 
+## Odin-native design
+
+tsodin is not a transliteration of tsgo, ts-rs, the TypeScript compiler, or any other implementation.
+
+Other compilers are useful as semantic references, compatibility oracles, benchmark competitors, and sources of test cases. Their internal object models, ownership patterns, control flow, and language-specific workarounds are not architectural templates.
+
+When an existing implementation is written around Go, Rust, C++, or JavaScript constraints, redesign the problem for Odin instead of reproducing those constraints.
+
+Prefer Odin-native choices when they improve the design, including:
+
+- explicit allocators and lifetime-scoped arenas;
+- `context.allocator` and `context.temp_allocator` where ownership remains clear;
+- compact distinct integer IDs;
+- dense arrays and data-oriented layouts;
+- slices for ordinary checked access and multi-pointers for justified hot paths;
+- explicit procedure specialization when genericity hides cost;
+- Odin's native concurrency, SIMD, and platform facilities when measured and appropriate.
+
+Semantic compatibility may be ported. Implementation accidents should not be.
+
 ## Design biases
 
 ### Stable IDs over pointer graphs
