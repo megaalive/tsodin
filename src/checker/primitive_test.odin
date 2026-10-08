@@ -476,3 +476,80 @@ primitive_checker_mutable_computation_does_not_gain_const_provenance :: proc(t: 
     parser.syntax_report_destroy(&ast)
     source.source_version_destroy(&v)
 }
+
+
+@(test)
+primitive_checker_straightline_assignment_flow :: proc(t: ^testing.T) {
+    input := "let count: number = 1; count = 2; const same = count === 2;" +
+             "count = 1 + 2; const broad = count === 9;" +
+             "let label: string = 'old'; label = 'new'; const sameText = label === 'new';"
+    v, ok := source.source_version_create(source.File_Id(733), 1, input)
+    testing.expect(t, ok, "valid UTF-8 source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && checked.checked_declarations == 5 &&
+                   checked.checked_assignments == 3 &&
+                   len(checked.diagnostics) == 0,
+                   "assignment transfers update current literal and widened facts")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_assignment_errors_continue_without_false_success :: proc(t: ^testing.T) {
+    input := "let count: number = 1; count = 2; const bad = count === 3;" +
+             "count = 4; const bad2 = count !== 2; count = 'wrong';"
+    v, ok := source.source_version_create(source.File_Id(734), 1, input)
+    testing.expect(t, ok, "source created")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete &&
+                   !checked.complete && !checked.fatal &&
+                   checked.checked_declarations == 3 &&
+                   checked.checked_assignments == 3 &&
+                   len(checked.diagnostics) == 3,
+                   "disjoint flows and bad assignment are independently reported")
+    if len(checked.diagnostics) == 3 {
+        testing.expect(t, checked.diagnostics[0].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[1].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[2].issue == .Assignment_Type_Mismatch,
+                       "existing TS2367/TS2322 candidate kinds are preserved")
+        testing.expect(t, input[checked.diagnostics[0].byte_start:checked.diagnostics[0].byte_end] == "count === 3" &&
+                       input[checked.diagnostics[2].byte_start:checked.diagnostics[2].byte_end] == "'wrong'",
+                       "comparison and assignment RHS diagnostics have real source spans")
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_refuses_unsupported_assignment_targets :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "const frozen = 1; frozen = 2;",
+        "var legacy = 1; legacy = 2;",
+        "let unassigned: number; unassigned = 2;",
+        "later = 1; let later = 2;",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(735), 1, input)
+        testing.expect(t, ok, "valid input")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, !checked.complete && checked.fatal &&
+                       len(checked.diagnostics) > 0 &&
+                       checked.diagnostics[0].issue == .Unsupported_Assignment_Target,
+                       "unsafe mutable/control-flow target must fail closed")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}

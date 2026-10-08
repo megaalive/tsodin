@@ -77,3 +77,24 @@ binder_unresolved_and_stale_syntax_fail :: proc(t: ^testing.T) {
                    "parser recovery is not binding success")
     binding_report_destroy(&refused)
 }
+
+
+@(test)
+binder_resolves_assignment_targets_without_creating_symbols :: proc(t: ^testing.T) {
+    input := "let score = 1; score = 2; const copy = score;"
+    v, ok := source.source_version_create(source.File_Id(732), 1, input)
+    testing.expect(t, ok, "valid source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := bind_program(&v, &ast)
+    testing.expect(t, ast.complete && bound.complete &&
+                   len(bound.symbols) == 2 && len(bound.references) == 2,
+                   "target and read references resolve to original declaration")
+    if len(bound.references) == 2 {
+        testing.expect(t, bound.references[0].symbol_index == 0 &&
+                       bound.references[1].symbol_index == 0,
+                       "both uses share the first symbol identity")
+    }
+    binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
