@@ -29,6 +29,8 @@ const fixtures=[
   {id:"checker-wide-errors",expectedCount:4},
   {id:"checker-flow-assign-valid",expectedCount:0},
   {id:"checker-flow-assign-errors",expectedCount:2},
+  {id:"checker-flow-branch-valid",expectedCount:0},
+  {id:"checker-flow-branch-errors",expectedCount:2},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});

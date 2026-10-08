@@ -37,10 +37,14 @@ Expr_Declaration :: struct {
 }
 
 // Source-order events: assignment roots and declarations share one dense node store.
-// No CFG branch is modeled in this first straight-line CFA slice.
+// A bounded, flat if/else is represented by explicit entry/split/join events.
+// Nested conditionals, branch declarations and implicit else paths fail closed.
 Statement_Kind :: enum {
     Declaration,
     Assignment,
+    If,
+    Else,
+    End_If,
 }
 
 Expr_Statement :: struct {
@@ -65,6 +69,9 @@ Syntax_Issue :: enum {
     Expected_Semicolon,
     Nesting_Limit,
     Expected_Equals, // append only: keep syntax issue ordinals stable
+    Expected_Open_Brace,
+    Expected_Close_Brace,
+    Expected_Else,
 }
 
 Syntax_Diagnostic :: struct {
@@ -379,6 +386,87 @@ syntax_assignment :: proc(p: ^Syntax_State) -> bool {
     return true
 }
 
+// M4-G5B: exactly one non-nested if/else, with assignment-only arms.
+// The checker decides whether a condition has proved narrowing semantics.
+// Explicit markers preserve source order without allocating CFG nodes.
+syntax_if :: proc(p: ^Syntax_State) -> bool {
+    start := p.current
+    syntax_advance(p)
+    if p.fatal { return false }
+    if p.current.kind != .Open_Paren {
+        syntax_issue(p, .Expected_Expression)
+        return false
+    }
+    syntax_advance(p)
+    condition, ok := syntax_expression(p, 0)
+    if !ok || p.fatal { return false }
+    if p.current.kind != .Close_Paren {
+        syntax_issue(p, .Expected_Close_Paren)
+        return false
+    }
+    syntax_advance(p)
+    if p.fatal { return false }
+    if p.current.kind != .Open_Brace {
+        syntax_issue(p, .Expected_Open_Brace)
+        return false
+    }
+    append(&p.report.statements, Expr_Statement{
+        kind=.If, declaration_index=-1, target_node=-1,
+        expression=condition, byte_start=start.byte_start,
+        byte_end=p.report.nodes[condition].byte_end,
+    })
+    syntax_advance(p)
+    for !p.fatal && p.current.kind != .Close_Brace &&
+        p.current.kind != .End_Of_File {
+        if p.current.kind != .Identifier || !syntax_assignment(p) {
+            syntax_issue(p, .Unsupported_Statement)
+            return false
+        }
+    }
+    if p.fatal { return false }
+    if p.current.kind != .Close_Brace {
+        syntax_issue(p, .Expected_Close_Brace)
+        return false
+    }
+    syntax_advance(p)
+    if p.fatal { return false }
+    if p.current.kind != .Else_Keyword {
+        syntax_issue(p, .Expected_Else)
+        return false
+    }
+    append(&p.report.statements, Expr_Statement{
+        kind=.Else, declaration_index=-1, target_node=-1,
+        expression=-1, byte_start=p.current.byte_start, byte_end=p.current.byte_end,
+    })
+    syntax_advance(p)
+    if p.fatal { return false }
+    if p.current.kind != .Open_Brace {
+        syntax_issue(p, .Expected_Open_Brace)
+        return false
+    }
+    syntax_advance(p)
+    for !p.fatal && p.current.kind != .Close_Brace &&
+        p.current.kind != .End_Of_File {
+        if p.current.kind != .Identifier || !syntax_assignment(p) {
+            syntax_issue(p, .Unsupported_Statement)
+            return false
+        }
+    }
+    if p.fatal { return false }
+    if p.current.kind != .Close_Brace {
+        syntax_issue(p, .Expected_Close_Brace)
+        return false
+    }
+    finish := p.current.byte_end
+    syntax_advance(p)
+    if p.fatal { return false }
+    append(&p.report.statements, Expr_Statement{
+        kind=.End_If, declaration_index=-1, target_node=-1,
+        expression=-1, byte_start=start.byte_start, byte_end=finish,
+    })
+    return true
+}
+
 // Reports all recoverable syntax errors for this limited grammar. A caller
 // must never regard partial recovered declarations as a successful check.
 // Unsupported lexical constructs and profile failures remain fatal.
@@ -404,7 +492,9 @@ parse_expression_program :: proc(version: ^source.Source_Version, profile: compa
     for !p.fatal && p.current.kind != .End_Of_File {
         before := len(report.nodes)
         ok := false
-        if p.current.kind == .Identifier {
+        if p.current.kind == .If_Keyword {
+            ok = syntax_if(&p)
+        } else if p.current.kind == .Identifier {
             ok = syntax_assignment(&p)
         } else {
             ok = syntax_declaration(&p)

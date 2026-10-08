@@ -251,3 +251,47 @@ expression_assignment_syntax_fails_closed :: proc(t: ^testing.T) {
         source.source_version_destroy(&v)
     }
 }
+
+@(test)
+expression_conditional_events_keep_order :: proc(t: ^testing.T) {
+    input := "let x: number = 1; x = 1 + 2; if (x === 2) { x = 3; } else { x = 4; } const y = x;"
+    v, ok := source.source_version_create(source.File_Id(740), 1, input)
+    testing.expect(t, ok, "source accepted")
+    defer source.source_version_destroy(&v)
+    ast := parse_expression_program(&v, compat.ts7_profile())
+    defer syntax_report_destroy(&ast)
+    testing.expect(t, ast.complete && len(ast.statements) == 8 && len(ast.declarations) == 2,
+                   "one conditional emits a fork, split, join and two assignment events")
+    if len(ast.statements) == 8 {
+        testing.expect(t, ast.statements[2].kind == .If &&
+                       ast.statements[3].kind == .Assignment &&
+                       ast.statements[4].kind == .Else &&
+                       ast.statements[5].kind == .Assignment &&
+                       ast.statements[6].kind == .End_If &&
+                       ast.statements[7].kind == .Declaration,
+                       "events remain in source order")
+        node := ast.nodes[ast.statements[2].expression]
+        testing.expect(t, input[node.byte_start:node.byte_end] == "x === 2",
+                       "guard span belongs to original source")
+    }
+}
+
+@(test)
+expression_conditional_unsupported_syntax_fails_closed :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let x = 1; if (x === 1) { x = 2; }",
+        "let x = 1; if (x === 1) x = 2; else { x = 3; }",
+        "let x = 1; if (x === 1) { let y = 2; } else { x = 3; }",
+        "let x = 1; if (x === 1) { if (x === 2) { x = 3; } else { x = 4; } } else { x = 5; }",
+        "let x = 1; if (x === 1) { x = 2; } else x = 3;",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(741), 1, input)
+        testing.expect(t, ok, "valid snapshot")
+        ast := parse_expression_program(&v, compat.ts7_profile())
+        testing.expect(t, !ast.complete && len(ast.diagnostics) > 0,
+                       "unsupported shape is an incomplete parse")
+        syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}

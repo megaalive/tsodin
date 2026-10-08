@@ -554,3 +554,73 @@ primitive_checker_refuses_unsupported_assignment_targets :: proc(t: ^testing.T) 
         source.source_version_destroy(&v)
     }
 }
+
+@(test)
+primitive_checker_conditional_narrowing_and_join :: proc(t: ^testing.T) {
+    input := "let code: number = 1; code = 1 + 2; let verdict: boolean = false;" +
+             "if (code === 2) { verdict = code === 2; } else { verdict = code === 3; }" +
+             "const merged: boolean = verdict === true; const restored = code === 9;"
+    v, ok := source.source_version_create(source.File_Id(742), 1, input)
+    testing.expect(t, ok, "snapshot accepted")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && checked.checked_declarations == 4 &&
+                   checked.checked_assignments == 3 && len(checked.diagnostics) == 0,
+                   "true arm narrows; false arm restores entry; merged facts remain broad")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_conditional_disjoint_and_assignment_error :: proc(t: ^testing.T) {
+    input := "let code: number = 1; code = 1 + 2; let verdict: boolean = false;" +
+             "if (code === 2) { verdict = code === 3; } else { verdict = 'wrong'; }" +
+             "const after = code === 4;"
+    v, ok := source.source_version_create(source.File_Id(743), 1, input)
+    testing.expect(t, ok, "snapshot accepted")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && !checked.complete &&
+                   !checked.fatal && len(checked.diagnostics) == 2,
+                   "both branch-local diagnostics are retained without false success")
+    if len(checked.diagnostics) == 2 {
+        testing.expect(t, checked.diagnostics[0].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[1].issue == .Assignment_Type_Mismatch &&
+                       input[checked.diagnostics[0].byte_start:checked.diagnostics[0].byte_end] == "code === 3" &&
+                       input[checked.diagnostics[1].byte_start:checked.diagnostics[1].byte_end] == "verdict",
+                       "candidate TS2367 and TS2322 locations are source-backed")
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_conditional_unproved_guard_is_fatal :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let code: number = 1; code = 1 + 2; if (code > 2) { code = 3; } else { code = 4; }",
+        "let code: number = 1; code = 1 + 2; if (code !== 2) { code = 3; } else { code = 4; }",
+        "let code: number = 1; code = 1 + 2; if (code === code) { code = 3; } else { code = 4; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(744), 1, input)
+        testing.expect(t, ok, "snapshot accepted")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                       !checked.complete && len(checked.diagnostics) > 0 &&
+                       checked.diagnostics[0].issue == .Unsupported_Condition,
+                       "unproved guard fails closed without evaluating branch mutations")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
