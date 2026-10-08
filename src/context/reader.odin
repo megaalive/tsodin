@@ -2,6 +2,7 @@ package lexcontext
 
 import "../source"
 import "../scanner"
+import "../compat"
 
 // Parser-side lexical context, not a TypeScript grammar parser.
 TEMPLATE_LIMIT :: 32
@@ -18,7 +19,11 @@ Reader :: struct {
 }
 
 reader_init :: proc(version: ^source.Source_Version) -> Reader {
-    return Reader{lexer = scanner.scanner_init(version)}
+    return reader_init_with_profile(version, compat.ts7_profile())
+}
+
+reader_init_with_profile :: proc(version: ^source.Source_Version, profile: compat.Profile) -> Reader {
+    return Reader{lexer = scanner.scanner_init_with_profile(version, profile)}
 }
 
 reader_error :: proc(r: ^Reader, error: scanner.Scan_Error) -> scanner.Token {
