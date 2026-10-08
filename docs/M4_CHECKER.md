@@ -90,3 +90,24 @@ Two independently pinned TS7.0.2 oracle projects exercise valid expressions and
 TS2322 assignment mismatches. Native TS7 code + UTF-16 start positions are
 compared separately from auxiliary TS6 structured full spans. These are scoped
 witnesses, not full TypeScript conformance. Public `tsodin check` stays disabled.
+
+## M4-G1 — source-backed literal identity and disjoint comparison diagnostics
+
+The checker recognizes direct, same-primitive integer/boolean and unescaped
+ASCII string literal pairs without allocating new per-node type objects.
+String values are compared without their single/double quote delimiters.
+For distinct direct literal values in strict equality/inequality, the
+nonfatal internal `Disjoint_Literal_Comparison` issue is emitted with the
+binary expression's source span. The checker continues scanning later
+declarations; a report containing such issues must never be `complete`.
+
+Internal issue ID 11 is separately mapped to candidate TS2367 in the
+pinned TS7 7.0.2 CLI code/UTF-16 start witness and TS6 structured supplemental
+span witness. Existing TS2322 internal issue ID 10 is unchanged.
+The added oracle projects are `checker-literal-valid` and
+`checker-literal-disjoint`.
+
+This is NOT general TypeScript literal-type inference or control-flow
+narrowing. Variable references, computed expressions, numeric spelling
+edge cases and different primitive types remain conservatively bounded.
+Official Microsoft conformance remains NOT RUN.
