@@ -53,6 +53,9 @@ jobs:
       - name: Validate expression precedence and syntax recovery
         run: odin test src/parser
 
+      - name: Validate single-file binder and symbol references
+        run: odin test src/binder
+
       - name: Validate developer syntax diagnostic trace
         shell: bash
         run: |
