@@ -137,4 +137,10 @@ const contradictionBad=read("checker-flow-contradiction-errors");
 assert.equal(contradictionBad.status,1,"live-arm mismatches remain visible");
 assert.deepEqual(contradictionBad.diags.map(x=>x[1]),["10","10"],
   "both reachable type errors retain stable issue IDs");
-console.log("PASS: G5F3 bounded contradiction flow and scoped TS7 witnesses");
+const deadValid=read("checker-flow-dead-assign-valid");
+assert.equal(deadValid.status,0,"dead-arm direct assignments remain checked");
+const deadErrors=read("checker-flow-dead-assign-errors");
+assert.equal(deadErrors.status,1,"mismatches inside dead and live arms never vanish");
+assert.deepEqual(deadErrors.diags.map(x=>x[1]),["10","10","10"],
+  "dead-arm TS2322 candidates are emitted in source order");
+console.log("PASS: G5F4 dead-arm literal typechecking and pinned witnesses");

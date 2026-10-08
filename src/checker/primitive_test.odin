@@ -929,8 +929,8 @@ primitive_checker_compound_guard_fail_closed :: proc(t: ^testing.T) {
               "let a: boolean = false; a = n === 2;" +
               "let b: boolean = false; b = n === 3; let out: boolean = false;"
     cases := [?]string {
-        prefix + "if (a && !a) { out = true; } else { out = false; }",
-        prefix + "if (a || !a) { out = true; } else { out = false; }",
+        prefix + "if (a && !a) { out = a; } else { out = false; }",
+        prefix + "if (a || !a) { out = true; } else { out = !a; }",
         prefix + "if (a && true) { out = true; } else { out = false; }",
         prefix + "if (a || false) { out = true; } else { out = false; }",
         prefix + "if (a && (b || a)) { out = true; } else { out = false; }",
@@ -994,8 +994,8 @@ primitive_checker_rhs_context_disjoint_and_contradiction_fail_closed :: proc(t: 
               "let out: boolean = false;"
     cases := [?]string {
         prefix + "if (flag && (flag === false)) { out = true; } else { out = false; }",
-        prefix + "if (flag && !flag) { out = true; } else { out = false; }",
-        prefix + "if (flag || !flag) { out = true; } else { out = false; }",
+        prefix + "if (flag && !flag) { out = flag; } else { out = false; }",
+        prefix + "if (flag || !flag) { out = true; } else { out = !flag; }",
     }
     for input in cases {
         v, ok := source.source_version_create(source.File_Id(771), 1, input)
@@ -1060,10 +1060,10 @@ primitive_checker_contradiction_dead_arm_statements_fail_closed :: proc(t: ^test
     prefix :: "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
               "flag = n === 2; let out: boolean = false;"
     cases := [?]string {
-        prefix + "if (flag && !flag) { out = true; } else { }",
-        prefix + "if (flag || !flag) { } else { out = true; }",
-        prefix + "if (!(flag && !flag)) { } else { out = true; }",
-        prefix + "if (!(flag || !flag)) { out = true; } else { }",
+        prefix + "if (flag && !flag) { out = flag; } else { }",
+        prefix + "if (flag || !flag) { } else { out = flag; }",
+        prefix + "if (!(flag && !flag)) { } else { out = !flag; }",
+        prefix + "if (!(flag || !flag)) { out = !flag; } else { }",
         prefix + "if (flag && !flag) {" +
         "if (flag) { out = true; } else { out = false; }" +
         "} else { out = true; }",
@@ -1078,6 +1078,92 @@ primitive_checker_contradiction_dead_arm_statements_fail_closed :: proc(t: ^test
                        !checked.complete && len(checked.diagnostics)>0 &&
                        checked.diagnostics[0].issue == .Unsupported_Condition,
                        "never-state semantics are not invented for dead-arm statements")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_typechecks_dead_arm_literal_assignments_without_transfer :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+        "flag = n === 2; let out: boolean = false;" +
+        "if (flag && !flag) { out = true; out = false; }" +
+        "else { out = flag === false; }" +
+        "if (flag || !flag) { out = flag === true; }" +
+        "else { out = true; }" +
+        "const after: boolean = flag === false;",
+        "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+        "flag = n === 2; let other: boolean = false;" +
+        "other = n === 3; let out: boolean = false;" +
+        "if (flag) {" +
+        "if (other && !other) { out = true; } else { out = flag === true; }" +
+        "} else { out = flag === false; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(790), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                       !checked.fatal && len(checked.diagnostics)==0,
+                       "direct dead-arm literals are checked without leaking assignments")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_dead_arm_mismatch_is_not_hidden :: proc(t: ^testing.T) {
+    input := "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+             "flag = n === 2; let out: boolean = false;" +
+             "if (flag && !flag) { out = 'dead error'; } else { out = 'live error'; }" +
+             "if (flag || !flag) { out = true; } else { out = 12; }"
+    v, ok := source.source_version_create(source.File_Id(791), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && !checked.complete &&
+                   !checked.fatal && len(checked.diagnostics)==3,
+                   "dead and live primitive mismatches each preserve TS2322 candidate")
+    for d in checked.diagnostics {
+        testing.expect(t, d.issue == .Assignment_Type_Mismatch,
+                       "dead-arm type mismatches are not suppressed")
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_dead_arm_unsupported_semantics_fail_closed :: proc(t: ^testing.T) {
+    prefix :: "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+              "flag = n === 2; let out: boolean = false;"
+    cases := [?]string {
+        prefix + "if (flag && !flag) { flag = true; } else { out = true; }",
+        prefix + "if (flag && !flag) { out = flag; } else { out = false; }",
+        prefix + "if (flag || !flag) { out = true; } else { out = !flag; }",
+        prefix + "if (flag && !flag) {" +
+        "if (flag) { out = true; } else { out = false; }" +
+        "} else { out = true; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(792), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                       !checked.complete && len(checked.diagnostics)>0 &&
+                       checked.diagnostics[0].issue == .Unsupported_Condition,
+                       "unproved unreachable semantics cannot become success")
         report_destroy(&checked)
         binder.binding_report_destroy(&bound)
         parser.syntax_report_destroy(&ast)
