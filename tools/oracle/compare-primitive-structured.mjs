@@ -35,6 +35,8 @@ const fixtures=[
   ["checker-literal-disjoint",3],
   ["checker-const-literal-valid",0],
   ["checker-const-literal-disjoint",3],
+  ["checker-domain-valid",0],
+  ["checker-domain-errors",5],
 ];
 
 function structuredReference(cwd) {
@@ -67,9 +69,9 @@ function odinDiagnostics(cwd) {
   if(run.error || run.signal || run.status===null) throw new Error("Odin checker did not complete");
   const result=[...run.stdout.matchAll(/^DIAG\t(\d+)\t(\d+)\t(\d+)\t(\d+)\t(\d+)$/gm)].map(m=>{
     const kind=Number(m[1]);
-    assert.ok(kind===10 || kind===11,"unmapped Odin issue in structured witness");
+    assert.ok(kind===10 || kind===11 || kind===12,"unmapped Odin issue in structured witness");
     return {
-      code:kind===11?2367:2322,category:"error",
+      code:kind===10?2322:2367,category:"error",
       line:Number(m[2])+1,column:Number(m[3])+1,
       endLine:Number(m[4])+1,endColumn:Number(m[5])+1,
     };

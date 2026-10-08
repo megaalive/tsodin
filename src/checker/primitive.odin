@@ -28,6 +28,8 @@ Check_Issue :: enum {
     Assignment_Type_Mismatch,
     // Appended: preserve internal issue IDs used by the TS2322 witness.
     Disjoint_Literal_Comparison,
+    // Independent proof: base primitive domains cannot overlap under ===/!==.
+    Disjoint_Primitive_Domains,
 }
 
 Diagnostic :: struct {
@@ -292,27 +294,33 @@ check_file :: proc(
                     // Logical operators return operand values in TypeScript.
                     // Restrict to boolean-only cases until truthiness is modeled.
                     kind = .Boolean
-                } else if (node.operator == .Equals_Equals_Equals ||
-                           node.operator == .Exclamation_Equals_Equals) &&
-                          left == right {
-                    // Coarse primitive types lose literal/flow narrowing.
-                    // Constant comparisons may emit TS2367.
-                    lhs := syntax.nodes[node.left]
-                    rhs := syntax.nodes[node.right]
-                    same_name := lhs.kind == .Name && rhs.kind == .Name &&
-                                 references[node.left] > 0 &&
-                                 references[node.left] == references[node.right]
-                    both_literals, same_value := literal_overlap(
-                        literal_nodes[node.left], literal_nodes[node.right], text)
-                    if same_name || (both_literals && same_value) {
-                        kind = .Boolean
-                    } else if both_literals {
-                        // Two distinct literal types have no overlap. This is
-                        // recoverable TS2367-candidate evidence, not an unsupported
-                        // operator; subsequent declarations are still checked.
-                        fail(&result, .Disjoint_Literal_Comparison,
+                } else if node.operator == .Equals_Equals_Equals ||
+                          node.operator == .Exclamation_Equals_Equals {
+                    if left != right {
+                        // Number, string and boolean are pairwise disjoint
+                        // domains for strict equality, even when an annotation
+                        // widened either operand. No literal assumptions needed.
+                        fail(&result, .Disjoint_Primitive_Domains,
                              node.byte_start, node.byte_end, false)
                         kind = .Boolean
+                    } else {
+                        // Same primitive domain does NOT prove overlap: TS
+                        // literal and flow-narrowing rules may still report
+                        // TS2367. Retain M4-G2's conservative proof boundary.
+                        lhs := syntax.nodes[node.left]
+                        rhs := syntax.nodes[node.right]
+                        same_name := lhs.kind == .Name && rhs.kind == .Name &&
+                                     references[node.left] > 0 &&
+                                     references[node.left] == references[node.right]
+                        both_literals, same_value := literal_overlap(
+                            literal_nodes[node.left], literal_nodes[node.right], text)
+                        if same_name || (both_literals && same_value) {
+                            kind = .Boolean
+                        } else if both_literals {
+                            fail(&result, .Disjoint_Literal_Comparison,
+                                 node.byte_start, node.byte_end, false)
+                            kind = .Boolean
+                        }
                     }
                 }
                 if kind == .Unknown {

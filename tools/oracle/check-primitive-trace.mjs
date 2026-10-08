@@ -66,4 +66,12 @@ assert.equal(constBad.status,1,"disjoint const aliases must fail");
 assert.deepEqual(constBad.summary,["SUMMARY","10","3","1"]);
 assert.deepEqual(constBad.diags.map(row=>row[1]),["11","11","11"],
   "all disjoint const alias comparisons use the TS2367-candidate issue");
-console.log("PASS: Odin bounded checker with source-backed const literal provenance; TS7 parity checked separately");
+const domainValid=read("checker-domain-valid");
+assert.equal(domainValid.status,0,"proven same-name comparisons remain accepted");
+assert.deepEqual(domainValid.summary,["SUMMARY","5","0","0"]);
+const domainErrors=read("checker-domain-errors");
+assert.equal(domainErrors.status,1,"disjoint primitive domains must not return success");
+assert.deepEqual(domainErrors.summary,["SUMMARY","9","5","1"]);
+assert.deepEqual(domainErrors.diags.map(row=>row[1]),["12","12","12","12","10"],
+  "primitive domain and assignment issues have stable distinct ordinals");
+console.log("PASS: Odin checker with disjoint primitive domains; TS7 parity checked separately");
