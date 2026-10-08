@@ -9,8 +9,8 @@
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./soft-glass.css?v=20261008-xray-editor">
-  <link rel="stylesheet" href="./live.css">
-  <script src="./app.js?v=20261008-xray-editor" type="module"></script>
+  <link rel="stylesheet" href="./live.css?v=20261009-live-orbit">
+  <script src="./app.js?v=20261009-live-orbit" type="module"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -38,11 +38,22 @@
         <div class="hero-actions"><button class="primary-link view-action" type="button" data-view="activity">Explore activity ↘</button><button class="quiet-link view-action" type="button" data-view="conformance">See conformance →</button></div>
         <p class="honesty-line"><span class="star-mark" aria-hidden="true">✳</span> No TypeScript checker performance claim until an equivalent end-to-end checker exists.</p>
       </div>
-      <div class="hero-instrument live-instrument" aria-label="Compiler pipeline diagram, not performance data">
-        <div class="instrument-top"><span class="dot-row" aria-hidden="true"><i></i><i></i><i></i></span> ARCHITECTURE / IN PROGRESS <span>TS → ODIN</span></div>
-        <div class="compiler-orbit"><div class="orbit-ring orbit-one"></div><div class="orbit-ring orbit-two"></div><div class="orbit-ring orbit-three"></div><div class="orbit-center"><span>COMPILER</span><strong>ODIN</strong><small>SEMANTICS FIRST</small></div><span class="orbit-satellite sat-one">SOURCE</span><span class="orbit-satellite sat-two">SYMBOLS</span><span class="orbit-satellite sat-three">TYPES</span></div>
-        <div class="instrument-meta"><span>BRANCH <strong>main</strong></span><span class="instrument-good">PUBLIC SOURCE ↗</span></div>
-        <p class="instrument-warning">This diagram illustrates the planned compiler architecture. It does not claim those stages are implemented.</p>
+      <div class="hero-instrument live-instrument" id="architecture-instrument" aria-label="Animated, interactive conceptual compiler architecture diagram; not live compilation" data-stage="source">
+        <div class="instrument-top"><span class="dot-row" aria-hidden="true"><i></i><i></i><i></i></span> ARCHITECTURE / INTERACTIVE <span>TS → ODIN</span></div>
+        <div class="compiler-orbit" aria-label="Select a compiler stage to inspect its source">
+          <div class="orbit-ring orbit-one" aria-hidden="true"></div><div class="orbit-ring orbit-two" aria-hidden="true"></div><div class="orbit-ring orbit-three" aria-hidden="true"></div>
+          <div class="orbit-center"><span>COMPILER</span><strong>ODIN</strong><small>SEMANTICS FIRST</small></div>
+          <button type="button" class="orbit-satellite sat-one is-active" data-orbit-stage="source" aria-controls="orbit-detail" aria-pressed="true">SOURCE</button>
+          <button type="button" class="orbit-satellite sat-two" data-orbit-stage="symbols" aria-controls="orbit-detail" aria-pressed="false">SYMBOLS</button>
+          <button type="button" class="orbit-satellite sat-three" data-orbit-stage="types" aria-controls="orbit-detail" aria-pressed="false">TYPES</button>
+          <span class="orbit-hint" aria-hidden="true">TAP A STAGE ↗</span>
+        </div>
+        <div class="orbit-inspector" id="orbit-detail" role="group" aria-label="Selected architecture stage">
+          <div class="orbit-inspector-copy"><span class="orbit-inspector-kicker">SOURCE FILE · NOT COMPLETION STATUS</span><strong id="orbit-stage-name">Source &amp; UTF-16</strong><p id="orbit-stage-description">Versioned source and byte-to-UTF-16 position mapping.</p></div>
+          <a id="orbit-stage-link" href="https://github.com/megaalive/tsodin/blob/main/src/source/utf16.odin" target="_blank" rel="noopener noreferrer" aria-label="Inspect source stage implementation file">VIEW FILE ↗</a>
+        </div>
+        <div class="instrument-meta"><span>BRANCH <strong>main</strong></span><button class="orbit-motion-toggle" id="orbit-motion-toggle" type="button" aria-pressed="false" aria-controls="architecture-instrument">Ⅱ Pause motion</button></div>
+        <p class="instrument-warning">Animated architecture illustration, not a running compiler or proof of stage completion.</p>
       </div>
     </section>
 

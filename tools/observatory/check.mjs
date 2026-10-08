@@ -6,6 +6,7 @@ import {readFileSync,existsSync} from "node:fs";
 import {resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport} from "../../lib/observatory-core.mjs";
+import {ORBIT_STAGES,nextOrbitStage,orbitStage} from "../../lib/architecture-orbit.mjs";
 const root=resolve(fileURLToPath(new URL("../..",import.meta.url)));
 const get=path=>readFileSync(resolve(root,path),"utf8");
 
@@ -53,7 +54,7 @@ assert.equal(workflowOutcome({status:"completed",conclusion:"success"}).label,"P
 
 const html=get("index.html");
 assert.match(html, /<title>tsodin — Compiler Observatory<\/title>/);
-assert.match(html, /href="\.\/live\.css"/);
+assert.match(html, /href="\.\/live\.css\?v=20261009-live-orbit"/);
 assert.match(html, /href="\.\/soft-glass\.css\?v=20261008-xray-editor"/);
 assert.match(html, /GITHUB · CURRENT STATE/);
 assert.match(html, /data-panel="conformance" hidden/);
@@ -67,14 +68,14 @@ assert.match(html, /REFERENCE TOOL · NOT ODIN EXECUTION/);
 for(const id of ["main","activity","pipeline","xray","source-input","byte-offset","last-checked","latest-sha","main-ci","capability-list","refresh-button"]) {
  assert.match(html,new RegExp('id="'+id+'"'));
 }
-for(const file of ["index.html","styles.css","soft-glass.css","live.css","favicon.svg","app.js","lib/observatory-core.mjs","data/conformance.json"]) assert.ok(existsSync(resolve(root,file)),file+" missing");
+for(const file of ["index.html","styles.css","soft-glass.css","live.css","favicon.svg","app.js","lib/observatory-core.mjs","lib/architecture-orbit.mjs","data/conformance.json"]) assert.ok(existsSync(resolve(root,file)),file+" missing");
 const js=get("app.js");
 assert.match(js,/api\.github\.com\/repos\/megaalive\/tsodin/);
 assert.match(js,/Promise\.allSettled/);
 assert.match(js,/source tree/);
 assert.match(js,/Cannot confirm CI for current HEAD/);
 assert.match(js,/selectView/);
-assert.match(html, /src="\.\/app\.js\?v=20261008-xray-editor"/);
+assert.match(html, /src="\.\/app\.js\?v=20261009-live-orbit"/);
 const theme=get("soft-glass.css");
 assert.match(theme,/\.state-pill\.neutral,\s*\.state-pill\.pending\s*\{[^}]*background:\s*rgba\(54,121,180/s,
   "Neutral and pending badges must use muted blue glass rather than inherited gray");
@@ -89,6 +90,30 @@ assert.match(theme,/input\.byte-slider::-moz-range-thumb/,
 assert.match(js,/slider\.style\.setProperty\("--range-progress"/,
   "X-Ray control must update its filled track when position changes");
 assert.match(js,/publishedConformance/);
+assert.deepEqual(ORBIT_STAGES.map(x=>x.key),["source","symbols","types"]);
+assert.deepEqual([nextOrbitStage(0),nextOrbitStage(1),nextOrbitStage(2),nextOrbitStage(-1)],[1,2,0,0]);
+assert.equal(orbitStage("types").file,"src/checker/primitive.odin");
+assert.equal(orbitStage("unknown"),null);
+for(const stage of ORBIT_STAGES){
+  assert.match(html,new RegExp('data-orbit-stage="'+stage.key+'"'));
+  assert.ok(stage.file.startsWith("src/"),"source-backed stage link");
+}
+assert.match(html,/id="orbit-motion-toggle"[^>]*aria-pressed="false"/);
+assert.match(html,/animated architecture illustration, not a running compiler/i);
+assert.match(html,/id="orbit-detail"[^>]*role="group"/);
+assert.match(js,/initArchitectureOrbit/);
+const orbitJs=get("lib/architecture-orbit.mjs");
+assert.match(orbitJs,/prefers-reduced-motion/);
+assert.match(orbitJs,/visibilitychange/);
+assert.match(orbitJs,/root\.classList\.toggle\("orbit-paused",[\s\S]*manualPause \|\| media\.matches/);
+assert.match(orbitJs,/interacting/);
+assert.match(orbitJs,/selectedPanel\?\.hidden/);
+assert.match(orbitJs,/setInterval\(\(\)=>\{current=nextOrbitStage\(current\);paint\(\);\},4800\)/);
+assert.doesNotMatch(orbitJs,/fetch\(|XMLHttpRequest|localStorage|requestAnimationFrame/);
+const orbitCss=get("live.css");
+assert.match(orbitCss,/@keyframes orbit-halo/);
+assert.match(orbitCss,/\.orbit-paused \.orbit-ring/);
+assert.match(orbitCss,/@media\(prefers-reduced-motion:reduce\)/);
 assert.match(html, /id="edit-source"[^>]*aria-controls="source-input"/,
   "X-Ray must provide an explicit, discoverable edit action");
 assert.match(html, /id="source-input"[^>]*aria-describedby="source-edit-hint"/,

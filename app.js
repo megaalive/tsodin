@@ -1,4 +1,5 @@
 import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport} from "./lib/observatory-core.mjs";
+import {initArchitectureOrbit} from "./lib/architecture-orbit.mjs";
 const $ = id => document.getElementById(id);
 const REPO = "https://github.com/megaalive/tsodin";
 const API = "https://api.github.com/repos/megaalive/tsodin";
@@ -16,12 +17,14 @@ function selectView(id, updateHash = true) {
     button.classList.toggle("active",selected);
   });
   if(updateHash && location.hash!=="#"+active) location.hash=active;
+  document.dispatchEvent(new Event("tsodin:view-change"));
 }
 document.querySelectorAll("[data-view]").forEach(button=>{
   button.addEventListener("click",()=>selectView(button.dataset.view));
 });
 window.addEventListener("hashchange",()=>selectView(location.hash.slice(1),false));
 selectView(location.hash.slice(1),false);
+initArchitectureOrbit($("architecture-instrument"));
 
 async function publishedConformance() {
   const controller=new AbortController();

@@ -208,3 +208,62 @@ body > .site-footer {
   .site-footer .footer-links { gap: 5px 9px; }
   .site-footer .footer-links a { font-size: 10px; }
 }
+
+/* Living compiler architecture: CSS-only compositor animations, bounded
+   JavaScript stage selection. No fake compiler execution or telemetry. */
+.live-instrument .compiler-orbit{overflow:visible}
+.orbit-ring{pointer-events:none;will-change:transform}
+.orbit-one{animation:orbit-halo 18s linear infinite}
+.orbit-two{animation:orbit-halo 42s linear infinite reverse}
+.orbit-three{animation:orbit-halo 62s linear infinite}
+.orbit-two::after,.orbit-three::after{
+  content:"";position:absolute;top:50%;left:-4px;width:7px;height:7px;
+  border-radius:50%;background:#bdeeff;box-shadow:0 0 15px 5px rgba(109,211,255,.48);
+}
+.orbit-three::after{top:14%;left:13%;width:5px;height:5px;opacity:.72}
+.orbit-center{animation:orbit-heartbeat 5.5s ease-in-out infinite}
+.orbit-center::after{
+  content:"";position:absolute;inset:-14px;border:1px solid rgba(152,222,255,.32);
+  border-radius:50%;pointer-events:none;animation:orbit-wave 5.5s ease-out infinite;
+}
+.orbit-satellite{
+  appearance:none;cursor:pointer;font-weight:650;touch-action:manipulation;
+  transition:background-color .22s ease,border-color .22s ease,box-shadow .22s ease,transform .22s ease;
+}
+.orbit-satellite:hover,.orbit-satellite:focus-visible,.orbit-satellite.is-active{
+  color:#f2fbff;border-color:#e0f6ff;
+  background:rgba(57,126,181,.95);box-shadow:0 0 23px rgba(84,194,255,.38),inset 0 1px 0 rgba(243,251,255,.19);
+}
+.orbit-satellite:focus-visible,.orbit-motion-toggle:focus-visible,.orbit-inspector a:focus-visible{
+  outline:2px solid #e8faff;outline-offset:4px;
+}
+.orbit-satellite.is-active{transform:translateY(-2px)}
+.orbit-hint{position:absolute;bottom:0;right:0;font:600 8px ui-monospace,monospace;letter-spacing:.65px;color:#9dccea;opacity:.8;pointer-events:none}
+.orbit-inspector{
+  min-height:89px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 12px;margin:-1px 0 13px;border:1px solid rgba(149,214,255,.25);
+  border-radius:9px;background:rgba(11,46,80,.26);
+}
+.orbit-inspector-copy{min-width:0}
+.orbit-inspector-kicker{display:block;font:600 8px ui-monospace,monospace;letter-spacing:.65px;color:#99cdeb;margin-bottom:6px}
+.orbit-inspector-copy strong{font-size:12px;color:#e9faff}
+.orbit-inspector-copy p{font-size:10px;line-height:1.55;color:#c2dcee;margin:5px 0 0}
+.orbit-inspector a{white-space:nowrap;flex-shrink:0;font:650 9px ui-monospace,monospace;color:#b9e5ff}
+.orbit-inspector a:hover{color:#fff}
+.orbit-motion-toggle{appearance:none;border:0;background:transparent;color:#b9e5ff;font:600 9px ui-monospace,monospace;cursor:pointer;padding:2px 0}
+.orbit-motion-toggle:disabled{cursor:default;opacity:.68}
+.live-instrument .instrument-meta{align-items:center}
+.orbit-paused .orbit-ring,.orbit-paused .orbit-center,.orbit-paused .orbit-center::after{animation-play-state:paused}
+@keyframes orbit-halo{to{transform:rotate(360deg)}}
+@keyframes orbit-heartbeat{50%{box-shadow:0 0 78px rgba(79,173,252,.49),inset 0 1px 0 rgba(238,249,255,.34)}}
+@keyframes orbit-wave{0%{transform:scale(.85);opacity:.48}75%,100%{transform:scale(1.17);opacity:0}}
+@media (max-width:460px){
+  .orbit-inspector{gap:8px;padding:10px;margin-bottom:11px}
+  .orbit-inspector a{font-size:8px}
+  .orbit-inspector-copy p{font-size:9px}
+  .orbit-hint{bottom:-3px}
+}
+@media(prefers-reduced-motion:reduce){
+  .orbit-ring,.orbit-center,.orbit-center::after{animation:none!important;will-change:auto}
+  .orbit-satellite{transition:none}
+}
