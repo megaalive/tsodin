@@ -49,6 +49,8 @@ const fixtures=[
   ["checker-flow-guards-errors",6],
   ["checker-flow-nested-valid",0],
   ["checker-flow-nested-errors",5],
+  ["checker-flow-compound-valid",0],
+  ["checker-flow-compound-errors",5],
 ];
 
 function structuredReference(cwd) {

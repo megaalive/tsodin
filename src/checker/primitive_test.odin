@@ -861,3 +861,93 @@ primitive_checker_nested_mutation_invalidates_parent_fact :: proc(t: ^testing.T)
     parser.syntax_report_destroy(&ast)
     source.source_version_destroy(&v)
 }
+
+@(test)
+primitive_checker_compound_short_circuit_facts :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let n: number = 1; n = 1 + 2; let a: boolean = false; a = n === 2;" +
+        "let b: boolean = false; b = n === 3; let out: boolean = false;" +
+        "if (a && b) { out = a === true; out = b === true; } else { out = a === b; }" +
+        "const after: boolean = a === false;",
+        "let n: number = 1; n = 1 + 2; let a: boolean = false; a = n === 2;" +
+        "let b: boolean = false; b = n === 3; let out: boolean = false;" +
+        "if (a || b) { out = a === false; } else { out = a === false; out = b === false; }",
+        "let n: number = 1; n = 1 + 2; let a: boolean = false; a = n === 2;" +
+        "let b: boolean = false; b = n === 3; let out: boolean = false;" +
+        "if (!(a && !b)) { out = a === false; } else {" +
+        " out = a === true; out = b === false; a = n === 2; out = a === true; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(760), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                       !checked.fatal && len(checked.diagnostics) == 0,
+                       "pure independent guards yield only entailed facts")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_compound_guard_disjoint_diagnostics :: proc(t: ^testing.T) {
+    input := "let n: number = 1; n = 1 + 2; let a: boolean = false; a = n === 2;" +
+             "let b: boolean = false; b = n === 3; let out: boolean = false;" +
+             "if (a && b) { out = a === false; out = b === false; } else { out = 'bad'; }" +
+             "if (a || b) { out = a === false; } else {" +
+             " out = a === true; out = b === true; }"
+    v, ok := source.source_version_create(source.File_Id(761), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && !checked.complete &&
+                   !checked.fatal && len(checked.diagnostics) == 5,
+                   "AND true / OR false prove four disjoint comparisons")
+    if len(checked.diagnostics) == 5 {
+        testing.expect(t,
+            checked.diagnostics[0].issue == .Disjoint_Literal_Comparison &&
+            checked.diagnostics[1].issue == .Disjoint_Literal_Comparison &&
+            checked.diagnostics[2].issue == .Assignment_Type_Mismatch &&
+            checked.diagnostics[3].issue == .Disjoint_Literal_Comparison &&
+            checked.diagnostics[4].issue == .Disjoint_Literal_Comparison,
+            "compound narrowing respects ordered TS2367 and TS2322 candidates")
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_compound_guard_fail_closed :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "if (a && a) { out = true; } else { out = false; }",
+        "if (a || a) { out = true; } else { out = false; }",
+        "if (a && true) { out = true; } else { out = false; }",
+        "if (a || false) { out = true; } else { out = false; }",
+        "if (a && (b || a)) { out = true; } else { out = false; }",
+    }
+    prefix := "let n: number = 1; n = 1 + 2;" +
+              "let a: boolean = false; a = n === 2;" +
+              "let b: boolean = false; b = n === 3; let out: boolean = false;"
+    for suffix in cases {
+        v, ok := source.source_version_create(source.File_Id(762), 1, prefix + suffix)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                       !checked.complete && len(checked.diagnostics) > 0 &&
+                       checked.diagnostics[0].issue == .Unsupported_Condition,
+                       "unproved or repeated compound guard stays fail-closed")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}

@@ -234,8 +234,12 @@ check_file :: proc(
     // Per-depth split metadata prevents child conditionals from corrupting
     // parent guard facts. The live literal_decls/wide_decls arrays represent
     // the current path and are the only state consumed by expressions.
-    guard_indices: [parser.FLOW_NEST_LIMIT]int
-    guard_else_facts: [parser.FLOW_NEST_LIMIT]Literal_Fact
+    // At most two independent, effect-free guards per conditional.
+    // A short-circuit arm only receives facts logically implied by that arm.
+    guard_count: [parser.FLOW_NEST_LIMIT]int
+    guard_indices: [parser.FLOW_NEST_LIMIT][2]int
+    guard_then_facts: [parser.FLOW_NEST_LIMIT][2]Literal_Fact
+    guard_else_facts: [parser.FLOW_NEST_LIMIT][2]Literal_Fact
     for event in syntax.statements {
         if event.kind == .Else {
             if flow_depth == 0 || event.declaration_index != -1 ||
@@ -254,9 +258,11 @@ check_file :: proc(
             copy(then_wide[level], wide_decls)
             copy(literal_decls, entry_literals[level])
             copy(wide_decls, entry_wide[level])
-            if guard_else_facts[level].kind != .Name {
-                literal_decls[guard_indices[level]] = guard_else_facts[level]
-                wide_decls[guard_indices[level]] = false
+            for slot in 0..<guard_count[level] {
+                if guard_else_facts[level][slot].kind != .Name {
+                    literal_decls[guard_indices[level][slot]] = guard_else_facts[level][slot]
+                    wide_decls[guard_indices[level][slot]] = false
+                }
             }
             else_seen[level] = true
             continue
@@ -290,8 +296,12 @@ check_file :: proc(
                 }
             }
             else_seen[level] = false
-            guard_indices[level] = -1
-            guard_else_facts[level] = Literal_Fact{}
+            guard_count[level] = 0
+            for slot in 0..<2 {
+                guard_indices[level][slot] = -1
+                guard_then_facts[level][slot] = Literal_Fact{}
+                guard_else_facts[level][slot] = Literal_Fact{}
+            }
             flow_depth -= 1
             continue
         }
@@ -552,8 +562,10 @@ check_file :: proc(
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
             }
-            // Normalize only transparent groups and unary !. The tree remains
-            // postorder: each child must precede its parent. No CFG allocation.
+            // Only pure syntax nodes are available in conditions. Both
+            // operands of &&/|| are checked independently (not evaluated as
+            // mutations); TypeScript's short circuit controls WHICH arm may
+            // infer facts, not whether this parser binds an operand.
             guard_node := expression_root
             flipped := false
             for {
@@ -571,81 +583,140 @@ check_file :: proc(
                 }
             }
             root := syntax.nodes[guard_node]
-            guard_ref := -1
-            then_fact: Literal_Fact
-            else_fact: Literal_Fact
-            if root.kind == .Name {
-                // Truthiness is only modeled for proven-wide boolean lets.
-                // A plain if(flag) is equivalent to if(flag === true).
-                guard_ref = references[guard_node]
-                then_fact = branch_boolean_fact(!flipped)
-                else_fact = branch_boolean_fact(flipped)
-            } else if root.kind == .Binary &&
-                      (root.operator == .Equals_Equals_Equals ||
-                       root.operator == .Exclamation_Equals_Equals) &&
-                      root.left >= 0 && root.right >= 0 {
-                lhs := syntax.nodes[root.left]
-                rhs := syntax.nodes[root.right]
-                if lhs.kind != .Name {
+            compound := root.kind == .Binary &&
+                        (root.operator == .Ampersand_Ampersand ||
+                         root.operator == .Bar_Bar)
+            part_count := 1
+            part_nodes: [2]int
+            part_nodes[0] = guard_node
+            if compound {
+                if root.left < 0 || root.left >= guard_node ||
+                   root.right < 0 || root.right >= guard_node {
                     fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                     return result
                 }
-                guard_ref = references[root.left]
-                fact := literal_fact_from_node(rhs)
-                // A negation swaps the branch polarity; never subtract a
-                // literal from the opposite broad number/string/boolean arm.
-                negative := (root.operator == .Exclamation_Equals_Equals) != flipped
-                if rhs.kind == .Boolean {
-                    // Boolean is a closed two-value domain. Unlike number
-                    // and string, the opposite path proves the other value.
-                    value, valid := boolean_fact_value(fact, text)
-                    if !valid {
+                part_count = 2
+                part_nodes[0] = root.left
+                part_nodes[1] = root.right
+            }
+            level := flow_depth
+            // Do not carry metadata from an earlier conditional at this depth.
+            guard_count[level] = 0
+            for slot in 0..<part_count {
+                leaf_node := part_nodes[slot]
+                leaf_flipped := !compound && flipped
+                for {
+                    node := syntax.nodes[leaf_node]
+                    if node.kind == .Group ||
+                       (node.kind == .Unary && node.operator == .Exclamation) {
+                        if node.left < 0 || node.left >= leaf_node {
+                            fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                            return result
+                        }
+                        if node.kind == .Unary { leaf_flipped = !leaf_flipped }
+                        leaf_node = node.left
+                    } else {
+                        break
+                    }
+                }
+                leaf := syntax.nodes[leaf_node]
+                guard_ref := -1
+                then_fact: Literal_Fact
+                else_fact: Literal_Fact
+                if leaf.kind == .Name {
+                    guard_ref = references[leaf_node]
+                    then_fact = branch_boolean_fact(!leaf_flipped)
+                    else_fact = branch_boolean_fact(leaf_flipped)
+                } else if leaf.kind == .Binary &&
+                          (leaf.operator == .Equals_Equals_Equals ||
+                           leaf.operator == .Exclamation_Equals_Equals) &&
+                          leaf.left >= 0 && leaf.right >= 0 {
+                    lhs := syntax.nodes[leaf.left]
+                    rhs := syntax.nodes[leaf.right]
+                    if lhs.kind != .Name {
                         fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                         return result
                     }
-                    opposite := branch_boolean_fact(!value)
-                    if negative {
-                        then_fact = opposite
+                    guard_ref = references[leaf.left]
+                    fact := literal_fact_from_node(rhs)
+                    negative := (leaf.operator == .Exclamation_Equals_Equals) != leaf_flipped
+                    if rhs.kind == .Boolean {
+                        value, valid := boolean_fact_value(fact, text)
+                        if !valid {
+                            fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                            return result
+                        }
+                        opposite := branch_boolean_fact(!value)
+                        if negative {
+                            then_fact = opposite
+                            else_fact = fact
+                        } else {
+                            then_fact = fact
+                            else_fact = opposite
+                        }
+                    } else if negative {
                         else_fact = fact
                     } else {
                         then_fact = fact
-                        else_fact = opposite
                     }
-                } else if negative {
-                    else_fact = fact
                 } else {
-                    then_fact = fact
-                }
-            } else {
-                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
-                return result
-            }
-            if guard_ref <= 0 || guard_ref > len(symbols.symbols) {
-                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
-                return result
-            }
-            symbol := symbols.symbols[guard_ref-1]
-            guard := symbol.declaration_index
-            if symbol.kind != .Let || guard < 0 || guard >= result.checked_declarations ||
-               !wide_decls[guard] {
-                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
-                return result
-            }
-            if root.kind == .Name {
-                if declared[guard] != .Boolean {
                     fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                     return result
                 }
-            } else {
-                rhs := syntax.nodes[root.right]
-                if !((declared[guard] == .Number && rhs.kind == .Integer) ||
-                     (declared[guard] == .Text && rhs.kind == .Text) ||
-                     (declared[guard] == .Boolean && rhs.kind == .Boolean)) {
+                if guard_ref <= 0 || guard_ref > len(symbols.symbols) {
                     fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                     return result
                 }
+                symbol := symbols.symbols[guard_ref-1]
+                guard := symbol.declaration_index
+                if symbol.kind != .Let || guard < 0 || guard >= result.checked_declarations ||
+                   !wide_decls[guard] {
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
+                }
+                if leaf.kind == .Name {
+                    if declared[guard] != .Boolean {
+                        fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                        return result
+                    }
+                } else {
+                    rhs := syntax.nodes[leaf.right]
+                    if !((declared[guard] == .Number && rhs.kind == .Integer) ||
+                         (declared[guard] == .Text && rhs.kind == .Text) ||
+                         (declared[guard] == .Boolean && rhs.kind == .Boolean)) {
+                        fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                        return result
+                    }
+                }
+                // Repeated symbols need intersection/contradiction semantics
+                // across short-circuit paths; never pretend they are independent.
+                if slot > 0 && guard == guard_indices[level][0] {
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
+                }
+                guard_indices[level][slot] = guard
+                guard_then_facts[level][slot] = Literal_Fact{}
+                guard_else_facts[level][slot] = Literal_Fact{}
+                if !compound {
+                    guard_then_facts[level][slot] = then_fact
+                    guard_else_facts[level][slot] = else_fact
+                } else if root.operator == .Ampersand_Ampersand {
+                    // a && b proves BOTH predicates only when true.
+                    if flipped {
+                        guard_else_facts[level][slot] = then_fact
+                    } else {
+                        guard_then_facts[level][slot] = then_fact
+                    }
+                } else {
+                    // a || b disproves BOTH predicates only when false.
+                    if flipped {
+                        guard_then_facts[level][slot] = else_fact
+                    } else {
+                        guard_else_facts[level][slot] = else_fact
+                    }
+                }
+                guard_count[level] += 1
             }
-            level := flow_depth
             if len(entry_literals[level]) == 0 {
                 entry_literals[level] = make([]Literal_Fact, len(declared))
                 then_literals[level] = make([]Literal_Fact, len(declared))
@@ -654,11 +725,11 @@ check_file :: proc(
             }
             copy(entry_literals[level], literal_decls)
             copy(entry_wide[level], wide_decls)
-            guard_indices[level] = guard
-            guard_else_facts[level] = else_fact
-            if then_fact.kind != .Name {
-                literal_decls[guard] = then_fact
-                wide_decls[guard] = false
+            for slot in 0..<guard_count[level] {
+                if guard_then_facts[level][slot].kind != .Name {
+                    literal_decls[guard_indices[level][slot]] = guard_then_facts[level][slot]
+                    wide_decls[guard_indices[level][slot]] = false
+                }
             }
             else_seen[level] = false
             flow_depth += 1
