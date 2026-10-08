@@ -515,3 +515,23 @@ not official conformance. Public `tsodin check` remains disabled.
 A nested live parent guard with a contradictory child guard is included in
 both Odin unit tests and the TS7 valid witness to prevent per-depth
 reachability flags from leaking into the enclosing branch.
+
+## M4-G5F4 — typecheck direct primitive writes in unreachable arms
+
+A proven-dead Boolean contradiction arm may now contain assignments to
+previously initialized independent `let` variables with **direct**
+integer, string or Boolean literal RHS expressions. The checker performs
+normal declared-domain checking on these assignments, preserving TS2322
+candidate errors (including in unreachable code), but **does not transfer**
+dead assignments into any live flow state. The dead predecessor remains
+excluded from the join, preserving assignment facts on the only live path.
+
+Dead-arm assignments to any enclosing guard variable, references or
+computed expressions on the RHS, and nested conditionals remain fatal
+unsupported. This conservative boundary avoids claiming TypeScript's
+general unreachable `never` semantics. Multiple direct writes are
+typechecked in source order, with no per-statement heap allocation.
+`checker-flow-dead-assign-{valid,errors}` provide pinned TS7.0.2
+diagnostic-code/UTF-16-start oracle evidence and supplemental TS6.0.2
+structured spans. Public `tsodin check` remains disabled and official
+conformance is NOT RUN.

@@ -231,9 +231,9 @@ check_file :: proc(
     node_cursor := 0
     flow_depth := 0
     else_seen: [parser.FLOW_NEST_LIMIT]bool
-    // A proven-impossible arm remains syntax-checked but cannot be
-    // interpreted with today's singleton flow representation. It must be
-    // empty, and cannot participate in a reachable-path join.
+    // A proven-impossible arm cannot participate in a reachable-path join.
+    // Primitive literal writes can be typechecked without executing their
+    // flow transfer; expressions requiring never-state analysis remain fatal.
     dead_then: [parser.FLOW_NEST_LIMIT]bool
     dead_else: [parser.FLOW_NEST_LIMIT]bool
     // Per-depth split metadata prevents child conditionals from corrupting
@@ -283,7 +283,7 @@ check_file :: proc(
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
             }
-            // An unreachable, *empty* arm has no runtime predecessor.
+            // An unreachable arm has no runtime predecessor.
             // Joining it would erase facts from the only reachable path.
             if dead_else[level] {
                 copy(literal_decls, then_literals[level])
@@ -320,15 +320,26 @@ check_file :: proc(
             continue
         }
         condition_event := event.kind == .If
+        dead_assignment := false
         if flow_depth > 0 {
             enclosing := flow_depth-1
             if (!else_seen[enclosing] && dead_then[enclosing]) ||
                (else_seen[enclosing] && dead_else[enclosing]) {
-                // The source still has to be typechecked like TypeScript;
-                // a dead branch with statements cannot yet be represented
-                // safely as `never`. Reject instead of silently skipping it.
-                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
-                return result
+                // TypeScript diagnoses wrong assignments even in a dead arm.
+                // Only side-effect-free direct primitive literals to an
+                // independent initialized let are proven checker-safe here.
+                // The value is typechecked but NOT transferred to flow state.
+                if event.kind != .Assignment || event.expression < 0 ||
+                   event.expression >= len(syntax.nodes) {
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
+                }
+                rhs := syntax.nodes[event.expression]
+                if rhs.kind != .Integer && rhs.kind != .Text && rhs.kind != .Boolean {
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
+                }
+                dead_assignment = true
             }
         }
         if condition_event && flow_depth >= parser.FLOW_NEST_LIMIT {
@@ -383,6 +394,20 @@ check_file :: proc(
                 return result
             }
             declared_type = declared[target_index]
+            if dead_assignment {
+                // Never allow writes to the contradictory guard binding, nor
+                // to any enclosing narrowing guard; its never-state meaning
+                // must not be silently replaced by our broad declared type.
+                for depth in 0..<flow_depth {
+                    for slot in 0..<guard_count[depth] {
+                        if guard_indices[depth][slot] == target_index {
+                            fail(&result, .Unsupported_Condition,
+                                 target.byte_start, target.byte_end, true)
+                            return result
+                        }
+                    }
+                }
+            }
         } else if condition_event {
             if event.declaration_index != -1 || event.target_node != -1 {
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
@@ -939,9 +964,11 @@ check_file :: proc(
                 target := syntax.nodes[event.target_node]
                 fail(&result, .Assignment_Type_Mismatch,
                      target.byte_start, target.byte_end, false)
-                literal_decls[target_index] = Literal_Fact{}
-                wide_decls[target_index] = false
-            } else {
+                if !dead_assignment {
+                    literal_decls[target_index] = Literal_Fact{}
+                    wide_decls[target_index] = false
+                }
+            } else if !dead_assignment {
                 // This is the first linear flow transfer. Reassignment
                 // replaces the earlier narrowed fact; nothing persists
                 // across unsupported branches or mutation paths.
