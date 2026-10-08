@@ -44,6 +44,14 @@ Token_Kind :: enum {
     // Preserve all prior ordinals used by supplemental TS6 lexical witnesses.
     True_Keyword,
     False_Keyword,
+    // M4-F: append only; earlier token ordinals are compatibility witnesses.
+    Less_Than_Equals,
+    Greater_Than_Equals,
+    Equals_Equals_Equals,
+    Exclamation_Equals_Equals,
+    Ampersand_Ampersand,
+    Bar_Bar,
+    Exclamation,
 }
 
 Scan_Error :: enum {
@@ -245,7 +253,18 @@ scanner_next :: proc(s: ^Scanner) -> Token {
     switch c {
     case ':': kind = .Colon
     case ';': kind = .Semicolon
-    case '=': kind = .Equals
+    case '=':
+        if start + 1 < len(text) && text[start+1] == '=' {
+            if start + 2 < len(text) && text[start+2] == '=' {
+                kind = .Equals_Equals_Equals
+                s.offset += 2
+            } else {
+                s.offset += 2
+                return scanner_error(s, start, .Unsupported_Syntax)
+            }
+        } else {
+            kind = .Equals
+        }
     case ',': kind = .Comma
     case '(': kind = .Open_Paren
     case ')': kind = .Close_Paren
@@ -261,8 +280,42 @@ scanner_next :: proc(s: ^Scanner) -> Token {
         } else {
             kind = .Slash
         }
-    case '<': kind = .Less_Than
-    case '>': kind = .Greater_Than
+    case '<':
+        if start + 1 < len(text) && text[start+1] == '=' {
+            kind = .Less_Than_Equals
+            s.offset += 1
+        } else {
+            kind = .Less_Than
+        }
+    case '>':
+        if start + 1 < len(text) && text[start+1] == '=' {
+            kind = .Greater_Than_Equals
+            s.offset += 1
+        } else {
+            kind = .Greater_Than
+        }
+    case '!':
+        if start + 1 < len(text) && text[start+1] == '=' {
+            if start + 2 < len(text) && text[start+2] == '=' {
+                kind = .Exclamation_Equals_Equals
+                s.offset += 2
+            } else {
+                s.offset += 2
+                return scanner_error(s, start, .Unsupported_Syntax)
+            }
+        } else {
+            kind = .Exclamation
+        }
+    case '&':
+        if start + 1 < len(text) && text[start+1] == '&' {
+            kind = .Ampersand_Ampersand
+            s.offset += 1
+        }
+    case '|':
+        if start + 1 < len(text) && text[start+1] == '|' {
+            kind = .Bar_Bar
+            s.offset += 1
+        }
     }
     s.offset += 1
     if kind == .Slash || kind == .Close_Brace ||
