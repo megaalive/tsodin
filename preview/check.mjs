@@ -11,16 +11,16 @@ assert.match(landing, /href="\.\/soft\/index\.html"/);
 assert.match(landing, /href="\.\/neon\/index\.html"/);
 for(const option of ["soft","neon"]) {
   const html = get(option+"/index.html");
-  const css = get(option === "soft" ? "soft.css" : "neon.css");
+  const css = get(option === "soft" ? "../soft-glass.css" : "neon.css");
   assert.ok(html.startsWith("<!doctype html>"));
-  assert.match(html, /LIVE SITE UNCHANGED/);
+  assert.match(html, /VISUAL COMPARISON · SOFT IS LIVE/);
   assert.match(html, /aria-label="Compare preview themes"/);
   assert.match(html, /href="\.\.\/\.\.\/styles\.css"/);
   assert.match(html, /src="\.\.\/\.\.\/app\.js"/);
-  assert.match(html, new RegExp('href="\\.\\./' + option + '\\.css"'));
+  assert.match(html, option === "soft" ? /href="\.\.\/\.\.\/soft-glass\.css"/ : /href="\.\.\/neon\.css"/);
   assert.match(html, /Benchmark Arena|The Benchmark/);
   assert.match(html, /Synthetic microkernels only/);
-  for(const link of ["../../styles.css","../../app.js","../../favicon.svg","../"+option+".css","data/observatory.json"]) {
+  for(const link of ["../../styles.css","../../app.js","../../favicon.svg",option === "soft" ? "../../soft-glass.css" : "../neon.css","data/observatory.json"]) {
     assert.ok(existsSync(resolve(repo,option,link)),option+": broken asset "+link);
   }
   const archive = JSON.parse(get(option+"/data/observatory.json"));
@@ -29,5 +29,6 @@ for(const option of ["soft","neon"]) {
   assert.match(css, /backdrop-filter:blur\(/);
   assert.match(css, /--green:#/);
 }
-assert.ok(!root.includes("VISUAL PREVIEW · LIVE SITE UNCHANGED"));
+assert.match(root, /href="\.\/soft-glass\.css"/);
+assert.ok(!root.includes("VISUAL COMPARISON · SOFT IS LIVE"));
 console.log("PASS: two standalone branch previews, relative assets, unchanged scientific data and live root");

@@ -49,6 +49,8 @@ assert.equal(utf16AtByteOffset(empty, 1), null);
 
 const html = get("index.html");
 assert.match(html, /<title>tsodin — Compiler Observatory<\/title>/);
+assert.match(html, /href="\.\/styles\.css"\s*>\s*<link rel="stylesheet" href="\.\/soft-glass\.css"/);
+assert.match(html, /<meta name="theme-color" content="#0b1d32">/);
 assert.match(html, /BROWSER REFERENCE · NOT ODIN EXECUTION/);
 assert.match(html, /Not yet measurable/);
 assert.doesNotMatch(html, /width:19%/);
@@ -56,11 +58,13 @@ assert.match(html, /Synthetic microkernels only/);
 for (const id of ["main", "arena", "xray", "journey", "status", "source-input", "byte-offset"]) {
   assert.match(html, new RegExp('id="' + id + '"'));
 }
-for (const localAsset of ["./favicon.svg", "./styles.css", "./app.js", "./lib/observatory-core.mjs", "./data/observatory.json"]) {
+for (const localAsset of ["./favicon.svg", "./styles.css", "./soft-glass.css", "./app.js", "./lib/observatory-core.mjs", "./data/observatory.json"]) {
   assert.equal(existsSync(resolve(root, localAsset)), true, "Missing local asset " + localAsset);
 }
 assert.doesNotMatch(html, /(?:https?:)?\/\/(?:unpkg|cdn\.jsdelivr|cdnjs|fonts\.googleapis|esm\.sh)/);
 assert.match(get("styles.css"), /prefers-reduced-motion:reduce/);
+assert.match(get("soft-glass.css"), /--green:#85d0ff/);
+assert.match(get("soft-glass.css"), /backdrop-filter:blur/);
 assert.match(get("app.js"), /textContent/);
 
 console.log("PASS: 6 research rounds, P6 metrics, UTF-8/UTF-16 boundaries, and static-page integrity");

@@ -36,7 +36,9 @@ The actual Odin reference code lives in `src/source/utf16.odin`. No browser-exec
 
 ## Maintenance / publishing
 
-- Edit `index.html`, `styles.css`, `app.js`, `lib/observatory-core.mjs` and `data/observatory.json`.
+- Edit `index.html`, `styles.css`, `soft-glass.css`, `app.js`, `lib/observatory-core.mjs` and `data/observatory.json`.
+- The approved **Blue Glassy Soft** theme is maintained as `soft-glass.css` and loaded after `styles.css`; `/preview/soft/` reuses the same file. Neon is isolated to `/preview/neon.css`.
+- Theme chosen by the user on 8 October 2026; no semantic or benchmark claims changed.
 - Run: `node tools/observatory/check.mjs`
 - Syntax-check: `node --check app.js` and `node --check lib/observatory-core.mjs`.
 - GitHub Actions `Observatory smoke` checks this on relevant PRs/main pushes.
