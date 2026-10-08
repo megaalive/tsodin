@@ -327,6 +327,24 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": true
+    },
+    {
+      "id": "checker-flow-nested-valid",
+      "path": "tests/oracle/checker-flow-nested-valid",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "checker-flow-nested-errors",
+      "path": "tests/oracle/checker-flow-nested-errors",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
     }
   ]
 }

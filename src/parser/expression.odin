@@ -37,8 +37,8 @@ Expr_Declaration :: struct {
 }
 
 // Source-order events: assignment roots and declarations share one dense node store.
-// A bounded, flat if/else is represented by explicit entry/split/join events.
-// Nested conditionals, branch declarations and implicit else paths fail closed.
+// An explicit if/else uses ordered fork/split/join events. Bounded nested
+// conditionals are legal; branch declarations and implicit else fail closed.
 Statement_Kind :: enum {
     Declaration,
     Assignment,
@@ -105,10 +105,12 @@ Syntax_State :: struct {
     report: ^Syntax_Report,
     fatal: bool,
     recursion: int,
+    if_depth: int, // independent control-flow nesting bound
 }
 
 // The depth bound is a safety limit, not a TypeScript grammar restriction.
 SYNTAX_DEPTH_LIMIT :: 64
+FLOW_NEST_LIMIT :: 2 // deeper branch scopes fail closed, not silently flattened
 
 syntax_issue :: proc(p: ^Syntax_State, issue: Syntax_Issue) {
     append(&p.report.diagnostics, Syntax_Diagnostic {
@@ -386,10 +388,15 @@ syntax_assignment :: proc(p: ^Syntax_State) -> bool {
     return true
 }
 
-// M4-G5B: exactly one non-nested if/else, with assignment-only arms.
-// The checker decides whether a condition has proved narrowing semantics.
-// Explicit markers preserve source order without allocating CFG nodes.
+// Nested if/else depth is intentionally small; statement events stay flat,
+// ordered and source-backed rather than creating an object-rich CFG.
 syntax_if :: proc(p: ^Syntax_State) -> bool {
+    if p.if_depth >= FLOW_NEST_LIMIT {
+        syntax_issue(p, .Nesting_Limit)
+        return false
+    }
+    p.if_depth += 1
+    defer p.if_depth -= 1
     start := p.current
     syntax_advance(p)
     if p.fatal { return false }
@@ -418,7 +425,11 @@ syntax_if :: proc(p: ^Syntax_State) -> bool {
     syntax_advance(p)
     for !p.fatal && p.current.kind != .Close_Brace &&
         p.current.kind != .End_Of_File {
-        if p.current.kind != .Identifier || !syntax_assignment(p) {
+        if p.current.kind == .If_Keyword {
+            if !syntax_if(p) { return false }
+        } else if p.current.kind == .Identifier {
+            if !syntax_assignment(p) { return false }
+        } else {
             syntax_issue(p, .Unsupported_Statement)
             return false
         }
@@ -447,7 +458,11 @@ syntax_if :: proc(p: ^Syntax_State) -> bool {
     syntax_advance(p)
     for !p.fatal && p.current.kind != .Close_Brace &&
         p.current.kind != .End_Of_File {
-        if p.current.kind != .Identifier || !syntax_assignment(p) {
+        if p.current.kind == .If_Keyword {
+            if !syntax_if(p) { return false }
+        } else if p.current.kind == .Identifier {
+            if !syntax_assignment(p) { return false }
+        } else {
             syntax_issue(p, .Unsupported_Statement)
             return false
         }
