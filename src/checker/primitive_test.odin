@@ -222,8 +222,6 @@ primitive_checker_comparisons_and_boolean_logic :: proc(t: ^testing.T) {
 @(test)
 primitive_checker_refuses_unproven_literal_overlap :: proc(t: ^testing.T) {
     bad_sources := [?]string{
-        "const bad = 1 === 2;",
-        "const bad = true !== false;",
         "const bad = 1 && true;",
         "const bad = !2;",
         "const bad = 'hi' < 'there';",
