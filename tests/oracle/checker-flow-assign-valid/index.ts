@@ -5,7 +5,7 @@ count = 1 + 2;
 const broadCount: boolean = count === 9;
 let label: string = "old";
 label = "new";
-const sameLabel: boolean = label !== "other";
+const sameLabel: boolean = label === "new";
 let ready: boolean = false;
 ready = true;
 const sameReady: boolean = ready === true;
