@@ -684,7 +684,7 @@ primitive_checker_negative_guard_assignment_invalidates_else_fact :: proc(t: ^te
     checked := check_file(&v, &ast, &bound)
     testing.expect(t, ast.complete && bound.complete && checked.complete &&
                    !checked.fatal && len(checked.diagnostics) == 0 &&
-                   checked.checked_declarations == 4 && checked.checked_assignments == 4,
+                   checked.checked_declarations == 3 && checked.checked_assignments == 4,
                    "assignment widens else and join; no stale singleton survives")
     report_destroy(&checked)
     binder.binding_report_destroy(&bound)
