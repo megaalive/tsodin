@@ -408,3 +408,71 @@ primitive_checker_does_not_invent_same_domain_overlap :: proc(t: ^testing.T) {
     parser.syntax_report_destroy(&ast)
     source.source_version_destroy(&v)
 }
+
+
+@(test)
+primitive_checker_computed_wide_domains :: proc(t: ^testing.T) {
+    input := "const total = 1 + 2; const alias = total; const check = alias === 9;" +
+             "const text = 'a' + 'b'; const copy = text; const textCheck = copy !== 'z';" +
+             "const greater = 3 > 1; const flag = greater; const flagCheck = flag === false;"
+    v, ok := source.source_version_create(source.File_Id(725), 1, input)
+    testing.expect(t, ok, "valid source snapshot")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && checked.checked_declarations == 9 &&
+                   len(checked.diagnostics) == 0,
+                   "widened numeric, string and comparison results pass through const aliases")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_wide_domains_preserve_disjointness :: proc(t: ^testing.T) {
+    input := "const num = 1 + 2; const text = 'a' + 'b'; const bad = num === text;" +
+             "const flag = 2 < 3; const bad2 = flag !== num;" +
+             "const first = 1; const second = 2; const bad3 = first === second;" +
+             "const wrong: string = num;"
+    v, ok := source.source_version_create(source.File_Id(726), 1, input)
+    testing.expect(t, ok, "valid source snapshot")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete &&
+                   !checked.complete && !checked.fatal &&
+                   checked.checked_declarations == 9 &&
+                   len(checked.diagnostics) == 4,
+                   "all four errors stay visible after introducing widened facts")
+    if len(checked.diagnostics) == 4 {
+        testing.expect(t, checked.diagnostics[0].issue == .Disjoint_Primitive_Domains &&
+                       checked.diagnostics[1].issue == .Disjoint_Primitive_Domains &&
+                       checked.diagnostics[2].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[3].issue == .Assignment_Type_Mismatch,
+                       "widened tracking does not suppress independent TS2367/TS2322 candidates")
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_mutable_computation_does_not_gain_const_provenance :: proc(t: ^testing.T) {
+    input := "let mutable = 1 + 2; const uncertain = mutable === 7;"
+    v, ok := source.source_version_create(source.File_Id(727), 1, input)
+    testing.expect(t, ok, "valid source snapshot")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                   !checked.complete && len(checked.diagnostics) == 1 &&
+                   checked.diagnostics[0].issue == .Incompatible_Operator,
+                   "mutable inferred value is not granted unproven flow semantics")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
