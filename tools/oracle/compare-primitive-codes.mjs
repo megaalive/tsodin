@@ -47,6 +47,12 @@ for(const fixture of fixtures){
              fixture.id+": invalid Odin diagnostic span");
   }
   const mapped=actual.map(d=>({code:2322,line:d.line,column:d.column}));
+  if(fixture.id==="checker-primitives-utf16") {
+    // Emoji precedes the declaration ON THE SAME LINE. UTF-8 byte columns
+    // are different from UTF-16 units; this locks the real TS7 coordinate.
+    assert.deepEqual(upstream,[{code:2322,line:2,column:16}],
+      "Pinned TS7 inline non-BMP/CRLF diagnostic start changed");
+  }
   assert.deepEqual(upstream,mapped,fixture.id+": TS7 code/start UTF-16 mismatch");
   records.push({fixture:fixture.id,reference:upstream,odin:mapped,
     codeParityChecked:true,startPositionParityChecked:true,

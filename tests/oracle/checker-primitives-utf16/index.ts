@@ -1,2 +1,2 @@
-// 😀 unicode trivia
-const label: string = 5;
+// previous line
+/* 😀 */ const label: string = 5;
