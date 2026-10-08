@@ -111,9 +111,11 @@ syntax_node :: proc(p: ^Syntax_State, node: Expr_Node) -> int {
 // Only the documented ASCII expression operators are accepted. Left
 // associativity follows precedence climbing (rhs minimum = priority + 1).
 binary_priority :: proc(kind: scanner.Token_Kind) -> int {
-    switch kind {
-    case .Plus, .Minus: return 10
-    case .Asterisk, .Slash: return 20
+    if kind == .Plus || kind == .Minus {
+        return 10
+    }
+    if kind == .Asterisk || kind == .Slash {
+        return 20
     }
     return 0
 }
@@ -237,11 +239,13 @@ syntax_declaration :: proc(p: ^Syntax_State) -> bool {
     decl: Expr_Declaration
     decl.byte_start = start.byte_start
     decl.initializer = -1
-    switch start.kind {
-    case .Const: decl.kind = .Const
-    case .Let: decl.kind = .Let
-    case .Var: decl.kind = .Var
-    case:
+    if start.kind == .Const {
+        decl.kind = .Const
+    } else if start.kind == .Let {
+        decl.kind = .Let
+    } else if start.kind == .Var {
+        decl.kind = .Var
+    } else {
         syntax_issue(p, .Unsupported_Statement)
         return false
     }
@@ -264,11 +268,13 @@ syntax_declaration :: proc(p: ^Syntax_State) -> bool {
         if p.fatal {
             return false
         }
-        switch p.current.kind {
-        case .Number_Keyword: decl.type_kind = .Number
-        case .String_Keyword: decl.type_kind = .String
-        case .Boolean_Keyword: decl.type_kind = .Boolean
-        case:
+        if p.current.kind == .Number_Keyword {
+            decl.type_kind = .Number
+        } else if p.current.kind == .String_Keyword {
+            decl.type_kind = .String
+        } else if p.current.kind == .Boolean_Keyword {
+            decl.type_kind = .Boolean
+        } else {
             syntax_issue(p, .Missing_Type)
             return false
         }
