@@ -26,6 +26,8 @@ Check_Issue :: enum {
     Invalid_Expression_Node,
     Incompatible_Operator,
     Assignment_Type_Mismatch,
+    // Appended: preserve internal issue IDs used by the TS2322 witness.
+    Disjoint_Literal_Comparison,
 }
 
 Diagnostic :: struct {
@@ -68,6 +70,25 @@ annotation_type :: proc(value: parser.Primitive_Type) -> Primitive {
         return .Boolean
     }
     return .Unknown
+}
+
+// Compare only directly source-backed primitive literals. Strings are scanned
+// without escapes, so removing their quote delimiters is value-preserving.
+// No heap allocations, literal inference claims, or speculative flow narrowing.
+literal_overlap :: proc(a, b: parser.Expr_Node, text: string) -> (both_literals, same_value: bool) {
+    if a.kind != b.kind { return false, false }
+    if a.kind == .Integer || a.kind == .Boolean {
+        return true, text[a.byte_start:a.byte_end] == text[b.byte_start:b.byte_end]
+    }
+    if a.kind == .Text {
+        // Lexer guarantees both delimiters and forbids escape sequences.
+        if a.byte_end-a.byte_start < 2 || b.byte_end-b.byte_start < 2 {
+            return false, false
+        }
+        return true, text[a.byte_start+1:a.byte_end-1] ==
+                     text[b.byte_start+1:b.byte_end-1]
+    }
+    return false, false
 }
 
 // Every expression child index must be earlier than its parent (postorder).
@@ -252,11 +273,15 @@ check_file :: proc(
                     same_name := lhs.kind == .Name && rhs.kind == .Name &&
                                  references[node.left] > 0 &&
                                  references[node.left] == references[node.right]
-                    same_literal := (lhs.kind == .Integer || lhs.kind == .Text ||
-                                     lhs.kind == .Boolean) && lhs.kind == rhs.kind &&
-                                    text[lhs.byte_start:lhs.byte_end] ==
-                                    text[rhs.byte_start:rhs.byte_end]
-                    if same_name || same_literal {
+                    both_literals, same_value := literal_overlap(lhs, rhs, text)
+                    if same_name || (both_literals && same_value) {
+                        kind = .Boolean
+                    } else if both_literals {
+                        // Two distinct literal types have no overlap. This is
+                        // recoverable TS2367-candidate evidence, not an unsupported
+                        // operator; subsequent declarations are still checked.
+                        fail(&result, .Disjoint_Literal_Comparison,
+                             node.byte_start, node.byte_end, false)
                         kind = .Boolean
                     }
                 }
