@@ -80,3 +80,17 @@ No JavaScript scroll listeners, resize polling or UI framework are needed.
 ## Future
 
 When the actual scanner and parser/checker are implemented, the public site may show their verified source traces, real oracle parity and separately measured end-to-end workload results; the current Observatory must not display these as done before such evidence exists.
+
+## X-Ray editor discoverability
+
+The browser-only source editor is a real textarea, not a static code sample.
+A visible **Edit code** button in the file tab focuses the textarea and
+places the caret at the end of the existing source without replacing it.
+A short visible hint invites typing/pasting and changes to **Editing live**
+while the textarea is focused. Blue-glass focus styles provide feedback
+without motion, modal prompts, or external dependencies. On narrow phones
+the editor uses 16px text to reduce mobile automatic zoom.
+
+The existing Unicode reference responds immediately to `input` events.
+No TypeScript parsing, Odin execution, persistence, network request, or
+conformance result is implied by this editor interaction.

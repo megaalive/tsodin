@@ -54,7 +54,7 @@ assert.equal(workflowOutcome({status:"completed",conclusion:"success"}).label,"P
 const html=get("index.html");
 assert.match(html, /<title>tsodin — Compiler Observatory<\/title>/);
 assert.match(html, /href="\.\/live\.css"/);
-assert.match(html, /href="\.\/soft-glass\.css\?v=20261008-blue-controls"/);
+assert.match(html, /href="\.\/soft-glass\.css\?v=20261008-xray-editor"/);
 assert.match(html, /GITHUB · CURRENT STATE/);
 assert.match(html, /data-panel="conformance" hidden/);
 assert.match(html, /data-view="overview"/);
@@ -74,7 +74,7 @@ assert.match(js,/Promise\.allSettled/);
 assert.match(js,/source tree/);
 assert.match(js,/Cannot confirm CI for current HEAD/);
 assert.match(js,/selectView/);
-assert.match(html, /src="\.\/app\.js\?v=20261008-blue-controls"/);
+assert.match(html, /src="\.\/app\.js\?v=20261008-xray-editor"/);
 const theme=get("soft-glass.css");
 assert.match(theme,/\.state-pill\.neutral,\s*\.state-pill\.pending\s*\{[^}]*background:\s*rgba\(54,121,180/s,
   "Neutral and pending badges must use muted blue glass rather than inherited gray");
@@ -89,6 +89,28 @@ assert.match(theme,/input\.byte-slider::-moz-range-thumb/,
 assert.match(js,/slider\.style\.setProperty\("--range-progress"/,
   "X-Ray control must update its filled track when position changes");
 assert.match(js,/publishedConformance/);
+assert.match(html, /id="edit-source"[^>]*aria-controls="source-input"/,
+  "X-Ray must provide an explicit, discoverable edit action");
+assert.match(html, /id="source-input"[^>]*aria-describedby="source-edit-hint"/,
+  "Editable textarea needs a visible instructional description");
+assert.match(html, /Click Edit code or tap the editor to type/,
+  "The first-visit prompt must clearly invite actual typing");
+assert.doesNotMatch(html, /EDIT ANY TIME/,
+  "Do not revert to a tiny non-actionable edit label");
+assert.match(js, /editSource\.addEventListener\("click",\(\)=>\{/,
+  "Edit action must be wired to a click");
+assert.match(js, /input\.focus\(\)/,
+  "Edit action must focus the actual editable input");
+assert.match(js, /input\.addEventListener\("focus"/,
+  "Editing cue must respond to keyboard or touch focus");
+assert.match(js, /input\.addEventListener\("blur"/,
+  "Editing cue must clear on blur");
+assert.match(theme, /\.editor-edit-action\s*\{[^}]*appearance:\s*none/s,
+  "Edit action must use intentional blue-glass styling, not native gray");
+assert.match(theme, /\.editor-panel\.is-editing\s*\.source-edit-hint/,
+  "Focus state must visibly reinforce that this is a live editor");
+assert.match(theme, /@media \(max-width:460px\)[\s\S]*#source-input\s*\{font-size:16px;/,
+  "Mobile editing text must avoid tiny tap/zoom targets");
 assert.match(get("styles.css"),/prefers-reduced-motion:reduce/);
 const footerCss=get("live.css");
 assert.match(html,/<footer class="site-footer">/,"semantic footer remains in document");
