@@ -691,3 +691,87 @@ primitive_checker_negative_guard_assignment_invalidates_else_fact :: proc(t: ^te
     parser.syntax_report_destroy(&ast)
     source.source_version_destroy(&v)
 }
+
+@(test)
+primitive_checker_negated_and_boolean_guard_valid :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let n: number = 1; n = 1 + 2; let out: boolean = false;" +
+        "if (!(n === 2)) { out = n === 3; } else { out = n === 2; }" +
+        "const restored: boolean = n === 9;",
+        "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+        "flag = n === 2; let out: boolean = false;" +
+        "if (flag) { out = flag === true; } else { out = flag === false; }" +
+        "if (!flag) { out = flag === false; } else { out = flag === true; }" +
+        "const after: boolean = flag === false;",
+        "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+        "flag = n === 2; let out: boolean = false;" +
+        "if (flag === false) { out = flag === false; } else { out = flag === true; }" +
+        "if (!!(n !== 2)) { out = n === 3; } else { out = n === 2; }",
+        "let n: number = 1; n = 1 + 2; let out: boolean = false;" +
+        "if (!(n !== 2)) { out = n === 2; } else { out = n === 3; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(748), 1, input)
+        testing.expect(t, ok, "snapshot")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                       !checked.fatal && len(checked.diagnostics) == 0,
+                       "proven boolean/negated paths stay accepted")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_boolean_guard_disjoint_paths :: proc(t: ^testing.T) {
+    input := "let n: number = 1; n = 1 + 2; let ready: boolean = false;" +
+             "ready = n === 2; let result: boolean = false;" +
+             "if (ready) { result = ready === false; } else { result = ready === true; }"
+    v, ok := source.source_version_create(source.File_Id(749), 1, input)
+    testing.expect(t, ok, "snapshot")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && !checked.complete &&
+                   !checked.fatal && len(checked.diagnostics) == 2,
+                   "each boolean path independently proves TS2367 candidates")
+    if len(checked.diagnostics) == 2 {
+        testing.expect(t, checked.diagnostics[0].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[1].issue == .Disjoint_Literal_Comparison,
+                       "boolean synthetics compare to source literals with stable issue IDs")
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_negated_condition_fail_closed :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let n: number = 1; n = 1 + 2; if (!(n > 2)) { n = 3; } else { n = 4; }",
+        "let n: number = 1; n = 1 + 2; if (!(n === n)) { n = 3; } else { n = 4; }",
+        "let n: number = 1; n = 1 + 2; if (!(2 === n)) { n = 3; } else { n = 4; }",
+        "let n: number = 1; n = 1 + 2; if (!(n === 2 && true)) { n = 3; } else { n = 4; }",
+        "let n: number = 1; n = 1 + 2; if (!!(n !== 2 || false)) { n = 3; } else { n = 4; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(750), 1, input)
+        testing.expect(t, ok, "snapshot")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, !checked.complete && checked.fatal &&
+                       len(checked.diagnostics) > 0 &&
+                       checked.diagnostics[0].issue == .Unsupported_Condition,
+                       "unproved compound/reversed guard cannot succeed")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}

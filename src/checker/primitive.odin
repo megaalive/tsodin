@@ -77,9 +77,9 @@ annotation_type :: proc(value: parser.Primitive_Type) -> Primitive {
     return .Unknown
 }
 
-// A value can carry a proven literal identity without allocating a new string.
-// A default (.Name) kind means unknown: do not infer a literal merely from a
-// primitive base type. The borrowed spans refer to the same source snapshot.
+// A value can carry a proven literal identity without allocating a string.
+// A default (.Name) kind means unknown. Ordinary spans are source-backed;
+// the explicitly marked Boolean fact below is synthetic for if(flag)/!flag.
 Literal_Fact :: struct {
     kind: parser.Expr_Kind,
     byte_start: int,
@@ -95,13 +95,44 @@ literal_fact_from_node :: proc(node: parser.Expr_Node) -> Literal_Fact {
     return Literal_Fact{}
 }
 
+// INVARIANT: byte_start=-1 only for a proven branch Boolean; byte_end=0/1
+// stores false/true. No source mapper may consume this fact as a byte span.
+// This keeps the existing compact fact layout and avoids per-node storage.
+branch_boolean_fact :: proc(value: bool) -> Literal_Fact {
+    return Literal_Fact{
+        kind=.Boolean, byte_start=-1, byte_end=value ? 1 : 0,
+    }
+}
+
+boolean_fact_value :: proc(fact: Literal_Fact, text: string) -> (bool, bool) {
+    if fact.kind != .Boolean { return false, false }
+    if fact.byte_start == -1 {
+        if fact.byte_end == 0 { return false, true }
+        if fact.byte_end == 1 { return true, true }
+        return false, false
+    }
+    if fact.byte_start < 0 || fact.byte_end > len(text) ||
+       fact.byte_start >= fact.byte_end {
+        return false, false
+    }
+    spelling := text[fact.byte_start:fact.byte_end]
+    if spelling == "true" { return true, true }
+    if spelling == "false" { return false, true }
+    return false, false
+}
+
 // Source-backed literal equality. Strings contain no escapes in this grammar;
 // stripping either quote delimiter preserves the value. This does not handle
 // computed expressions, widened annotations or mutable flow types.
 literal_overlap :: proc(a, b: Literal_Fact, text: string) -> (both_literals, same_value: bool) {
     if a.kind != b.kind || a.kind == .Name { return false, false }
-    if a.kind == .Integer || a.kind == .Boolean {
+    if a.kind == .Integer {
         return true, text[a.byte_start:a.byte_end] == text[b.byte_start:b.byte_end]
+    }
+    if a.kind == .Boolean {
+        a_value, a_ok := boolean_fact_value(a, text)
+        b_value, b_ok := boolean_fact_value(b, text)
+        return a_ok && b_ok, a_ok && b_ok && a_value == b_value
     }
     if a.kind == .Text {
         // Lexer guarantees both delimiters and forbids escape sequences.
@@ -194,11 +225,12 @@ check_file :: proc(
     node_cursor := 0
     inside_if := false
     else_seen := false
-    // COMPAT: !== only proves equality on the ELSE arm; do not subtract
-    // literal identities from a broad primitive domain on the true arm.
-    negative_guard := false
+    // The true/false arm facts are independent. An equality guard proves a
+    // singleton on one arm; a direct boolean guard proves true/false on both.
+    // Empty (.Name) fact means no narrowing, not an implicit exclusion.
     guard_index := -1
-    guard_fact: Literal_Fact
+    guard_then_fact: Literal_Fact
+    guard_else_fact: Literal_Fact
     for event in syntax.statements {
         if event.kind == .Else {
             if !inside_if || else_seen || event.expression != -1 {
@@ -211,13 +243,10 @@ check_file :: proc(
             copy(then_wide, wide_decls)
             copy(literal_decls, entry_literals)
             copy(wide_decls, entry_wide)
-            if negative_guard {
-                // The false arm of x !== literal proves x === literal.
-                if guard_index < 0 || guard_index >= len(declared) {
-                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
-                    return result
-                }
-                literal_decls[guard_index] = guard_fact
+            if guard_else_fact.kind != .Name {
+                // The false arm's independent proof never borrows the then
+                // arm's mutations; it starts from the original entry snapshot.
+                literal_decls[guard_index] = guard_else_fact
                 wide_decls[guard_index] = false
             }
             else_seen = true
@@ -248,9 +277,9 @@ check_file :: proc(
             }
             inside_if = false
             else_seen = false
-            negative_guard = false
             guard_index = -1
-            guard_fact = Literal_Fact{}
+            guard_then_fact = Literal_Fact{}
+            guard_else_fact = Literal_Fact{}
             continue
         }
         condition_event := event.kind == .If
@@ -500,31 +529,102 @@ check_file :: proc(
         expression_type := inferred[expression_root]
         node_cursor = expression_root + 1
         if condition_event {
-            // Only direct strict equality/inequality with a proven-wide
-            // initialized mutable number/string and matching source literal.
-            root := syntax.nodes[expression_root]
-            if root.kind != .Binary ||
-               (root.operator != .Equals_Equals_Equals &&
-                root.operator != .Exclamation_Equals_Equals) ||
-               expression_type != .Boolean || root.left < 0 || root.right < 0 {
+            if expression_type != .Boolean {
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
             }
-            lhs := syntax.nodes[root.left]
-            rhs := syntax.nodes[root.right]
-            ref := references[root.left]
-            if lhs.kind != .Name || ref <= 0 || ref > len(symbols.symbols) {
+            // Normalize only transparent groups and unary !. The tree remains
+            // postorder: each child must precede its parent. No CFG allocation.
+            guard_node := expression_root
+            flipped := false
+            for {
+                node := syntax.nodes[guard_node]
+                if node.kind == .Group ||
+                   (node.kind == .Unary && node.operator == .Exclamation) {
+                    if node.left < 0 || node.left >= guard_node {
+                        fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                        return result
+                    }
+                    if node.kind == .Unary { flipped = !flipped }
+                    guard_node = node.left
+                } else {
+                    break
+                }
+            }
+            root := syntax.nodes[guard_node]
+            guard_ref := -1
+            then_fact: Literal_Fact
+            else_fact: Literal_Fact
+            if root.kind == .Name {
+                // Truthiness is only modeled for proven-wide boolean lets.
+                // A plain if(flag) is equivalent to if(flag === true).
+                guard_ref = references[guard_node]
+                then_fact = branch_boolean_fact(!flipped)
+                else_fact = branch_boolean_fact(flipped)
+            } else if root.kind == .Binary &&
+                      (root.operator == .Equals_Equals_Equals ||
+                       root.operator == .Exclamation_Equals_Equals) &&
+                      root.left >= 0 && root.right >= 0 {
+                lhs := syntax.nodes[root.left]
+                rhs := syntax.nodes[root.right]
+                if lhs.kind != .Name {
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
+                }
+                guard_ref = references[root.left]
+                fact := literal_fact_from_node(rhs)
+                // A negation swaps the branch polarity; never subtract a
+                // literal from the opposite broad number/string/boolean arm.
+                negative := (root.operator == .Exclamation_Equals_Equals) != flipped
+                if rhs.kind == .Boolean {
+                    // Boolean is a closed two-value domain. Unlike number
+                    // and string, the opposite path proves the other value.
+                    value, valid := boolean_fact_value(fact, text)
+                    if !valid {
+                        fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                        return result
+                    }
+                    opposite := branch_boolean_fact(!value)
+                    if negative {
+                        then_fact = opposite
+                        else_fact = fact
+                    } else {
+                        then_fact = fact
+                        else_fact = opposite
+                    }
+                } else if negative {
+                    else_fact = fact
+                } else {
+                    then_fact = fact
+                }
+            } else {
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
             }
-            symbol := symbols.symbols[ref-1]
+            if guard_ref <= 0 || guard_ref > len(symbols.symbols) {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
+            }
+            symbol := symbols.symbols[guard_ref-1]
             guard := symbol.declaration_index
             if symbol.kind != .Let || guard < 0 || guard >= result.checked_declarations ||
-               !wide_decls[guard] ||
-               !((declared[guard] == .Number && rhs.kind == .Integer) ||
-                 (declared[guard] == .Text && rhs.kind == .Text)) {
+               !wide_decls[guard] {
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
+            }
+            if root.kind == .Name {
+                if declared[guard] != .Boolean {
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
+                }
+            } else {
+                rhs := syntax.nodes[root.right]
+                if !((declared[guard] == .Number && rhs.kind == .Integer) ||
+                     (declared[guard] == .Text && rhs.kind == .Text) ||
+                     (declared[guard] == .Boolean && rhs.kind == .Boolean)) {
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
+                }
             }
             if len(entry_literals) == 0 {
                 entry_literals = make([]Literal_Fact, len(declared))
@@ -534,12 +634,11 @@ check_file :: proc(
             }
             copy(entry_literals, literal_decls)
             copy(entry_wide, wide_decls)
-            negative_guard = root.operator == .Exclamation_Equals_Equals
             guard_index = guard
-            guard_fact = literal_fact_from_node(rhs)
-            // === narrows then; !== narrows else. All opposite paths stay wide.
-            if !negative_guard {
-                literal_decls[guard] = guard_fact
+            guard_then_fact = then_fact
+            guard_else_fact = else_fact
+            if guard_then_fact.kind != .Name {
+                literal_decls[guard] = guard_then_fact
                 wide_decls[guard] = false
             }
             inside_if = true
