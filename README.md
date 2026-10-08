@@ -22,6 +22,10 @@ The first implemented library primitive is a checked UTF-8-byte-prefix to UTF-16
 - [Hack registry](docs/HACKS.md)
 - [Agent/contributor rules](AGENTS.md)
 
+## Public observatory
+
+The [Compiler Observatory](https://megaalive.github.io/tsodin/) is a lightweight GitHub Pages website with synthetic research comparisons, an experiment timeline, and a browser-only source-position X-Ray. It is **not** a compiled TypeScript checker demo. See [observatory maintenance](docs/OBSERVATORY.md).
+
 ## Local bootstrap
 
 The M0 toolchain is pinned in [bench/manifests/baselines.json](bench/manifests/baselines.json).

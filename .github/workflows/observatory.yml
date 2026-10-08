@@ -1,0 +1,48 @@
+name: Observatory smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "styles.css"
+      - "app.js"
+      - "favicon.svg"
+      - "data/**"
+      - "lib/**"
+      - "tools/observatory/**"
+      - ".github/workflows/observatory.yml"
+  pull_request:
+    paths:
+      - "index.html"
+      - "styles.css"
+      - "app.js"
+      - "favicon.svg"
+      - "data/**"
+      - "lib/**"
+      - "tools/observatory/**"
+      - ".github/workflows/observatory.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-site:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node 22 for offline checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          check-latest: false
+          cache: ""
+      - name: Validate JS syntax
+        run: |
+          node --check app.js
+          node --check lib/observatory-core.mjs
+          node --check tools/observatory/check.mjs
+      - name: Verify archive, Unicode boundaries and asset integrity
+        run: node tools/observatory/check.mjs
