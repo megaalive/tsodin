@@ -8,13 +8,13 @@ tsodin is an experimental, performance-first TypeScript checker/compiler designe
 
 ## Status
 
-M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. **M3-A is implemented**: a single-file declaration binder with dense symbol IDs, forward name resolution and internal duplicate/unresolved-name issues. A complete TypeScript parser, multi-file binder, type checker, C0/C1 compatibility and end-to-end performance are **not yet established**.
+M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. **M3-A/B are implemented**: source-backed single-file symbols and a strictly bounded cross-file *script-global* binder, with dense IDs, forward references and internal conflict/unresolved-name issues. A complete TypeScript parser, module-aware binder, type checker, official C0/C1 conformance and end-to-end performance are **not yet established**.
 
 - [M1-A: source-version/index contract](docs/M1_SOURCE.md)
 - [M1-B–E: scanner and contextual witness](docs/M1_SCANNER.md)
 - [M2-A: declaration-parser subset](docs/M2_PARSER.md)
 - [M2-B/C: expression syntax, recovery, and diagnostic trace](docs/M2_EXPRESSION.md)
-- [M3-A: single-file binder](docs/M3_BINDER.md)
+- [M3-A/B: single-file and script-global binding](docs/M3_BINDER.md)
 - [Official TypeScript conformance strategy](docs/OFFICIAL_CONFORMANCE.md)
 
 There are **no TypeScript compatibility or compiler performance claims**.
