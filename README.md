@@ -8,11 +8,12 @@ tsodin is an experimental, performance-first TypeScript checker/compiler designe
 
 ## Status
 
-M0 is **closed**: the pinned CLI intentionally rejects `check`, with Unicode reference tests and CI. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested template tracking are implemented, but full scanner parity is not yet established. **M2-A is implemented**: an intentionally narrow parser handles basic `var`/`let`/`const` declarations with primitive annotations and simple literal initializers. A complete TypeScript parser, binder, checker, C0/C1 compatibility and end-to-end performance are **not yet established**.
+M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. A complete TypeScript parser, binder, checker, C0/C1 compatibility and end-to-end performance are **not yet established**.
 
 - [M1-A: source-version/index contract](docs/M1_SOURCE.md)
 - [M1-B–E: scanner and contextual witness](docs/M1_SCANNER.md)
 - [M2-A: declaration-parser subset](docs/M2_PARSER.md)
+- [M2-B/C: expression syntax, recovery, and diagnostic trace](docs/M2_EXPRESSION.md)
 
 There are **no TypeScript compatibility or compiler performance claims**.
 
