@@ -50,7 +50,7 @@ jobs:
       - name: Validate parser-side lexical context
         run: odin test src/context
 
-      - name: Validate bounded declaration parser
+      - name: Validate expression precedence and syntax recovery
         run: odin test src/parser
 
       - name: Build bootstrap CLI
