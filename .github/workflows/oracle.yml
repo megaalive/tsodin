@@ -1,0 +1,40 @@
+name: Pinned TypeScript 7 oracle capture
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/oracle.yml"
+      - "tools/oracle/**"
+      - "tests/oracle/**"
+      - "bench/manifests/baselines.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  oracle:
+    name: TypeScript 7.0.2 diagnostic capture
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned TypeScript CLI in temporary prefix
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/ts7" --no-save --no-audit --no-fund typescript@7.0.2
+          "$RUNNER_TEMP/ts7/node_modules/.bin/tsc" --version
+
+      - name: Capture raw oracle diagnostics
+        env:
+          TSODIN_TSC: ${{ runner.temp }}/ts7/node_modules/.bin/tsc
+          TSODIN_ORACLE_OUTPUT: ${{ runner.temp }}/oracle-results
+        run: node tools/oracle/capture.mjs
+
+      - name: Upload oracle evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: ts7-oracle-raw
+          path: ${{ runner.temp }}/oracle-results/
+          retention-days: 14
