@@ -82,4 +82,12 @@ assert.equal(wideErrors.status,1,"bad widened comparisons must still fail");
 assert.deepEqual(wideErrors.summary,["SUMMARY","9","4","1"]);
 assert.deepEqual(wideErrors.diags.map(row=>row[1]),["12","12","11","10"],
   "computed widened operands must not suppress unrelated errors");
-console.log("PASS: Odin checker with narrow computed-wide fact propagation; TS7 parity checked separately");
+const flowValid=read("checker-flow-assign-valid");
+assert.equal(flowValid.status,0,"valid straight-line let assignment sequence");
+assert.deepEqual(flowValid.summary,["SUMMARY","7","0","0"]);
+const flowBad=read("checker-flow-assign-errors");
+assert.equal(flowBad.status,1,"incorrect flow facts and assignments fail");
+assert.deepEqual(flowBad.summary,["SUMMARY","3","3","1"]);
+assert.deepEqual(flowBad.diags.map(row=>row[1]),["11","11","10"],
+  "TS2367-candidate mismatches and TS2322 assignment type errors are distinct");
+console.log("PASS: Odin checker with source-ordered let assignment flows; TS7 parity checked separately");
