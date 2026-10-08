@@ -19,6 +19,8 @@ const fixtures=[
   {id:"checker-boolean-errors",expectedCount:2},
   {id:"checker-logic-valid",expectedCount:0},
   {id:"checker-logic-errors",expectedCount:2},
+  {id:"checker-literal-valid",expectedCount:0},
+  {id:"checker-literal-disjoint",expectedCount:3},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});
@@ -45,12 +47,12 @@ for(const fixture of fixtures){
   assert.equal(upstream.length,fixture.expectedCount,fixture.id+": expected TS7 errors");
   assert.equal(actual.length,fixture.expectedCount,fixture.id+": expected Odin diagnostics");
   for(const item of actual){
-    assert.equal(item.kind,10,fixture.id+": unmapped Odin issue");
+    assert.ok(item.kind===10 || item.kind===11,fixture.id+": unmapped Odin issue");
     assert.ok(item.endLine>item.line ||
              (item.endLine===item.line && item.endColumn>item.column),
              fixture.id+": invalid Odin diagnostic span");
   }
-  const mapped=actual.map(d=>({code:2322,line:d.line,column:d.column}));
+  const mapped=actual.map(d=>({code:d.kind===11?2367:2322,line:d.line,column:d.column}));
   if(fixture.id==="checker-primitives-utf16") {
     // Emoji precedes the declaration ON THE SAME LINE. UTF-8 byte columns
     // are different from UTF-16 units; this locks the real TS7 coordinate.
@@ -61,7 +63,7 @@ for(const fixture of fixtures){
   records.push({fixture:fixture.id,reference:upstream,odin:mapped,
     codeParityChecked:true,startPositionParityChecked:true,
     endPositionParityChecked:false,categoryParityChecked:false,messageParityChecked:false});
-  console.log("PASS "+fixture.id+": "+actual.length+" TS2322 codes and UTF-16 start positions match pinned TS7");
+  console.log("PASS "+fixture.id+": "+actual.length+" mapped TS2322/TS2367 codes and UTF-16 start positions match pinned TS7");
 }
 console.log("START_WITNESS "+JSON.stringify({
   schemaVersion:2,kind:"primitive-code-start-witness-not-conformance",

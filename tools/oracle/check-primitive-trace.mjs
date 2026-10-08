@@ -50,4 +50,12 @@ const logicBad=read("checker-logic-errors");
 assert.equal(logicBad.status,1,"assignment mismatches must fail");
 assert.deepEqual(logicBad.summary,["SUMMARY","2","2","1"]);
 assert.deepEqual(logicBad.diags.map(x=>x[1]),["10","10"]);
-console.log("PASS: Odin bounded semantic checker; native TS7 equivalence requires separate pinned witness");
+const literalValid=read("checker-literal-valid");
+assert.equal(literalValid.status,0,"equal primitive literals have no diagnostic");
+assert.deepEqual(literalValid.summary,["SUMMARY","3","0","0"]);
+const disjoint=read("checker-literal-disjoint");
+assert.equal(disjoint.status,1,"disjoint comparisons must never report success");
+assert.deepEqual(disjoint.summary,["SUMMARY","3","3","1"]);
+assert.deepEqual(disjoint.diags.map(x=>x[1]),["11","11","11"],
+  "the new disjoint-literal issue is distinct from TS2322 candidates");
+console.log("PASS: Odin bounded semantic checker with disjoint literal issues; TS7 parity checked separately");

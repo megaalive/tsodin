@@ -31,6 +31,8 @@ const fixtures=[
   ["checker-boolean-errors",2],
   ["checker-logic-valid",0],
   ["checker-logic-errors",2],
+  ["checker-literal-valid",0],
+  ["checker-literal-disjoint",3],
 ];
 
 function structuredReference(cwd) {
@@ -44,7 +46,7 @@ function structuredReference(cwd) {
   return ts.getPreEmitDiagnostics(program).map(d=>{
     assert.ok(d.file && d.file.fileName.endsWith("/index.ts"),"No fileless or foreign TS6 diagnostics may be hidden");
     assert.equal(d.category,ts.DiagnosticCategory.Error,"only error diagnostics are expected");
-    assert.equal(d.code,2322,"unexpected TS6 diagnostic code");
+    assert.ok(d.code===2322 || d.code===2367,"unexpected TS6 diagnostic code");
     assert.ok(Number.isSafeInteger(d.start) && Number.isSafeInteger(d.length) && d.length>0,
       "TS6 must provide an actual nonempty source span");
     const begin=d.file.getLineAndCharacterOfPosition(d.start);
@@ -62,9 +64,10 @@ function odinDiagnostics(cwd) {
   });
   if(run.error || run.signal || run.status===null) throw new Error("Odin checker did not complete");
   const result=[...run.stdout.matchAll(/^DIAG\t(\d+)\t(\d+)\t(\d+)\t(\d+)\t(\d+)$/gm)].map(m=>{
-    assert.equal(Number(m[1]),10,"only mapped primitive assignment mismatches are in scope");
+    const kind=Number(m[1]);
+    assert.ok(kind===10 || kind===11,"unmapped Odin issue in structured witness");
     return {
-      code:2322,category:"error",
+      code:kind===11?2367:2322,category:"error",
       line:Number(m[2])+1,column:Number(m[3])+1,
       endLine:Number(m[4])+1,endColumn:Number(m[5])+1,
     };
