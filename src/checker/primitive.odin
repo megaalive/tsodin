@@ -31,6 +31,7 @@ Check_Issue :: enum {
     // Independent proof: base primitive domains cannot overlap under ===/!==.
     Disjoint_Primitive_Domains,
     Unsupported_Assignment_Target, // fail closed on const/var and unknown flow
+    Unsupported_Condition, // unproved branch guard or malformed CFG event
 }
 
 Diagnostic :: struct {
@@ -168,6 +169,16 @@ check_file :: proc(
     defer delete(wide_nodes)
     wide_decls := make([]bool, len(syntax.declarations))
     defer delete(wide_decls)
+    // A single if/else needs just two snapshots of live facts. These arrays
+    // are dense and reused; the grammar forbids nested control flow.
+    entry_literals := make([]Literal_Fact, len(syntax.declarations))
+    defer delete(entry_literals)
+    then_literals := make([]Literal_Fact, len(syntax.declarations))
+    defer delete(then_literals)
+    entry_wide := make([]bool, len(syntax.declarations))
+    defer delete(entry_wide)
+    then_wide := make([]bool, len(syntax.declarations))
+    defer delete(then_wide)
 
     for ref in symbols.references {
         if ref.node_index < 0 || ref.node_index >= len(syntax.nodes) ||
@@ -181,7 +192,55 @@ check_file :: proc(
 
     text := version.owned_text
     node_cursor := 0
+    inside_if := false
+    else_seen := false
     for event in syntax.statements {
+        if event.kind == .Else {
+            if !inside_if || else_seen || event.expression != -1 {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
+            }
+            // Fork: keep the then-arm result, restore the entry facts, and
+            // evaluate else from exactly the same pre-condition snapshot.
+            copy(then_literals, literal_decls)
+            copy(then_wide, wide_decls)
+            copy(literal_decls, entry_literals)
+            copy(wide_decls, entry_wide)
+            else_seen = true
+            continue
+        }
+        if event.kind == .End_If {
+            if !inside_if || !else_seen || event.expression != -1 {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
+            }
+            // Join: only keep singleton facts proved on BOTH paths. A changed
+            // value otherwise becomes a broad primitive; no path is ignored.
+            for i in 0..<len(declared) {
+                identical, same := literal_overlap(then_literals[i], literal_decls[i], text)
+                if identical && same && !then_wide[i] && !wide_decls[i] {
+                    literal_decls[i] = then_literals[i]
+                    wide_decls[i] = false
+                } else if then_wide[i] || wide_decls[i] ||
+                          then_literals[i].kind != literal_decls[i].kind ||
+                          (identical && !same) {
+                    literal_decls[i] = Literal_Fact{}
+                    wide_decls[i] = true
+                } else {
+                    // Both sides unknown, or neither side can prove equality.
+                    literal_decls[i] = Literal_Fact{}
+                    wide_decls[i] = false
+                }
+            }
+            inside_if = false
+            else_seen = false
+            continue
+        }
+        condition_event := event.kind == .If
+        if condition_event && inside_if {
+            fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+            return result
+        }
         assignment := event.kind == .Assignment
         // An assignment has no declaration index of its own. References in
         // its RHS may only see declarations already processed in source order.
@@ -224,6 +283,11 @@ check_file :: proc(
                 return result
             }
             declared_type = declared[target_index]
+        } else if condition_event {
+            if event.declaration_index != -1 || event.target_node != -1 {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
+            }
         } else {
             if event.kind != .Declaration || declaration_index < 0 ||
                declaration_index >= len(syntax.declarations) {
@@ -411,6 +475,40 @@ check_file :: proc(
         }
         expression_type := inferred[expression_root]
         node_cursor = expression_root + 1
+        if condition_event {
+            // Only a direct equality (initialized mutable number/string ===
+            // matching source literal) is admitted. The Name MUST resolve to
+            // a proven wide domain, so TS2367 isn't silently skipped.
+            root := syntax.nodes[expression_root]
+            if root.kind != .Binary || root.operator != .Equals_Equals_Equals ||
+               expression_type != .Boolean || root.left < 0 || root.right < 0 {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
+            }
+            lhs := syntax.nodes[root.left]
+            rhs := syntax.nodes[root.right]
+            ref := references[root.left]
+            if lhs.kind != .Name || ref <= 0 || ref > len(symbols.symbols) {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
+            }
+            symbol := symbols.symbols[ref-1]
+            guard := symbol.declaration_index
+            if symbol.kind != .Let || guard < 0 || guard >= result.checked_declarations ||
+               !wide_decls[guard] ||
+               !((declared[guard] == .Number && rhs.kind == .Integer) ||
+                 (declared[guard] == .Text && rhs.kind == .Text)) {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
+            }
+            copy(entry_literals, literal_decls)
+            copy(entry_wide, wide_decls)
+            literal_decls[guard] = literal_fact_from_node(rhs)
+            wide_decls[guard] = false
+            inside_if = true
+            else_seen = false
+            continue
+        }
         if assignment {
             result.checked_assignments += 1
             if expression_type != declared_type {
@@ -453,6 +551,10 @@ check_file :: proc(
             }
             result.checked_declarations += 1
         }
+    }
+    if inside_if || else_seen {
+        fail(&result, .Unsupported_Condition, 0, 0, true)
+        return result
     }
     if node_cursor != len(syntax.nodes) {
         fail(&result, .Invalid_Expression_Node, 0, 0, true)
