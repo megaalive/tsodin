@@ -77,13 +77,21 @@ assert.match(js,/selectView/);
 assert.match(js,/publishedConformance/);
 assert.match(get("styles.css"),/prefers-reduced-motion:reduce/);
 const footerCss=get("live.css");
-assert.match(html,/<footer class="site-footer">/,"semantic footer remains in document flow");
-assert.match(footerCss,/min-height:100dvh/,"short views fill dynamic viewport");
-assert.match(footerCss,/body > main\s*\{[^}]*flex:1 0 auto/s,"main occupies remaining height");
-assert.match(footerCss,/body > \.site-footer\s*\{[^}]*margin-top:auto/s,"footer stays at bottom");
-assert.match(footerCss,/body > \.site-footer\s*\{[^}]*padding:12px 0/s,"desktop footer is compact");
-assert.doesNotMatch(footerCss,/\.site-footer\s*\{[^}]*(?:position:\s*fixed|position:\s*sticky)/s,
-  "footer must never obscure page content");
+assert.match(html,/<footer class="site-footer">/,"semantic footer remains in document");
+assert.match(footerCss,/body > \.site-footer\s*\{[^}]*position:\s*fixed/s,
+  "footer must remain attached to viewport, not scroll with content");
+assert.match(footerCss,/body > \.site-footer\s*\{[^}]*bottom:\s*0/s,
+  "dock is pinned to viewport bottom");
+assert.match(footerCss,/body\s*\{[^}]*padding-bottom:\s*calc\(82px \+ env\(safe-area-inset-bottom/s,
+  "desktop content clearance must include footer and device safe area");
+assert.match(footerCss,/@media \(max-width: 900px\)[\s\S]*body \{ padding-bottom: calc\(65px \+ env\(safe-area-inset-bottom/s,
+  "mobile clearance must reserve footer and device safe area");
+assert.match(footerCss,/\.site-footer \.footer-inner\s*\{[^}]*flex-wrap:\s*nowrap/s,
+  "fixed footer should not unexpectedly grow to multiple rows");
+assert.match(footerCss,/body > \.site-footer\s*\{[^}]*padding:\s*10px 0/s,
+  "footer remains compact");
+assert.doesNotMatch(footerCss,/body > \.site-footer\s*\{[^}]*margin-top:\s*auto/s,
+  "old flow-only footer positioning must not return");
 
 for(const path of ["index.html","app.js","live.css","lib/observatory-core.mjs","preview/index.html","preview/soft/index.html","preview/neon/index.html"]) {
  assert.doesNotMatch(get(path),/megaalive\/ts-fp|odin-hotpath|HOTPATH_P6|0\.821656|P1.?P6|synthetic microkernel/i,path+" leaked old research");
