@@ -1241,3 +1241,69 @@ primitive_checker_three_guard_fail_closed_boundaries :: proc(t: ^testing.T) {
         source.source_version_destroy(&v)
     }
 }
+
+@(test)
+primitive_checker_three_way_guard_nested_mutation_join :: proc(t: ^testing.T) {
+    input := "let n: number = 1; n = 1 + 2;" +
+             "let a: boolean = false; a = n === 2;" +
+             "let b: boolean = false; b = n === 3;" +
+             "let c: boolean = false; c = n === 4;" +
+             "let d: boolean = false; d = n === 5;" +
+             "let out: boolean = false;" +
+             "if (a && b && c) {" +
+             "if (d) { out = a === true; out = c === true; b = n === 7; }" +
+             "else { out = b === true; out = c === true; }" +
+             "out = c === true; out = b === false;" +
+             "} else { out = a === false; }" +
+             "const after: boolean = a === false;"
+    v, ok := source.source_version_create(source.File_Id(810), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && len(checked.diagnostics)==0,
+                   "inner mutation invalidates b but retains a/c facts in outer then")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_three_way_guard_nested_diagnostics :: proc(t: ^testing.T) {
+    input := "let n: number = 1; n = 1 + 2;" +
+             "let a: boolean = false; a = n === 2;" +
+             "let b: boolean = false; b = n === 3;" +
+             "let c: boolean = false; c = n === 4;" +
+             "let d: boolean = false; d = n === 5;" +
+             "let out: boolean = false;" +
+             "if (a && b && c) {" +
+             "if (d) { out = a === false; }" +
+             "else { out = c === false; }" +
+             "out = c === false;" +
+             "} else { out = 'wrong'; }" +
+             "if (a || b || c) { out = a === false; }" +
+             "else { out = b === true; }"
+    v, ok := source.source_version_create(source.File_Id(811), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && !checked.complete &&
+                   !checked.fatal && len(checked.diagnostics)==5,
+                   "nested path-local disjoint comparisons and mismatch remain visible")
+    if len(checked.diagnostics) == 5 {
+        testing.expect(t,
+            checked.diagnostics[0].issue == .Disjoint_Literal_Comparison &&
+            checked.diagnostics[1].issue == .Disjoint_Literal_Comparison &&
+            checked.diagnostics[2].issue == .Disjoint_Literal_Comparison &&
+            checked.diagnostics[3].issue == .Assignment_Type_Mismatch &&
+            checked.diagnostics[4].issue == .Disjoint_Literal_Comparison,
+            "three-way nested error code order stays source-backed")
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
