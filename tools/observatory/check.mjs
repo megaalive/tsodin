@@ -105,6 +105,8 @@ assert.match(js,/initArchitectureOrbit/);
 const orbitJs=get("lib/architecture-orbit.mjs");
 assert.match(orbitJs,/prefers-reduced-motion/);
 assert.match(orbitJs,/visibilitychange/);
+assert.match(orbitJs,/root\.classList\.toggle\("orbit-paused",[\s\S]*manualPause \|\| media\.matches/);
+assert.match(orbitJs,/interacting/);
 assert.match(orbitJs,/selectedPanel\?\.hidden/);
 assert.match(orbitJs,/setInterval\(\(\)=>\{current=nextOrbitStage\(current\);paint\(\);\},4800\)/);
 assert.doesNotMatch(orbitJs,/fetch\(|XMLHttpRequest|localStorage|requestAnimationFrame/);
