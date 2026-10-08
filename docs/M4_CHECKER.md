@@ -145,19 +145,53 @@ arrays store source spans; no per-node strings or object allocation is added.
 ## M4-G3 — disjoint primitive domains through widening
 
 Under strict equality/inequality, the three supported primitive domains
-\u0060number\u0060, \u0060string\u0060 and \u0060boolean\u0060 cannot overlap with *each other*.
+`number`, `string` and `boolean` cannot overlap with *each other*.
 When both operand types are known and different, the checker emits an
-internal, recoverable \u0060Disjoint_Primitive_Domains\u0060 diagnostic (ID 12).
+internal, recoverable `Disjoint_Primitive_Domains` diagnostic (ID 12).
 This remains true when variables have explicit widening annotations, come
 from earlier bound names, or are produced by supported arithmetic. This
 requires no additional heap storage or mutable flow-state assumptions.
 
 The existing literal-specific issue 11 and assignment issue 10 keep their
 ordinals. Differential witness tooling maps issues 11/12 to candidate
-\u0060TS2367\u0060 and issue 10 to \u0060TS2322\u0060. The new pinned fixtures
-\u0060checker-domain-valid\u0060 and \u0060checker-domain-errors\u0060 check actual
+`TS2367` and issue 10 to `TS2322`. The new pinned fixtures
+`checker-domain-valid` and `checker-domain-errors` check actual
 TS7 CLI diagnostic codes and UTF-16 start positions; TS6 structured spans
 remain supplemental. Same-domain comparisons with insufficient overlap
 proof still fail closed: widening alone does not prove TS literal/flow
 semantics. This does not enable the public checker or establish official
 TypeScript conformance.
+
+## M4-G4 — computed-wide expression facts (not flow narrowing)
+
+Arithmetic (`+`, `-`, `*`, `/`), supported string concatenation, and
+numeric relational expressions produce broad primitive results. M4-G4
+adds two dense `bool` fact arrays to the iterative checker: one per syntax
+node, another per declaration. These facts flow through parentheses and
+previous, inferred `const` aliases without allocating per-node strings.
+When a strict equality compares two operands from the same primitive
+domain, a proven broad computed result overlaps that domain, avoiding
+a false unsupported failure.
+
+Example:
+
+```ts
+const total = 1 + 2;
+const copy = total;
+const comparison: boolean = copy === 9; // valid in the pinned subset
+```
+
+A direct literal still retains its precise identity. Different literal
+identities produce candidate TS2367; different primitive domains produce
+candidate TS2367 even if computed; incompatible declaration annotations
+produce candidate TS2322. Every diagnostic remains non-success, with
+UTF-16 positions compared against pinned TypeScript 7.0.2 CLI output and
+supplementary structured TS6.0.2 spans. New oracle fixtures:
+`checker-wide-valid` and `checker-wide-errors`.
+
+This is *not* general control-flow narrowing. In particular, mutable
+`let`/`var`, annotations, unary constant folding, and arbitrary logical
+operators are **not** presumed broad. They retain the previous
+conservative refusal rules where exact TS flow rules are unimplemented.
+Full official TypeScript conformance and public `tsodin check` remain
+NOT RUN / unavailable.

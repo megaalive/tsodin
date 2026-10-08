@@ -37,6 +37,8 @@ const fixtures=[
   ["checker-const-literal-disjoint",3],
   ["checker-domain-valid",0],
   ["checker-domain-errors",5],
+  ["checker-wide-valid",0],
+  ["checker-wide-errors",4],
 ];
 
 function structuredReference(cwd) {

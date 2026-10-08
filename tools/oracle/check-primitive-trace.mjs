@@ -74,4 +74,12 @@ assert.equal(domainErrors.status,1,"disjoint primitive domains must not return s
 assert.deepEqual(domainErrors.summary,["SUMMARY","9","5","1"]);
 assert.deepEqual(domainErrors.diags.map(row=>row[1]),["12","12","12","12","10"],
   "primitive domain and assignment issues have stable distinct ordinals");
-console.log("PASS: Odin checker with disjoint primitive domains; TS7 parity checked separately");
+const wideValid=read("checker-wide-valid");
+assert.equal(wideValid.status,0,"proven broad computed domains must type-check");
+assert.deepEqual(wideValid.summary,["SUMMARY","13","0","0"]);
+const wideErrors=read("checker-wide-errors");
+assert.equal(wideErrors.status,1,"bad widened comparisons must still fail");
+assert.deepEqual(wideErrors.summary,["SUMMARY","9","4","1"]);
+assert.deepEqual(wideErrors.diags.map(row=>row[1]),["12","12","11","10"],
+  "computed widened operands must not suppress unrelated errors");
+console.log("PASS: Odin checker with narrow computed-wide fact propagation; TS7 parity checked separately");

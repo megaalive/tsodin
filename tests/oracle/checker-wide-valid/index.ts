@@ -1,0 +1,13 @@
+const total = 1 + 2;
+const alias = total;
+const numericCheck: boolean = alias === 9;
+const product = (2 * 3);
+const computedCheck: boolean = product !== 8;
+const label = "a" + 'b';
+const copied = label;
+const textCheck: boolean = copied === 'else';
+const greater = 4 > 1;
+const flag = greater;
+const flagCheck: boolean = flag !== false;
+const directCalc: boolean = (2 + 3) === 8;
+const equalLiteral: boolean = 'ok' === "ok";
