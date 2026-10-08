@@ -925,18 +925,18 @@ primitive_checker_compound_guard_disjoint_diagnostics :: proc(t: ^testing.T) {
 
 @(test)
 primitive_checker_compound_guard_fail_closed :: proc(t: ^testing.T) {
-    cases := [?]string {
-        "if (a && a) { out = true; } else { out = false; }",
-        "if (a || a) { out = true; } else { out = false; }",
-        "if (a && true) { out = true; } else { out = false; }",
-        "if (a || false) { out = true; } else { out = false; }",
-        "if (a && (b || a)) { out = true; } else { out = false; }",
-    }
-    prefix := "let n: number = 1; n = 1 + 2;" +
+    prefix :: "let n: number = 1; n = 1 + 2;" +
               "let a: boolean = false; a = n === 2;" +
               "let b: boolean = false; b = n === 3; let out: boolean = false;"
-    for suffix in cases {
-        v, ok := source.source_version_create(source.File_Id(762), 1, prefix + suffix)
+    cases := [?]string {
+        prefix + "if (a && a) { out = true; } else { out = false; }",
+        prefix + "if (a || a) { out = true; } else { out = false; }",
+        prefix + "if (a && true) { out = true; } else { out = false; }",
+        prefix + "if (a || false) { out = true; } else { out = false; }",
+        prefix + "if (a && (b || a)) { out = true; } else { out = false; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(762), 1, input)
         testing.expect(t, ok, "source")
         ast := parser.parse_expression_program(&v, compat.ts7_profile())
         bound := binder.bind_program(&v, &ast)
