@@ -57,6 +57,16 @@ TypeScript's own green CI as tsodin conformance is forbidden. The report
 schema and fail-closed checks live in `lib/observatory-core.mjs` and
 `tools/observatory/check.mjs`.
 
+## Persistent bottom footer
+
+The footer is a compact **fixed bottom dock**, rather than the previous
+flow-only flex footer. It remains visible while navigating and scrolling
+between sections, without bobbing up and down with document height.
+The page reserves desktop/mobile bottom padding including the device safe-area
+inset, allowing the last section's controls to be reached above the dock.
+At narrower breakpoints, secondary footer copy is omitted to retain one row.
+No JavaScript scroll listeners, resize polling or UI framework are needed.
+
 ## Maintenance
 
 - Homepage: `index.html`, `styles.css`, `soft-glass.css`, `live.css`, `app.js`.
