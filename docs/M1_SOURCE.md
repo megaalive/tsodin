@@ -39,3 +39,5 @@ M1-B scanner needs a pull-token interface accepting a specific immutable
 `Source_Version`, explicit `Need_Rescan` hooks for TS-contextual lexing,
 and cases compared to the pinned TypeScript oracle. Do not claim syntax or
 semantic parity based solely on these source-position tests.
+
+Validation is run by the pinned Linux Odin CI on the exact PR revision.
