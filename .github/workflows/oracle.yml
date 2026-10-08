@@ -13,6 +13,8 @@ on:
       - "src/context/**"
       - "src/parser/**"
       - "src/binder/**"
+      - "src/checker/**"
+      - "src/checktrace/**"
       - "src/syntaxtrace/**"
       - "src/contexttrace/**"
       - "tests/lexical/**"
