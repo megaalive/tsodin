@@ -98,3 +98,41 @@ jobs:
           TSODIN_CONTEXTTRACE: ${{ runner.temp }}/contexttrace
           TSODIN_TS6_API: ${{ runner.temp }}/ts6-lex/node_modules/@typescript/typescript6/lib/typescript.js
         run: node tools/oracle/compare-context.mjs
+
+
+  primitive-code-witness:
+    name: Primitive TS7 diagnostic code witness (not full parity)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Odin toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/odin.tar.gz"
+          root="$RUNNER_TEMP/odin"
+          curl --fail --location --retry 3 --output "$archive" \
+            https://github.com/odin-lang/Odin/releases/download/dev-2026-10/odin-linux-amd64-dev-2026-10.tar.gz
+          echo "c3c8b095621fd0c75f7f73e3a0829f1b4d45324225f20ba11ed8dc4da310a8ab  $archive" | sha256sum --check -
+          mkdir -p "$root"
+          tar -xzf "$archive" -C "$root" --strip-components=1
+          echo "$root" >> "$GITHUB_PATH"
+      - name: Install pinned TypeScript 7 CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/oracle/profile.test.mjs
+          spec="$(node tools/oracle/profile.mjs npmSpec ts7)"
+          npm install --prefix "$RUNNER_TEMP/ts7" --no-save --no-audit --no-fund "$spec"
+          binary="$RUNNER_TEMP/ts7/node_modules/.bin/tsc"
+          "$binary" --version
+          echo "TSODIN_TSC=$binary" >> "$GITHUB_ENV"
+      - name: Build actual Odin semantic checker trace
+        shell: bash
+        run: |
+          set -euo pipefail
+          odin build src/checktrace -out:"$RUNNER_TEMP/checktrace"
+          echo "TSODIN_CHECKTRACE=$RUNNER_TEMP/checktrace" >> "$GITHUB_ENV"
+      - name: Compare TypeScript 7 diagnostic codes on a tiny supported slice
+        run: node tools/oracle/compare-primitive-codes.mjs
