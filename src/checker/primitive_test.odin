@@ -136,3 +136,61 @@ primitive_checker_accepts_empty_file_and_explicit_declaration :: proc(t: ^testin
         source.source_version_destroy(&v)
     }
 }
+
+
+@(test)
+primitive_checker_boolean_inference_and_type_errors :: proc(t: ^testing.T) {
+    ok_text := "const enabled: boolean = true; let disabled = false; const flag: boolean = disabled;"
+    v, valid := source.source_version_create(source.File_Id(612), 1, ok_text)
+    testing.expect(t, valid, "valid boolean source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && checked.checked_declarations == 3,
+                   "boolean literals and inferred local references pass")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+
+    bad_text := "const flag: boolean = 1; const total: number = true;"
+    bad, valid_bad := source.source_version_create(source.File_Id(613), 2, bad_text)
+    testing.expect(t, valid_bad, "valid mismatch fixture bytes")
+    bad_ast := parser.parse_expression_program(&bad, compat.ts7_profile())
+    bad_bound := binder.bind_program(&bad, &bad_ast)
+    mismatches := check_file(&bad, &bad_ast, &bad_bound)
+    testing.expect(t, bad_ast.complete && bad_bound.complete &&
+                   !mismatches.complete && !mismatches.fatal &&
+                   len(mismatches.diagnostics) == 2 &&
+                   mismatches.checked_declarations == 2,
+                   "number-to-boolean and boolean-to-number both mismatch")
+    testing.expect(t, mismatches.diagnostics[0].issue == .Assignment_Type_Mismatch &&
+                   mismatches.diagnostics[1].issue == .Assignment_Type_Mismatch,
+                   "mismatch kind matches existing narrow TS2322 mapper")
+    testing.expect(t, bad_text[mismatches.diagnostics[0].byte_start:mismatches.diagnostics[0].byte_end] == "flag" &&
+                   bad_text[mismatches.diagnostics[1].byte_start:mismatches.diagnostics[1].byte_end] == "total",
+                   "mismatch spans attach to declaration names")
+    report_destroy(&mismatches)
+    binder.binding_report_destroy(&bad_bound)
+    parser.syntax_report_destroy(&bad_ast)
+    source.source_version_destroy(&bad)
+}
+
+@(test)
+primitive_checker_rejects_unsupported_boolean_arithmetic :: proc(t: ^testing.T) {
+    text := "const impossible = true + 1;"
+    v, ok := source.source_version_create(source.File_Id(614), 1, text)
+    testing.expect(t, ok, "valid source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, checked.fatal && !checked.complete &&
+                   len(checked.diagnostics) == 1 &&
+                   checked.diagnostics[0].issue == .Incompatible_Operator,
+                   "boolean arithmetic must never be reported as valid")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}

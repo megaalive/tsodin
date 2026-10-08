@@ -164,6 +164,8 @@ check_file :: proc(
                 kind = .Number
             } else if node.kind == .Text {
                 kind = .Text
+            } else if node.kind == .Boolean {
+                kind = .Boolean
             } else if node.kind == .Name {
                 entry := references[i]
                 if entry <= 0 || entry > len(symbols.symbols) {

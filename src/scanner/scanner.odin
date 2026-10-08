@@ -41,6 +41,9 @@ Token_Kind :: enum {
     Template_Tail,
     Jsx_Tag_Start,
     Jsx_Text,
+    // Preserve all prior ordinals used by supplemental TS6 lexical witnesses.
+    True_Keyword,
+    False_Keyword,
 }
 
 Scan_Error :: enum {
@@ -200,6 +203,10 @@ scanner_next :: proc(s: ^Scanner) -> Token {
             kind = .String_Keyword
         } else if lexeme == "boolean" {
             kind = .Boolean_Keyword
+        } else if lexeme == "true" {
+            kind = .True_Keyword
+        } else if lexeme == "false" {
+            kind = .False_Keyword
         }
         return Token{kind=kind, byte_start=start, byte_end=s.offset}
     }

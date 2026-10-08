@@ -275,3 +275,24 @@ scanner_jsx_wrong_mode_fails_closed :: proc(t: ^testing.T) {
                    "ordinary scanner cannot silently skip JSX raw text")
     testing.expect(t, scanner_next(&s).error == .Previous_Failure, "mode misuse sticky")
 }
+
+
+@(test)
+scanner_boolean_literal_keywords_are_distinct :: proc(t: ^testing.T) {
+    source_text := "const yes: boolean = true; let no = false; let trueValue = true;"
+    v, ok := source.source_version_create(source.File_Id(610), 1, source_text)
+    testing.expect(t, ok, "boolean fixture valid")
+    defer source.source_version_destroy(&v)
+    s := scanner_init(&v)
+    expected := [?]Token_Kind{
+        .Const, .Identifier, .Colon, .Boolean_Keyword, .Equals,
+        .True_Keyword, .Semicolon, .Let, .Identifier, .Equals,
+        .False_Keyword, .Semicolon, .Let, .Identifier, .Equals,
+        .True_Keyword, .Semicolon, .End_Of_File,
+    }
+    for wanted in expected {
+        tok := scanner_next(&s)
+        testing.expect(t, tok.kind == wanted && tok.error == .None,
+                       "boolean keywords require complete lexeme match")
+    }
+}

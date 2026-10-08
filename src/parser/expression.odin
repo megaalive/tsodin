@@ -14,6 +14,7 @@ Expr_Kind :: enum {
     Unary,
     Binary,
     Group,
+    Boolean,
 }
 
 Expr_Node :: struct {
@@ -134,12 +135,15 @@ syntax_expression :: proc(p: ^Syntax_State, min_priority: int) -> (int, bool) {
     start := p.current
     left := -1
     if start.kind == .Identifier || start.kind == .Integer_Literal ||
-       start.kind == .String_Literal {
+       start.kind == .String_Literal || start.kind == .True_Keyword ||
+       start.kind == .False_Keyword {
         kind := Expr_Kind.Name
         if start.kind == .Integer_Literal {
             kind = .Integer
         } else if start.kind == .String_Literal {
             kind = .Text
+        } else if start.kind == .True_Keyword || start.kind == .False_Keyword {
+            kind = .Boolean
         }
         left = syntax_node(p, Expr_Node {
             kind = kind,

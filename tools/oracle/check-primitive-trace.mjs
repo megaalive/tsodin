@@ -34,4 +34,13 @@ for(const row of mismatch.diags) {
   assert.equal(line,endLine);
   assert.ok(end>start);
 }
+const boolValid=read("checker-boolean-valid");
+assert.equal(boolValid.status,0,"boolean declaration fixture must typecheck");
+assert.deepEqual(boolValid.summary,["SUMMARY","3","0","0"]);
+const boolBad=read("checker-boolean-errors");
+assert.equal(boolBad.status,1,"boolean mismatches must fail");
+assert.deepEqual(boolBad.summary,["SUMMARY","2","2","1"]);
+assert.deepEqual(boolBad.diags.map(x=>x[1]),["10","10"],"boolean mismatches use TS2322 candidate");
+assert.deepEqual(boolBad.diags.map(x=>x.slice(2,4)),[["0","6"],["1","6"]],
+  "boolean declaration-name source spans in zero-based UTF-16");
 console.log("PASS: Odin source → parse → bind → primitive type diagnostics; TS7 semantic parity not yet established");
