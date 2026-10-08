@@ -1,6 +1,11 @@
 name: Blue glass preview validation
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "preview/**"
+      - ".github/workflows/blue-glass-preview.yml"
   pull_request:
     paths:
       - "preview/**"
@@ -16,5 +21,5 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - name: Verify branch preview integrity
+      - name: Verify preview assets, links and research data
         run: node preview/check.mjs

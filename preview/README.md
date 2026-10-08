@@ -1,17 +1,15 @@
-# Odin blue-glass visual previews
+# Odin blue-glass theme previews
 
-These two preview pages exist **only on the `preview/odin-blue-glass-variants` branch** until the user chooses a direction. The GitHub Pages site on `main` is unchanged.
+The two candidate designs are published on **GitHub Pages under /preview/** so the main Observatory homepage remains unchanged until visual approval.
 
-- `preview/soft/index.html`: Blue Glassy Soft — brighter Odin-inspired blue, comfortable contrast, restrained soft glow and translucent glass.
-- `preview/neon/index.html`: Blue Neon Odin — saturated electric blues, stronger edge lighting, glow and glass.
+- Comparison landing page: https://megaalive.github.io/tsodin/preview/
+- Blue Glassy Soft: https://megaalive.github.io/tsodin/preview/soft/
+- Blue Neon Odin: https://megaalive.github.io/tsodin/preview/neon/
 
-Both pages use the existing root `styles.css`, `app.js` and `lib/observatory-core.mjs`. They load the same frozen archive data (a copy is placed below each preview for unchanged relative asset resolution). The only differences are supplemental theme CSS and a preview-only theme switcher.
+These preview pages are static, share the existing root `styles.css`, `app.js` and Odin benchmark archive, and add only supplemental theme styles. Benchmark values and checker implementation are unchanged.
 
-**Publishing note:** GitHub Pages is currently configured on `main`. Do not merge this preview PR without the user's visual approval. No benchmark or scientific claims have been changed.
+Both previews contain a bottom theme switcher. Preview pages remain separated from the homepage; a selected design should eventually be applied to root styling in a **separate change**, not by silently replacing the homepage.
 
-A public preview CDN may show these branch files via:
+**Deployment requirement:** GitHub Pages configured to use `main / (root)`. The PR must pass preview integrity and Odin CI before merging. A published preview needs its files in `main` because Pages is not serving this branch automatically.
 
-- `https://raw.githack.com/megaalive/tsodin/preview/odin-blue-glass-variants/preview/soft/index.html`
-- `https://raw.githack.com/megaalive/tsodin/preview/odin-blue-glass-variants/preview/neon/index.html`
-
-GitHub Pages does not provide separate branch previews automatically; raw.githack.com is an external read-only renderer for the public branch, *not* an official tsodin deployment. If it fails, use the files attached to the preview CI workflow.
+No external raw.githack renderer is required.

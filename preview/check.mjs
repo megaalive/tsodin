@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 const repo = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const get = p => readFileSync(resolve(repo,p),"utf8");
 const root = get("../index.html");
+const landing = get("index.html");
+assert.match(landing, /href="\.\/soft\/index\.html"/);
+assert.match(landing, /href="\.\/neon\/index\.html"/);
 for(const option of ["soft","neon"]) {
   const html = get(option+"/index.html");
   const css = get(option === "soft" ? "soft.css" : "neon.css");
