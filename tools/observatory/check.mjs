@@ -90,7 +90,7 @@ assert.match(footerCss,/\.site-footer \.footer-inner\s*\{[^}]*flex-wrap:\s*nowra
   "fixed footer should not unexpectedly grow to multiple rows");
 assert.match(footerCss,/body > \.site-footer\s*\{[^}]*padding:\s*10px 0/s,
   "footer remains compact");
-assert.doesNotMatch(footerCss,/body > \\.site-footer\\s*\\{[^}]*margin-top:\\s*auto/s,
+assert.doesNotMatch(footerCss,/body > \.site-footer\s*\{[^}]*margin-top:\s*auto/s,
   "old flow-only footer positioning must not return");
 
 for(const path of ["index.html","app.js","live.css","lib/observatory-core.mjs","preview/index.html","preview/soft/index.html","preview/neon/index.html"]) {
