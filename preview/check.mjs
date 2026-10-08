@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repo = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const repo = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const get = p => readFileSync(resolve(repo,p),"utf8");
 const root = get("../index.html");
 for(const option of ["soft","neon"]) {
