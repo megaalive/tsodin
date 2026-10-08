@@ -1,0 +1,12 @@
+const count = 7;
+const alias = count;
+const sameCount = 7;
+const equalNumbers: boolean = alias === sameCount;
+const firstText = "same";
+const otherText = 'same';
+const equalText: boolean = firstText === otherText;
+const yes = true;
+const yesAlias = yes;
+const equalFlags: boolean = yesAlias === true;
+const widened: number = 7;
+const reflexive: boolean = widened === widened;

@@ -284,3 +284,77 @@ primitive_checker_literal_value_identity_and_disjoint_diagnostics :: proc(t: ^te
     parser.syntax_report_destroy(&ast2)
     source.source_version_destroy(&v2)
 }
+
+
+@(test)
+primitive_checker_const_literal_alias_provenance :: proc(t: ^testing.T) {
+    valid_sources := [?]string {
+        "const count = 7; const alias = count; const same = 7; const equal: boolean = alias === same;",
+        "const text = 'same'; const copy = text; const equal: boolean = copy === \"same\";",
+        "const yes = true; const copy = yes; const equal: boolean = copy !== true;",
+    }
+    for input in valid_sources {
+        v, ok := source.source_version_create(source.File_Id(720), 1, input)
+        testing.expect(t, ok, "valid constant alias source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete &&
+                       checked.complete && !checked.fatal &&
+                       len(checked.diagnostics) == 0,
+                       "identical inferred const literal values are accepted")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+
+    input := "const low = 1; const high = 2; const copy = low; const bad = copy === high;" +
+             "const yes = true; const no = false; const bad2 = yes !== no;"
+    v, ok := source.source_version_create(source.File_Id(721), 1, input)
+    testing.expect(t, ok, "disjoint constant alias source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete &&
+                   !checked.complete && !checked.fatal &&
+                   len(checked.diagnostics) == 2 &&
+                   checked.checked_declarations == 7,
+                   "disjoint aliases produce nonfatal diagnostics and continue")
+    for issue in checked.diagnostics {
+        testing.expect(t, issue.issue == .Disjoint_Literal_Comparison,
+                       "distinct const literals map to disjoint comparison")
+    }
+    testing.expect(t, input[checked.diagnostics[0].byte_start:checked.diagnostics[0].byte_end] == "copy === high" &&
+                   input[checked.diagnostics[1].byte_start:checked.diagnostics[1].byte_end] == "yes !== no",
+                   "diagnostics preserve comparison source spans")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_does_not_assume_mutable_or_annotated_literals :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let flexible = 1; const result = flexible === 2;",
+        "const widened: number = 1; const result = widened === 2;",
+        "var mutable = false; const result = mutable === true;",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(722), 1, input)
+        testing.expect(t, ok, "valid input")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete &&
+                       checked.fatal && !checked.complete &&
+                       len(checked.diagnostics) == 1 &&
+                       checked.diagnostics[0].issue == .Incompatible_Operator,
+                       "no fabricated literal identity for let/var or annotations")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}

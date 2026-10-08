@@ -72,11 +72,29 @@ annotation_type :: proc(value: parser.Primitive_Type) -> Primitive {
     return .Unknown
 }
 
-// Compare only directly source-backed primitive literals. Strings are scanned
-// without escapes, so removing their quote delimiters is value-preserving.
-// No heap allocations, literal inference claims, or speculative flow narrowing.
-literal_overlap :: proc(a, b: parser.Expr_Node, text: string) -> (both_literals, same_value: bool) {
-    if a.kind != b.kind { return false, false }
+// A value can carry a proven literal identity without allocating a new string.
+// A default (.Name) kind means unknown: do not infer a literal merely from a
+// primitive base type. The borrowed spans refer to the same source snapshot.
+Literal_Fact :: struct {
+    kind: parser.Expr_Kind,
+    byte_start: int,
+    byte_end: int,
+}
+
+literal_fact_from_node :: proc(node: parser.Expr_Node) -> Literal_Fact {
+    if node.kind == .Integer || node.kind == .Text || node.kind == .Boolean {
+        return Literal_Fact{
+            kind=node.kind, byte_start=node.byte_start, byte_end=node.byte_end,
+        }
+    }
+    return Literal_Fact{}
+}
+
+// Source-backed literal equality. Strings contain no escapes in this grammar;
+// stripping either quote delimiter preserves the value. This does not handle
+// computed expressions, widened annotations or mutable flow types.
+literal_overlap :: proc(a, b: Literal_Fact, text: string) -> (both_literals, same_value: bool) {
+    if a.kind != b.kind || a.kind == .Name { return false, false }
     if a.kind == .Integer || a.kind == .Boolean {
         return true, text[a.byte_start:a.byte_end] == text[b.byte_start:b.byte_end]
     }
@@ -129,13 +147,17 @@ check_file :: proc(
         return result
     }
 
-    // Only three temporary contiguous arrays; no heap allocation per AST node.
+    // Dense temporary arrays; source-backed facts use spans, not heap strings.
     inferred := make([]Primitive, len(syntax.nodes))
     defer delete(inferred)
     declared := make([]Primitive, len(syntax.declarations))
     defer delete(declared)
     references := make([]int, len(syntax.nodes))
     defer delete(references)
+    literal_nodes := make([]Literal_Fact, len(syntax.nodes))
+    defer delete(literal_nodes)
+    literal_decls := make([]Literal_Fact, len(syntax.declarations))
+    defer delete(literal_decls)
 
     for ref in symbols.references {
         if ref.node_index < 0 || ref.node_index >= len(syntax.nodes) ||
@@ -183,10 +205,13 @@ check_file :: proc(
             kind := Primitive.Unknown
             if node.kind == .Integer {
                 kind = .Number
+                literal_nodes[i] = literal_fact_from_node(node)
             } else if node.kind == .Text {
                 kind = .Text
+                literal_nodes[i] = literal_fact_from_node(node)
             } else if node.kind == .Boolean {
                 kind = .Boolean
+                literal_nodes[i] = literal_fact_from_node(node)
             } else if node.kind == .Name {
                 entry := references[i]
                 if entry <= 0 || entry > len(symbols.symbols) {
@@ -210,6 +235,9 @@ check_file :: proc(
                     return result
                 }
                 kind = declared[symbol.declaration_index]
+                // Only inferred const declarations retain the literal type.
+                // An explicit annotation widens it; let/var flow is untracked.
+                literal_nodes[i] = literal_decls[symbol.declaration_index]
                 if kind == .Unknown {
                     fail(&result, .Unsupported_Expression, node.byte_start, node.byte_end, true)
                     return result
@@ -232,6 +260,7 @@ check_file :: proc(
                     }
                 } else {
                     kind = child
+                    literal_nodes[i] = literal_nodes[node.left]
                 }
             } else if node.kind == .Binary {
                 left, left_ok := operand_type(syntax.nodes[:], inferred, node.left, i)
@@ -273,7 +302,8 @@ check_file :: proc(
                     same_name := lhs.kind == .Name && rhs.kind == .Name &&
                                  references[node.left] > 0 &&
                                  references[node.left] == references[node.right]
-                    both_literals, same_value := literal_overlap(lhs, rhs, text)
+                    both_literals, same_value := literal_overlap(
+                        literal_nodes[node.left], literal_nodes[node.right], text)
                     if same_name || (both_literals && same_value) {
                         kind = .Boolean
                     } else if both_literals {
@@ -306,6 +336,11 @@ check_file :: proc(
         declared[declaration_index] = declared_type
         if declared_type == .Unknown {
             declared[declaration_index] = expression_type
+            if decl.kind == .Const {
+                // Alias chains such as const copy = first preserve the
+                // inferred literal; mutable bindings and annotations do not.
+                literal_decls[declaration_index] = literal_nodes[decl.initializer]
+            }
         }
         result.checked_declarations += 1
     }
