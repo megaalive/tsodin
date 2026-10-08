@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "oracleVersion": "7.0.2",
+  "projects": [
+    {
+      "id": "clean",
+      "path": "tests/oracle/clean",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "type-errors",
+      "path": "tests/oracle/type-errors",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
+    },
+    {
+      "id": "utf16-crlf",
+      "path": "tests/oracle/utf16-crlf",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
+    }
+  ]
+}
