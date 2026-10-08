@@ -8,16 +8,18 @@ tsodin is an experimental, performance-first TypeScript checker/compiler designe
 
 ## Status
 
-M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. **M3-A/B are implemented**: source-backed single-file symbols and a strictly bounded cross-file *script-global* binder, with dense IDs, forward references and internal conflict/unresolved-name issues. A complete TypeScript parser, module-aware binder, type checker, official C0/C1 conformance and end-to-end performance are **not yet established**.
+M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. **M3-A–C are implemented**: a one-file binder, cross-file script-global binding, and explicit rejection of unsupported external modules. **M4-A/B are implemented as a narrow semantic slice**: primitive expression checking and a code-only TS2322 witness against pinned TypeScript 7. A complete parser, module-aware binder, full type checker, official C0/C1 conformance, diagnostic-span parity and end-to-end performance are **not yet established**.
 
 - [M1-A: source-version/index contract](docs/M1_SOURCE.md)
 - [M1-B–E: scanner and contextual witness](docs/M1_SCANNER.md)
 - [M2-A: declaration-parser subset](docs/M2_PARSER.md)
 - [M2-B/C: expression syntax, recovery, and diagnostic trace](docs/M2_EXPRESSION.md)
-- [M3-A/B: single-file and script-global binding](docs/M3_BINDER.md)
+- [M3-A–C: symbols, script globals, and module safety boundary](docs/M3_BINDER.md)
+- [M4-A: first primitive type checker](docs/M4_CHECKER.md)
+- [M4-B: TS7 diagnostic code-only witness](docs/M4_CODE_WITNESS.md)
 - [Official TypeScript conformance strategy](docs/OFFICIAL_CONFORMANCE.md)
 
-There are **no TypeScript compatibility or compiler performance claims**.
+There are **no full TypeScript compatibility or compiler performance claims**. The CLI `check` command remains disabled; the primitive semantic checker is available only through developer tooling.
 
 - [Execution plan and gates](docs/EXECUTION.md)
 - [Architectural decision](docs/RESEARCH_TRANSFER.md)
