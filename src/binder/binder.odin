@@ -10,6 +10,7 @@ Issue_Kind :: enum {
     Snapshot_Mismatch,
     Duplicate_Declaration,
     Unresolved_Name,
+    Unsupported_File_Mode,
 }
 
 Binding_Issue :: struct {
