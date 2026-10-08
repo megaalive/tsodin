@@ -131,4 +131,10 @@ const rhsErrors=read("checker-flow-rhs-errors");
 assert.equal(rhsErrors.status,1,"disjoint facts on idempotent guard paths");
 assert.deepEqual(rhsErrors.diags.map(row=>row[1]),["11","11","11","11","10"],
   "stable code candidates and a later mismatch");
-console.log("PASS: RHS conditional flow and scoped TS7 witnesses");
+const contradictionValid=read("checker-flow-contradiction-valid");
+assert.equal(contradictionValid.status,0,"empty impossible arms join only reachable paths");
+const contradictionBad=read("checker-flow-contradiction-errors");
+assert.equal(contradictionBad.status,1,"live-arm mismatches remain visible");
+assert.deepEqual(contradictionBad.diags.map(x=>x[1]),["10","10"],
+  "both reachable type errors retain stable issue IDs");
+console.log("PASS: G5F3 bounded contradiction flow and scoped TS7 witnesses");

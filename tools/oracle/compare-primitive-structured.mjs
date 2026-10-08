@@ -53,6 +53,8 @@ const fixtures=[
   ["checker-flow-compound-errors",5],
   ["checker-flow-rhs-valid",0],
   ["checker-flow-rhs-errors",5],
+  ["checker-flow-contradiction-valid",0],
+  ["checker-flow-contradiction-errors",2],
 ];
 
 function structuredReference(cwd) {

@@ -1012,3 +1012,75 @@ primitive_checker_rhs_context_disjoint_and_contradiction_fail_closed :: proc(t: 
         source.source_version_destroy(&v)
     }
 }
+
+@(test)
+primitive_checker_boolean_contradiction_empty_arm_and_live_join :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+        "flag = n === 2; let out: boolean = false;" +
+        "if (flag && !flag) { } else { out = flag === false; }" +
+        "if (flag || !flag) { out = flag === true; } else { }" +
+        "const after: boolean = flag === false;",
+        "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+        "flag = n === 2; let out: boolean = false;" +
+        "if (!(flag && !flag)) { out = flag === true; } else { }" +
+        "if (!(flag || !flag)) { } else { out = flag === false; }",
+        "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+        "flag = n === 2; let out: boolean = false;" +
+        "if (flag && !flag) { } else { flag = n === 3; }" +
+        "if (flag || !flag) { flag = n === 4; } else { }" +
+        "const restored: boolean = flag === false;",
+        "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+        "flag = n === 2; let other: boolean = false; other = n === 3;" +
+        "let out: boolean = false;" +
+        "if (flag) {" +
+        "if (other && !other) { } else { out = flag === true; }" +
+        "if (other || !other) { out = flag === true; } else { }" +
+        "} else { out = flag === false; }" +
+        "const after: boolean = flag === false;",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(780), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                       !checked.fatal && len(checked.diagnostics) == 0,
+                       "empty dead arms are not merged; live branch flow survives")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_contradiction_dead_arm_statements_fail_closed :: proc(t: ^testing.T) {
+    prefix :: "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+              "flag = n === 2; let out: boolean = false;"
+    cases := [?]string {
+        prefix + "if (flag && !flag) { out = true; } else { }",
+        prefix + "if (flag || !flag) { } else { out = true; }",
+        prefix + "if (!(flag && !flag)) { } else { out = true; }",
+        prefix + "if (!(flag || !flag)) { out = true; } else { }",
+        prefix + "if (flag && !flag) {" +
+        "if (flag) { out = true; } else { out = false; }" +
+        "} else { out = true; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(781), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                       !checked.complete && len(checked.diagnostics)>0 &&
+                       checked.diagnostics[0].issue == .Unsupported_Condition,
+                       "never-state semantics are not invented for dead-arm statements")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
