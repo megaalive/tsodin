@@ -15,8 +15,10 @@ if (flag || !flag) {
 } else {
     out = false;
 }
+let other: boolean = false;
+other = n === 3;
 if (flag) {
-    if (flag && !flag) {
+    if (other && !other) {
         out = false;
     } else {
         out = flag === true;

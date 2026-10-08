@@ -1096,9 +1096,10 @@ primitive_checker_typechecks_dead_arm_literal_assignments_without_transfer :: pr
         "else { out = true; }" +
         "const after: boolean = flag === false;",
         "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
-        "flag = n === 2; let out: boolean = false;" +
+        "flag = n === 2; let other: boolean = false;" +
+        "other = n === 3; let out: boolean = false;" +
         "if (flag) {" +
-        "if (flag && !flag) { out = true; } else { out = flag === true; }" +
+        "if (other && !other) { out = true; } else { out = flag === true; }" +
         "} else { out = flag === false; }",
     }
     for input in cases {
