@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {readFileSync,existsSync} from "node:fs";
 import {resolve} from "node:path";
 import {fileURLToPath} from "node:url";
-import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome} from "../../lib/observatory-core.mjs";
+import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport} from "../../lib/observatory-core.mjs";
 const root=resolve(fileURLToPath(new URL("../..",import.meta.url)));
 const get=path=>readFileSync(resolve(root,path),"utf8");
 
@@ -56,17 +56,25 @@ assert.match(html, /<title>tsodin — Compiler Observatory<\/title>/);
 assert.match(html, /href="\.\/live\.css"/);
 assert.match(html, /href="\.\/soft-glass\.css"/);
 assert.match(html, /GITHUB · CURRENT STATE/);
+assert.match(html, /data-panel="conformance" hidden/);
+assert.match(html, /data-view="overview"/);
+assert.match(html, /aria-controls="conformance"/);
+for(const panel of ["activity","pipeline","conformance","xray","principles"]) {
+  assert.match(html,new RegExp('id="'+panel+'"[^>]*data-panel="'+panel+'" hidden'));
+}
 assert.match(html, /Not measured/);
 assert.match(html, /REFERENCE TOOL · NOT ODIN EXECUTION/);
 for(const id of ["main","activity","pipeline","xray","source-input","byte-offset","last-checked","latest-sha","main-ci","capability-list","refresh-button"]) {
  assert.match(html,new RegExp('id="'+id+'"'));
 }
-for(const file of ["index.html","styles.css","soft-glass.css","live.css","favicon.svg","app.js","lib/observatory-core.mjs"]) assert.ok(existsSync(resolve(root,file)),file+" missing");
+for(const file of ["index.html","styles.css","soft-glass.css","live.css","favicon.svg","app.js","lib/observatory-core.mjs","data/conformance.json"]) assert.ok(existsSync(resolve(root,file)),file+" missing");
 const js=get("app.js");
 assert.match(js,/api\.github\.com\/repos\/megaalive\/tsodin/);
 assert.match(js,/Promise\.allSettled/);
 assert.match(js,/source tree/);
 assert.match(js,/Cannot confirm CI for current HEAD/);
+assert.match(js,/selectView/);
+assert.match(js,/publishedConformance/);
 assert.match(get("styles.css"),/prefers-reduced-motion:reduce/);
 for(const path of ["index.html","app.js","live.css","lib/observatory-core.mjs","preview/index.html","preview/soft/index.html","preview/neon/index.html"]) {
  assert.doesNotMatch(get(path),/megaalive\/ts-fp|odin-hotpath|HOTPATH_P6|0\.821656|P1.?P6|synthetic microkernel/i,path+" leaked old research");
@@ -74,4 +82,22 @@ for(const path of ["index.html","app.js","live.css","lib/observatory-core.mjs","
 assert.equal(existsSync(resolve(root,"data/observatory.json")),false);
 assert.equal(existsSync(resolve(root,"preview/soft/data/observatory.json")),false);
 assert.equal(existsSync(resolve(root,"preview/neon/data/observatory.json")),false);
+
+const report=JSON.parse(get("data/conformance.json"));
+const unrun=validateConformanceReport(report);
+assert.equal(unrun.status,"not_run");
+assert.equal(unrun.counts,null);
+assert.equal(unrun.rate,null);
+assert.throws(()=>validateConformanceReport({...report,counts:{passed:0,failed:0}}),/Unrun/);
+assert.throws(()=>validateConformanceReport({...report,status:"measured"}),/Measured/);
+const evidence={
+  ...report,status:"measured",testedTsodinRevision:"a".repeat(40),
+  testedAt:"2026-10-08T11:00:00Z",
+  workflowRunUrl:"https://github.com/megaalive/tsodin/actions/runs/1234",
+  counts:{passed:4,failed:1,unsupported:50,skipped_by_scope:8,not_run:20}
+};
+assert.equal(validateConformanceReport(evidence).rate,.8);
+assert.throws(()=>validateConformanceReport({...evidence,counts:{...evidence.counts,passed:0,failed:0}}),/No executed/);
+assert.throws(()=>validateConformanceReport({...evidence,workflowRunUrl:"https://other.example/1"}),/Measured/);
+
 console.log("PASS: live-only dashboard, fail-closed CI status, source inventory, Unicode, assets and no legacy benchmark data");

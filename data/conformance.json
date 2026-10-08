@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "project": "tsodin",
+  "source": "Microsoft TypeScript compiler/conformance tests",
+  "authority": "https://github.com/microsoft/TypeScript",
+  "profile": "ts7",
+  "typescriptVersion": "7.0.2",
+  "upstreamRevision": "1e4744d68260a7cb91b62b12edc3f6a2187faaf1",
+  "status": "not_run",
+  "testedTsodinRevision": null,
+  "testedAt": null,
+  "workflowRunUrl": null,
+  "counts": null,
+  "notes": "No tsodin-vs-official-suite conformance run has been performed. TypeScript 7 CLI acceptance fixtures are a separate oracle workflow and do not count as tsodin conformance passes."
+}
