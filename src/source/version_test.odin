@@ -55,14 +55,17 @@ source_index_unicode_and_crlf :: proc(t: ^testing.T) {
 
 @(test)
 source_index_rejects_invalid_utf8 :: proc(t: ^testing.T) {
-    invalid := string([]u8{0x61, 0xE2, 0x28, 0xA1})
+    invalid_bytes := []u8{0x61, 0xE2, 0x28, 0xA1}
+    invalid := transmute(string)invalid_bytes
     version, ok := source_version_create(File_Id(1), 0, invalid)
     testing.expect(t, !ok && !version.initialized, "malformed UTF-8 must fail closed")
     source_version_destroy(&version)
-    bad_surrogate := string([]u8{0xED, 0xA0, 0x80})
+    surrogate_bytes := []u8{0xED, 0xA0, 0x80}
+    bad_surrogate := transmute(string)surrogate_bytes
     _, ok = source_version_create(File_Id(1), 1, bad_surrogate)
     testing.expect(t, !ok, "UTF-8 surrogate encoding is rejected")
-    bad_scalar := string([]u8{0xF4, 0x90, 0x80, 0x80})
+    scalar_bytes := []u8{0xF4, 0x90, 0x80, 0x80}
+    bad_scalar := transmute(string)scalar_bytes
     _, ok = source_version_create(File_Id(1), 1, bad_scalar)
     testing.expect(t, !ok, "out-of-range Unicode scalar is rejected")
 }
