@@ -101,7 +101,7 @@ jobs:
 
 
   primitive-code-witness:
-    name: Primitive TS7 diagnostic code witness (not full parity)
+    name: Primitive TS7 code + UTF-16 start witness (not full parity)
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -134,5 +134,5 @@ jobs:
           set -euo pipefail
           odin build src/checktrace -out:"$RUNNER_TEMP/checktrace"
           echo "TSODIN_CHECKTRACE=$RUNNER_TEMP/checktrace" >> "$GITHUB_ENV"
-      - name: Compare TypeScript 7 diagnostic codes on a tiny supported slice
+      - name: Compare TypeScript 7 codes and UTF-16 starts on a tiny supported slice
         run: node tools/oracle/compare-primitive-codes.mjs
