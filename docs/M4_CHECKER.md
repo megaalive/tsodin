@@ -280,3 +280,41 @@ UTF-16 start coordinates. Internal issue 11 maps to TS2367; 10 to TS2322.
 Auxiliary TS6.0.2 structured full spans remain separately labeled. No
 public checker readiness or official conformance is claimed.
 Neither the public checker nor a benchmark performance win is claimed by this event-only gate.
+
+## M4-G5C — negative-arm narrowing under direct strict inequality
+
+The existing event-only flat `if/else` checker now recognizes
+`if (name !== literal)` when `name` is an initialized mutable
+`let` with a proven-wide number/string domain and the literal has
+the same primitive type. The `if` arm keeps the wide entry fact.
+The `else` arm alone receives the proven identity `name === literal`.
+Nothing subtracts the literal from the broad true-arm domain.
+
+```ts
+let code: number = 1;
+code = 1 + 2;
+let result: boolean = false;
+if (code !== 2) {
+    result = code === 2; // true arm remains wide
+} else {
+    result = code === 2; // false arm proves exact equality
+}
+const after: boolean = code === 9; // join remains broad
+```
+
+Assignment kills a branch-local literal fact; the original conservative
+fork/join combines independently proven facts only. Branch snapshots are
+still lazy, with no general graph or per-node heap objects.
+
+The new `checker-flow-negative-valid` and
+`checker-flow-negative-errors` fixtures cover numeric/string conditions,
+disjoint literals, assignment mismatch and post-join restoration.
+Native pinned **TS7.0.2** compares diagnostic codes and UTF-16 starts;
+**TS6.0.2** structured full spans are supplemental. Odin unit tests
+also cover assignment invalidation and unsupported guard rejection.
+
+Reversed operands, chained guards, truthiness, general negation,
+literal-exclusion types, branch-local declarations, nested branches,
+implicit else and loops remain outside the proof boundary: **fail closed**.
+No public checker, official Microsoft conformance pass, or real-world
+performance win is claimed by this milestone.

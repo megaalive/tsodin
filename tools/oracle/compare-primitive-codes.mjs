@@ -31,6 +31,8 @@ const fixtures=[
   {id:"checker-flow-assign-errors",expectedCount:2},
   {id:"checker-flow-branch-valid",expectedCount:0},
   {id:"checker-flow-branch-errors",expectedCount:2},
+  {id:"checker-flow-negative-valid",expectedCount:0},
+  {id:"checker-flow-negative-errors",expectedCount:3},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});

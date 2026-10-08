@@ -605,7 +605,8 @@ primitive_checker_conditional_disjoint_and_assignment_error :: proc(t: ^testing.
 primitive_checker_conditional_unproved_guard_is_fatal :: proc(t: ^testing.T) {
     cases := [?]string {
         "let code: number = 1; code = 1 + 2; if (code > 2) { code = 3; } else { code = 4; }",
-        "let code: number = 1; code = 1 + 2; if (code !== 2) { code = 3; } else { code = 4; }",
+        "let code: number = 1; code = 1 + 2; if (code !== code) { code = 3; } else { code = 4; }",
+        "let code: number = 1; code = 1 + 2; if (code !== 2 + 1) { code = 3; } else { code = 4; }",
         "let code: number = 1; code = 1 + 2; if (code === code) { code = 3; } else { code = 4; }",
     }
     for input in cases {
@@ -623,4 +624,70 @@ primitive_checker_conditional_unproved_guard_is_fatal :: proc(t: ^testing.T) {
         parser.syntax_report_destroy(&ast)
         source.source_version_destroy(&v)
     }
+}
+
+@(test)
+primitive_checker_negative_guard_else_narrowing :: proc(t: ^testing.T) {
+    input := "let code: number = 1; code = 1 + 2; let verdict: boolean = false;" +
+             "if (code !== 2) { verdict = code === 2; } else { verdict = code === 2; }" +
+             "const merged: boolean = verdict === true; const restored = code === 9;"
+    v, ok := source.source_version_create(source.File_Id(745), 1, input)
+    testing.expect(t, ok, "snapshot accepted")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && checked.checked_declarations == 4 &&
+                   checked.checked_assignments == 3 && len(checked.diagnostics) == 0,
+                   "negative true arm remains wide, else is exact, join restores broad")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_negative_guard_else_errors :: proc(t: ^testing.T) {
+    input := "let code: number = 1; code = 1 + 2; let verdict: boolean = false;" +
+             "if (code !== 2) { verdict = code === 3; }" +
+             "else { verdict = code === 3; verdict = 'bad'; } const after = code === 4;"
+    v, ok := source.source_version_create(source.File_Id(746), 1, input)
+    testing.expect(t, ok, "snapshot accepted")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && !checked.complete &&
+                   !checked.fatal && len(checked.diagnostics) == 2,
+                   "negative else path emits disjoint and assignment diagnostics")
+    if len(checked.diagnostics) == 2 {
+        testing.expect(t, checked.diagnostics[0].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[1].issue == .Assignment_Type_Mismatch &&
+                       input[checked.diagnostics[0].byte_start:checked.diagnostics[0].byte_end] == "code === 3" &&
+                       input[checked.diagnostics[1].byte_start:checked.diagnostics[1].byte_end] == "verdict",
+                       "candidate code and UTF-16 spans remain source-backed")
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_negative_guard_assignment_invalidates_else_fact :: proc(t: ^testing.T) {
+    input := "let code: number = 1; code = 1 + 2; let verdict: boolean = false;" +
+             "if (code !== 2) { verdict = code === 2; }" +
+             "else { code = 9; verdict = code === 3; } const after = code === 7;"
+    v, ok := source.source_version_create(source.File_Id(747), 1, input)
+    testing.expect(t, ok, "snapshot accepted")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && len(checked.diagnostics) == 0 &&
+                   checked.checked_declarations == 3 && checked.checked_assignments == 4,
+                   "assignment widens else and join; no stale singleton survives")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
 }
