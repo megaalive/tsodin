@@ -1,0 +1,11 @@
+# Compiler build artifacts
+/tsodin
+/tsodin.exe
+/build/
+/bin/
+/tmp/
+
+# Local benchmark evidence; keep summary/manifest sources in git
+/bench/results/
+*.prof
+*.pprof
