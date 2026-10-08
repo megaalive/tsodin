@@ -279,3 +279,4 @@ are checked against pinned **TypeScript 7.0.2** CLI diagnostic codes and
 UTF-16 start coordinates. Internal issue 11 maps to TS2367; 10 to TS2322.
 Auxiliary TS6.0.2 structured full spans remain separately labeled. No
 public checker readiness or official conformance is claimed.
+Neither the public checker nor a benchmark performance win is claimed by this event-only gate.
