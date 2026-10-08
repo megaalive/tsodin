@@ -141,3 +141,23 @@ type), computed values, general type relations and flow narrowing are **not**
 claimed. They do not acquire speculative facts. No public `tsodin check` or
 official Microsoft conformance score is enabled. Two extra dense scratch
 arrays store source spans; no per-node strings or object allocation is added.
+
+## M4-G3 — disjoint primitive domains through widening
+
+Under strict equality/inequality, the three supported primitive domains
+\u0060number\u0060, \u0060string\u0060 and \u0060boolean\u0060 cannot overlap with *each other*.
+When both operand types are known and different, the checker emits an
+internal, recoverable \u0060Disjoint_Primitive_Domains\u0060 diagnostic (ID 12).
+This remains true when variables have explicit widening annotations, come
+from earlier bound names, or are produced by supported arithmetic. This
+requires no additional heap storage or mutable flow-state assumptions.
+
+The existing literal-specific issue 11 and assignment issue 10 keep their
+ordinals. Differential witness tooling maps issues 11/12 to candidate
+\u0060TS2367\u0060 and issue 10 to \u0060TS2322\u0060. The new pinned fixtures
+\u0060checker-domain-valid\u0060 and \u0060checker-domain-errors\u0060 check actual
+TS7 CLI diagnostic codes and UTF-16 start positions; TS6 structured spans
+remain supplemental. Same-domain comparisons with insufficient overlap
+proof still fail closed: widening alone does not prove TS literal/flow
+semantics. This does not enable the public checker or establish official
+TypeScript conformance.

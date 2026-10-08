@@ -23,6 +23,8 @@ const fixtures=[
   {id:"checker-literal-disjoint",expectedCount:3},
   {id:"checker-const-literal-valid",expectedCount:0},
   {id:"checker-const-literal-disjoint",expectedCount:3},
+  {id:"checker-domain-valid",expectedCount:0},
+  {id:"checker-domain-errors",expectedCount:5},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});
@@ -49,12 +51,12 @@ for(const fixture of fixtures){
   assert.equal(upstream.length,fixture.expectedCount,fixture.id+": expected TS7 errors");
   assert.equal(actual.length,fixture.expectedCount,fixture.id+": expected Odin diagnostics");
   for(const item of actual){
-    assert.ok(item.kind===10 || item.kind===11,fixture.id+": unmapped Odin issue");
+    assert.ok(item.kind===10 || item.kind===11 || item.kind===12,fixture.id+": unmapped Odin issue");
     assert.ok(item.endLine>item.line ||
              (item.endLine===item.line && item.endColumn>item.column),
              fixture.id+": invalid Odin diagnostic span");
   }
-  const mapped=actual.map(d=>({code:d.kind===11?2367:2322,line:d.line,column:d.column}));
+  const mapped=actual.map(d=>({code:d.kind===10?2322:2367,line:d.line,column:d.column}));
   if(fixture.id==="checker-primitives-utf16") {
     // Emoji precedes the declaration ON THE SAME LINE. UTF-8 byte columns
     // are different from UTF-16 units; this locks the real TS7 coordinate.

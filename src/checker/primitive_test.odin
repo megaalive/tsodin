@@ -358,3 +358,53 @@ primitive_checker_does_not_assume_mutable_or_annotated_literals :: proc(t: ^test
         source.source_version_destroy(&v)
     }
 }
+
+
+@(test)
+primitive_checker_proves_disjoint_base_domains_without_literal_flow :: proc(t: ^testing.T) {
+    input := "const count: number = 1; const label: string = '1';" +
+             "const different = count === label;" +
+             "let enabled: boolean = true; const total = 2 + 2;" +
+             "const different2 = enabled !== total;" +
+             "const badAssignment: string = count < total;"
+    v, ok := source.source_version_create(source.File_Id(723), 1, input)
+    testing.expect(t, ok, "cross-primitive source is valid")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete &&
+                   !checked.complete && !checked.fatal &&
+                   checked.checked_declarations == 7 &&
+                   len(checked.diagnostics) == 3,
+                   "checker reports both domain disjointness and assignment mismatch")
+    testing.expect(t, checked.diagnostics[0].issue == .Disjoint_Primitive_Domains &&
+                   checked.diagnostics[1].issue == .Disjoint_Primitive_Domains &&
+                   checked.diagnostics[2].issue == .Assignment_Type_Mismatch,
+                   "stable, source-ordered internal issue IDs")
+    testing.expect(t, input[checked.diagnostics[0].byte_start:checked.diagnostics[0].byte_end] == "count === label" &&
+                   input[checked.diagnostics[1].byte_start:checked.diagnostics[1].byte_end] == "enabled !== total" &&
+                   input[checked.diagnostics[2].byte_start:checked.diagnostics[2].byte_end] == "badAssignment",
+                   "full expression spans and declaration-name mismatch span")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_does_not_invent_same_domain_overlap :: proc(t: ^testing.T) {
+    input := "const a: number = 1; const b: number = 2; const uncertain = a === b;"
+    v, ok := source.source_version_create(source.File_Id(724), 1, input)
+    testing.expect(t, ok, "valid source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                   !checked.complete && len(checked.diagnostics) == 1 &&
+                   checked.diagnostics[0].issue == .Incompatible_Operator,
+                   "widened same-base types remain unsupported without flow proof")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
