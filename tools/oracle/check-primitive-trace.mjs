@@ -87,7 +87,7 @@ assert.equal(flowValid.status,0,"valid straight-line let assignment sequence");
 assert.deepEqual(flowValid.summary,["SUMMARY","7","0","0"]);
 const flowBad=read("checker-flow-assign-errors");
 assert.equal(flowBad.status,1,"incorrect flow facts and assignments fail");
-assert.deepEqual(flowBad.summary,["SUMMARY","3","3","1"]);
-assert.deepEqual(flowBad.diags.map(row=>row[1]),["11","11","10"],
+assert.deepEqual(flowBad.summary,["SUMMARY","6","2","1"]);
+assert.deepEqual(flowBad.diags.map(row=>row[1]),["11","10"],
   "TS2367-candidate mismatches and TS2322 assignment type errors are distinct");
 console.log("PASS: Odin checker with source-ordered let assignment flows; TS7 parity checked separately");

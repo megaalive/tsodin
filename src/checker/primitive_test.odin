@@ -501,8 +501,10 @@ primitive_checker_straightline_assignment_flow :: proc(t: ^testing.T) {
 
 @(test)
 primitive_checker_assignment_errors_continue_without_false_success :: proc(t: ^testing.T) {
-    input := "let count: number = 1; count = 2; const bad = count === 3;" +
-             "count = 4; const bad2 = count !== 2; count = 'wrong';"
+    input := "let count: number = 1; count = 2; const possible = count === 3;" +
+             "count = 4; const possible2 = count !== 2;" +
+             "const low = 1; const high = 2; const bad = low === high;" +
+             "count = 'wrong';"
     v, ok := source.source_version_create(source.File_Id(734), 1, input)
     testing.expect(t, ok, "source created")
     ast := parser.parse_expression_program(&v, compat.ts7_profile())
@@ -510,17 +512,16 @@ primitive_checker_assignment_errors_continue_without_false_success :: proc(t: ^t
     checked := check_file(&v, &ast, &bound)
     testing.expect(t, ast.complete && bound.complete &&
                    !checked.complete && !checked.fatal &&
-                   checked.checked_declarations == 3 &&
+                   checked.checked_declarations == 6 &&
                    checked.checked_assignments == 3 &&
-                   len(checked.diagnostics) == 3,
-                   "disjoint flows and bad assignment are independently reported")
-    if len(checked.diagnostics) == 3 {
+                   len(checked.diagnostics) == 2,
+                   "widened let comparisons stay valid; disjoint const and bad assignment fail")
+    if len(checked.diagnostics) == 2 {
         testing.expect(t, checked.diagnostics[0].issue == .Disjoint_Literal_Comparison &&
-                       checked.diagnostics[1].issue == .Disjoint_Literal_Comparison &&
-                       checked.diagnostics[2].issue == .Assignment_Type_Mismatch,
+                       checked.diagnostics[1].issue == .Assignment_Type_Mismatch,
                        "existing TS2367/TS2322 candidate kinds are preserved")
-        testing.expect(t, input[checked.diagnostics[0].byte_start:checked.diagnostics[0].byte_end] == "count === 3" &&
-                       input[checked.diagnostics[2].byte_start:checked.diagnostics[2].byte_end] == "'wrong'",
+        testing.expect(t, input[checked.diagnostics[0].byte_start:checked.diagnostics[0].byte_end] == "low === high" &&
+                       input[checked.diagnostics[1].byte_start:checked.diagnostics[1].byte_end] == "'wrong'",
                        "comparison and assignment RHS diagnostics have real source spans")
     }
     report_destroy(&checked)

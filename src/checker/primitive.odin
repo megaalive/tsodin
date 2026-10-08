@@ -425,8 +425,16 @@ check_file :: proc(
                 // This is the first linear flow transfer. Reassignment
                 // replaces the earlier narrowed fact; nothing persists
                 // across unsupported branches or mutation paths.
-                literal_decls[target_index] = literal_nodes[expression_root]
-                wide_decls[target_index] = wide_nodes[expression_root]
+                if declared_type == .Number || declared_type == .Text {
+                    // A mutable number/string retains its widened base domain:
+                    // assigning a literal does not make it a singleton type.
+                    literal_decls[target_index] = Literal_Fact{}
+                    wide_decls[target_index] = true
+                } else {
+                    // Boolean flow is deliberately a separate restricted case.
+                    literal_decls[target_index] = literal_nodes[expression_root]
+                    wide_decls[target_index] = wide_nodes[expression_root]
+                }
             }
         } else {
             if declared_type != .Unknown && expression_type != declared_type {
