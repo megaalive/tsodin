@@ -236,6 +236,7 @@ check_file :: proc(
     // flow transfer; expressions requiring never-state analysis remain fatal.
     dead_then: [parser.FLOW_NEST_LIMIT]bool
     dead_else: [parser.FLOW_NEST_LIMIT]bool
+    contradiction_guard: [parser.FLOW_NEST_LIMIT]int
     // Per-depth split metadata prevents child conditionals from corrupting
     // parent guard facts. The live literal_decls/wide_decls arrays represent
     // the current path and are the only state consumed by expressions.
@@ -309,6 +310,7 @@ check_file :: proc(
             // If THEN is impossible, live ELSE is already in the current arrays.
             dead_then[level] = false
             dead_else[level] = false
+            contradiction_guard[level] = -1
             else_seen[level] = false
             guard_count[level] = 0
             for slot in 0..<2 {
@@ -405,6 +407,11 @@ check_file :: proc(
                                  target.byte_start, target.byte_end, true)
                             return result
                         }
+                    }
+                    if contradiction_guard[depth] == target_index {
+                        fail(&result, .Unsupported_Condition,
+                             target.byte_start, target.byte_end, true)
+                        return result
                     }
                 }
             }
@@ -765,6 +772,7 @@ check_file :: proc(
             contradiction := false
             dead_then[level] = false
             dead_else[level] = false
+            contradiction_guard[level] = -1
             for slot in 0..<part_count {
                 leaf_node := part_nodes[slot]
                 leaf_flipped := !compound && flipped
@@ -910,7 +918,9 @@ check_file :: proc(
                     if flipped { dead_then[level] = true
                     } else { dead_else[level] = true }
                 }
-                // No singleton from an impossible decisive path may escape.
+                // Preserve the contradiction's identity for dead-arm target
+                // rejection, even though no singleton flow fact may escape.
+                contradiction_guard[level] = guard_indices[level][0]
                 guard_count[level] = 0
             } else if compound && guard_indices[level][0] == guard_indices[level][1] {
                 // Same Boolean predicate on both sides is idempotent:

@@ -929,8 +929,8 @@ primitive_checker_compound_guard_fail_closed :: proc(t: ^testing.T) {
               "let a: boolean = false; a = n === 2;" +
               "let b: boolean = false; b = n === 3; let out: boolean = false;"
     cases := [?]string {
-        prefix + "if (a && !a) { out = true; } else { out = false; }",
-        prefix + "if (a || !a) { out = true; } else { out = false; }",
+        prefix + "if (a && !a) { out = a; } else { out = false; }",
+        prefix + "if (a || !a) { out = true; } else { out = !a; }",
         prefix + "if (a && true) { out = true; } else { out = false; }",
         prefix + "if (a || false) { out = true; } else { out = false; }",
         prefix + "if (a && (b || a)) { out = true; } else { out = false; }",
@@ -994,8 +994,8 @@ primitive_checker_rhs_context_disjoint_and_contradiction_fail_closed :: proc(t: 
               "let out: boolean = false;"
     cases := [?]string {
         prefix + "if (flag && (flag === false)) { out = true; } else { out = false; }",
-        prefix + "if (flag && !flag) { out = true; } else { out = false; }",
-        prefix + "if (flag || !flag) { out = true; } else { out = false; }",
+        prefix + "if (flag && !flag) { out = flag; } else { out = false; }",
+        prefix + "if (flag || !flag) { out = true; } else { out = !flag; }",
     }
     for input in cases {
         v, ok := source.source_version_create(source.File_Id(771), 1, input)
@@ -1060,10 +1060,10 @@ primitive_checker_contradiction_dead_arm_statements_fail_closed :: proc(t: ^test
     prefix :: "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
               "flag = n === 2; let out: boolean = false;"
     cases := [?]string {
-        prefix + "if (flag && !flag) { out = true; } else { }",
-        prefix + "if (flag || !flag) { } else { out = true; }",
-        prefix + "if (!(flag && !flag)) { } else { out = true; }",
-        prefix + "if (!(flag || !flag)) { out = true; } else { }",
+        prefix + "if (flag && !flag) { out = flag; } else { }",
+        prefix + "if (flag || !flag) { } else { out = flag; }",
+        prefix + "if (!(flag && !flag)) { } else { out = !flag; }",
+        prefix + "if (!(flag || !flag)) { out = !flag; } else { }",
         prefix + "if (flag && !flag) {" +
         "if (flag) { out = true; } else { out = false; }" +
         "} else { out = true; }",

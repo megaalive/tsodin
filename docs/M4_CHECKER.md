@@ -535,3 +535,9 @@ typechecked in source order, with no per-statement heap allocation.
 diagnostic-code/UTF-16-start oracle evidence and supplemental TS6.0.2
 structured spans. Public `tsodin check` remains disabled and official
 conformance is NOT RUN.
+
+The original G5F3 fail-closed tests are retained and updated to cover
+reference/computed expressions (still unsupported), while the newly
+supported direct-literal assignments have their own positive and
+TS2322-negative witnesses. Contradiction identity is retained per depth
+for rejection of writes to the impossible branch's guard target.
