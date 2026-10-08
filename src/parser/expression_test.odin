@@ -282,7 +282,7 @@ expression_conditional_unsupported_syntax_fails_closed :: proc(t: ^testing.T) {
         "let x = 1; if (x === 1) { x = 2; }",
         "let x = 1; if (x === 1) x = 2; else { x = 3; }",
         "let x = 1; if (x === 1) { let y = 2; } else { x = 3; }",
-        "let x = 1; if (x === 1) { if (x === 2) { x = 3; } else { x = 4; } } else { x = 5; }",
+        "let x = 1; if (x === 1) { if (x === 2) { if (x === 3) { x = 4; } else { x = 5; } } else { x = 6; } } else { x = 7; }",
         "let x = 1; if (x === 1) { x = 2; } else x = 3;",
     }
     for input in cases {
@@ -293,5 +293,32 @@ expression_conditional_unsupported_syntax_fails_closed :: proc(t: ^testing.T) {
                        "unsupported shape is an incomplete parse")
         syntax_report_destroy(&ast)
         source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+expression_nested_if_events_keep_parent_order :: proc(t: ^testing.T) {
+    input := "let x: number = 1; let ready: boolean = false;" +
+             "if (x === 2) { if (ready) { x = 3; } else { x = 4; } x = 5; }" +
+             "else { if (!ready) { x = 6; } else { x = 7; } }"
+    v, ok := source.source_version_create(source.File_Id(751), 1, input)
+    testing.expect(t, ok, "nested source")
+    defer source.source_version_destroy(&v)
+    ast := parse_expression_program(&v, compat.ts7_profile())
+    defer syntax_report_destroy(&ast)
+    testing.expect(t, ast.complete && !ast.fatal &&
+                   len(ast.declarations) == 2 && len(ast.statements) == 16,
+                   "two-level if/else emits a properly nested flat event stream")
+    if len(ast.statements) == 16 {
+        expected := [?]Statement_Kind {
+            .Declaration, .Declaration, .If,
+            .If, .Assignment, .Else, .Assignment, .End_If,
+            .Assignment, .Else,
+            .If, .Assignment, .Else, .Assignment, .End_If, .End_If,
+        }
+        for kind, i in expected {
+            testing.expect(t, ast.statements[i].kind == kind,
+                           "every child marker precedes the parent join")
+        }
     }
 }

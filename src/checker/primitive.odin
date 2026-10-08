@@ -200,16 +200,22 @@ check_file :: proc(
     defer delete(wide_nodes)
     wide_decls := make([]bool, len(syntax.declarations))
     defer delete(wide_decls)
-    // PERF: Ordinary straight-line files pay no snapshot allocation cost.
-    // Allocate at the first proven guard, then reuse for flat conditionals.
-    entry_literals: []Literal_Fact
-    defer delete(entry_literals)
-    then_literals: []Literal_Fact
-    defer delete(then_literals)
-    entry_wide: []bool
-    defer delete(entry_wide)
-    then_wide: []bool
-    defer delete(then_wide)
+    // PERF: Straight-line files allocate no branch snapshots. Each nesting
+    // level obtains its own four dense buffers only when first encountered.
+    // A completed child join mutates the enclosing arm's current facts;
+    // parent's entry/then snapshots are never overwritten by a child.
+    entry_literals: [parser.FLOW_NEST_LIMIT][]Literal_Fact
+    then_literals: [parser.FLOW_NEST_LIMIT][]Literal_Fact
+    entry_wide: [parser.FLOW_NEST_LIMIT][]bool
+    then_wide: [parser.FLOW_NEST_LIMIT][]bool
+    defer {
+        for level in 0..<parser.FLOW_NEST_LIMIT {
+            delete(entry_literals[level])
+            delete(then_literals[level])
+            delete(entry_wide[level])
+            delete(then_wide[level])
+        }
+    }
 
     for ref in symbols.references {
         if ref.node_index < 0 || ref.node_index >= len(syntax.nodes) ||
@@ -223,67 +229,80 @@ check_file :: proc(
 
     text := version.owned_text
     node_cursor := 0
-    inside_if := false
-    else_seen := false
-    // The true/false arm facts are independent. An equality guard proves a
-    // singleton on one arm; a direct boolean guard proves true/false on both.
-    // Empty (.Name) fact means no narrowing, not an implicit exclusion.
-    guard_index := -1
-    guard_then_fact: Literal_Fact
-    guard_else_fact: Literal_Fact
+    flow_depth := 0
+    else_seen: [parser.FLOW_NEST_LIMIT]bool
+    // Per-depth split metadata prevents child conditionals from corrupting
+    // parent guard facts. The live literal_decls/wide_decls arrays represent
+    // the current path and are the only state consumed by expressions.
+    guard_indices: [parser.FLOW_NEST_LIMIT]int
+    guard_else_facts: [parser.FLOW_NEST_LIMIT]Literal_Fact
     for event in syntax.statements {
         if event.kind == .Else {
-            if !inside_if || else_seen || event.expression != -1 {
+            if flow_depth == 0 || event.declaration_index != -1 ||
+               event.target_node != -1 || event.expression != -1 {
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
             }
-            // Fork: keep the then-arm result, restore the entry facts, and
-            // evaluate else from exactly the same pre-condition snapshot.
-            copy(then_literals, literal_decls)
-            copy(then_wide, wide_decls)
-            copy(literal_decls, entry_literals)
-            copy(wide_decls, entry_wide)
-            if guard_else_fact.kind != .Name {
-                // The false arm's independent proof never borrows the then
-                // arm's mutations; it starts from the original entry snapshot.
-                literal_decls[guard_index] = guard_else_fact
-                wide_decls[guard_index] = false
+            level := flow_depth-1
+            if else_seen[level] {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
             }
-            else_seen = true
+            // Save the completed THEN arm, then restore this depth's entry
+            // state. A nested join cannot overwrite an enclosing snapshot.
+            copy(then_literals[level], literal_decls)
+            copy(then_wide[level], wide_decls)
+            copy(literal_decls, entry_literals[level])
+            copy(wide_decls, entry_wide[level])
+            if guard_else_facts[level].kind != .Name {
+                literal_decls[guard_indices[level]] = guard_else_facts[level]
+                wide_decls[guard_indices[level]] = false
+            }
+            else_seen[level] = true
             continue
         }
         if event.kind == .End_If {
-            if !inside_if || !else_seen || event.expression != -1 {
+            if flow_depth == 0 || event.declaration_index != -1 ||
+               event.target_node != -1 || event.expression != -1 {
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
             }
-            // Join: only keep singleton facts proved on BOTH paths. A changed
-            // value otherwise becomes a broad primitive; no path is ignored.
+            level := flow_depth-1
+            if !else_seen[level] {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
+            }
+            // Join preserves a singleton only if both paths prove it.
+            // Child joins operate on the parent's current arm and then pop.
             for i in 0..<len(declared) {
-                identical, same := literal_overlap(then_literals[i], literal_decls[i], text)
-                if identical && same && !then_wide[i] && !wide_decls[i] {
-                    literal_decls[i] = then_literals[i]
+                identical, same := literal_overlap(then_literals[level][i], literal_decls[i], text)
+                if identical && same && !then_wide[level][i] && !wide_decls[i] {
+                    literal_decls[i] = then_literals[level][i]
                     wide_decls[i] = false
-                } else if then_wide[i] || wide_decls[i] ||
-                          then_literals[i].kind != literal_decls[i].kind ||
+                } else if then_wide[level][i] || wide_decls[i] ||
+                          then_literals[level][i].kind != literal_decls[i].kind ||
                           (identical && !same) {
                     literal_decls[i] = Literal_Fact{}
                     wide_decls[i] = true
                 } else {
-                    // Both sides unknown, or neither side can prove equality.
                     literal_decls[i] = Literal_Fact{}
                     wide_decls[i] = false
                 }
             }
-            inside_if = false
-            else_seen = false
-            guard_index = -1
-            guard_then_fact = Literal_Fact{}
-            guard_else_fact = Literal_Fact{}
+            else_seen[level] = false
+            guard_indices[level] = -1
+            guard_else_facts[level] = Literal_Fact{}
+            flow_depth -= 1
             continue
         }
         condition_event := event.kind == .If
-        if condition_event && inside_if {
+        if condition_event && flow_depth >= parser.FLOW_NEST_LIMIT {
+            fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+            return result
+        }
+        if event.kind == .Declaration && flow_depth > 0 {
+            // The grammar cannot bind block declarations yet. Reject even
+            // forged complete event streams instead of leaking fake scope.
             fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
             return result
         }
@@ -626,23 +645,23 @@ check_file :: proc(
                     return result
                 }
             }
-            if len(entry_literals) == 0 {
-                entry_literals = make([]Literal_Fact, len(declared))
-                then_literals = make([]Literal_Fact, len(declared))
-                entry_wide = make([]bool, len(declared))
-                then_wide = make([]bool, len(declared))
+            level := flow_depth
+            if len(entry_literals[level]) == 0 {
+                entry_literals[level] = make([]Literal_Fact, len(declared))
+                then_literals[level] = make([]Literal_Fact, len(declared))
+                entry_wide[level] = make([]bool, len(declared))
+                then_wide[level] = make([]bool, len(declared))
             }
-            copy(entry_literals, literal_decls)
-            copy(entry_wide, wide_decls)
-            guard_index = guard
-            guard_then_fact = then_fact
-            guard_else_fact = else_fact
-            if guard_then_fact.kind != .Name {
-                literal_decls[guard] = guard_then_fact
+            copy(entry_literals[level], literal_decls)
+            copy(entry_wide[level], wide_decls)
+            guard_indices[level] = guard
+            guard_else_facts[level] = else_fact
+            if then_fact.kind != .Name {
+                literal_decls[guard] = then_fact
                 wide_decls[guard] = false
             }
-            inside_if = true
-            else_seen = false
+            else_seen[level] = false
+            flow_depth += 1
             continue
         }
         if assignment {
@@ -688,7 +707,7 @@ check_file :: proc(
             result.checked_declarations += 1
         }
     }
-    if inside_if || else_seen {
+    if flow_depth != 0 {
         fail(&result, .Unsupported_Condition, 0, 0, true)
         return result
     }

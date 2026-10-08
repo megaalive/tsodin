@@ -775,3 +775,89 @@ primitive_checker_negated_condition_fail_closed :: proc(t: ^testing.T) {
         source.source_version_destroy(&v)
     }
 }
+
+@(test)
+primitive_checker_nested_two_levels_preserve_parent_narrowing :: proc(t: ^testing.T) {
+    input := "let code: number = 1; code = 1 + 2; let ready: boolean = false;" +
+             "ready = code === 2; let result: boolean = false;" +
+             "if (code === 2) {" +
+             "  if (ready) { result = code === 2; result = ready === true; }" +
+             "  else { result = code === 2; result = ready === false; }" +
+             "  result = code === 2;" +
+             "} else {" +
+             "  if (!ready) { result = ready === false; }" +
+             "  else { result = ready === true; }" +
+             "  result = code === 9;" +
+             "} const after: boolean = code === 4;"
+    v, ok := source.source_version_create(source.File_Id(752), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && len(checked.diagnostics) == 0 &&
+                   checked.checked_declarations == 4 &&
+                   checked.checked_assignments == 10,
+                   "child joins keep parent code literal and do not leak ready facts")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_nested_diagnostics_are_path_local :: proc(t: ^testing.T) {
+    input := "let code: number = 1; code = 1 + 2; let ready: boolean = false;" +
+             "ready = code === 2; let result: boolean = false;" +
+             "if (code === 2) {" +
+             "  if (ready) { result = code === 3; result = ready === false; }" +
+             "  else { result = code === 4; }" +
+             "} else {" +
+             "  if (!ready) { result = ready === true; }" +
+             "  else { result = 'wrong'; }" +
+             "} const after: boolean = code === 9;"
+    v, ok := source.source_version_create(source.File_Id(753), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && !checked.complete &&
+                   !checked.fatal && checked.checked_declarations == 4 &&
+                   len(checked.diagnostics) == 5,
+                   "four child-local disjoint facts and one assignment mismatch")
+    if len(checked.diagnostics) == 5 {
+        testing.expect(t, checked.diagnostics[0].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[1].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[2].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[3].issue == .Disjoint_Literal_Comparison &&
+                       checked.diagnostics[4].issue == .Assignment_Type_Mismatch,
+                       "nested path diagnostics retain stable candidate code ordering")
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_nested_mutation_invalidates_parent_fact :: proc(t: ^testing.T) {
+    input := "let code: number = 1; code = 1 + 2; let ready: boolean = false;" +
+             "ready = code === 2; let result: boolean = false;" +
+             "if (code === 2) {" +
+             "  if (ready) { code = 7; result = code === 3; }" +
+             "  else { result = code === 2; }" +
+             "  result = code === 4;" +
+             "} else { result = code === 9; }"
+    v, ok := source.source_version_create(source.File_Id(754), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && len(checked.diagnostics) == 0,
+                   "child mutation widens parent then arm and leaves else independent")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}

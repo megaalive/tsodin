@@ -111,4 +111,12 @@ const guardsBad=read("checker-flow-guards-errors");
 assert.equal(guardsBad.status,1,"disjoint facts and mismatch cannot succeed");
 assert.deepEqual(guardsBad.summary,["SUMMARY","4","6","1"]);
 assert.deepEqual(guardsBad.diags.map(row=>row[1]),["11","11","11","11","11","10"]);
-console.log("PASS: bounded boolean and negated guards with pinned TS7 oracle");
+const nestedValid=read("checker-flow-nested-valid");
+assert.equal(nestedValid.status,0,"bounded nested flow must remain valid");
+assert.deepEqual(nestedValid.summary,["SUMMARY","4","0","0"]);
+const nestedErrors=read("checker-flow-nested-errors");
+assert.equal(nestedErrors.status,1,"nested disjointness and mismatch cannot succeed");
+assert.deepEqual(nestedErrors.summary,["SUMMARY","4","5","1"]);
+assert.deepEqual(nestedErrors.diags.map(row=>row[1]),["11","11","11","11","10"],
+  "child-local TypeScript candidate errors preserve source order");
+console.log("PASS: bounded nested branch fork/join and TS7 witnesses");

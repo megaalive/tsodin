@@ -374,3 +374,49 @@ Not supported: `&&`/`||` as guards, nested branches, optional
 operands, side-effecting conditions, closures, or general truthiness.
 Public `tsodin check` stays disabled; official Microsoft conformance
 is NOT RUN. No speed comparison to Rust/Go is claimed.
+
+## M4-G5E — bounded two-level nested if/else flow
+
+The parser accepts **at most two levels** of explicit `if/else` with
+assignment-only arms; the third level, missing `else`, branch-local
+declarations, `else if` and other unsupported statements fail closed.
+Statements remain flat and source-ordered (If / Else / End_If), with
+nested markers emitted in lexical order. No general heap CFG is built.
+
+The checker stores **independent fork/join snapshots per active depth**
+with lazy, reusable dense buffers. At the nested `End_If`, the child
+joins its two paths into the **parent's current arm**; the parent's entry
+snapshot and other arm remain untouched. An assignment in one child arm
+invalidates its singleton on join if not proved by both child arms.
+After the outer join, only facts common to its two outcomes survive.
+
+```ts
+let code: number = 1;
+code = 1 + 2;
+let ready: boolean = false;
+ready = code === 2;
+let result: boolean = false;
+if (code === 2) {
+    if (ready) {
+        result = code === 2; // outer fact persists in nested arm
+    } else {
+        result = code === 2; // independent child path
+    }
+} else {
+    result = code === 9;     // broad outer false arm
+}
+```
+
+A nesting limit of 2 is deliberate, separate from expression depth 64;
+it bounds snapshot storage to four dense arrays per encountered level.
+Straight-line files still allocate no branch snapshots. Source spans,
+internal issue IDs, TS7-compatible diagnostics, and the public checker
+fail-closed boundary remain unchanged.
+
+The new `checker-flow-nested-valid` and `checker-flow-nested-errors`
+fixtures compare Odin issues with pinned **TS7.0.2 diagnostic codes
+and UTF-16 starts** and auxiliary **TS6.0.2 structured full spans**.
+Unit tests exercise nested ordering, parent fact preservation, branch
+mutation invalidation and depth-three refusal. These are scoped witnesses,
+NOT full official TypeScript conformance. Public `tsodin check` stays
+disabled and no Rust/Go build-time speedup is claimed.
