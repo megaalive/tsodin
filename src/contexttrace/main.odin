@@ -30,12 +30,12 @@ main :: proc() {
         os.exit(2)
     }
     defer source.source_version_destroy(&source_version)
-    reader := context.reader_init(&source_version)
+    reader := lexcontext.reader_init(&source_version)
     after_semicolon := false
     for {
-        token := context.reader_next(&reader)
+        token := lexcontext.reader_next(&reader)
         if mode == "regex" && after_semicolon && token.kind == .Slash {
-            token = context.reader_rescan_regex(&reader, token)
+            token = lexcontext.reader_rescan_regex(&reader, token)
             after_semicolon = false
         }
         if token.error != .None || token.kind == .Invalid {

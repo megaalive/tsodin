@@ -1,4 +1,4 @@
-package context
+package lexcontext
 
 import "core:testing"
 import "../source"
