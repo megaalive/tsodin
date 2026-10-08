@@ -63,3 +63,45 @@ The scanner suite covers byte spans, source UTF-16 interop, comments,
 Unicode line separators, EOF, unsupported slash/identifier/escape cases,
 unterminated strings/comments, and sticky failure. The end-to-end `check`
 CLI remains intentionally disabled.
+
+
+## M1-D — explicit contextual scan entry points
+
+The scanner now separates **raw tokenization** from parser decisions. The Odin
+parser is not implemented yet; callers/tests exercise the following explicit
+boundaries. A successful tokenization does **not** imply a valid TypeScript
+expression or semantic checker result.
+
+- `scanner_next` returns an ordinary `Slash` or `Slash_Equals` token
+  without assuming division versus regex. The parser alone may call
+  `scanner_rescan_slash_as_regex` on the most recently returned `Slash`
+  token. A restricted ASCII regex body supports escaping, bracket classes,
+  and a small set of flags; malformed or unsupported spellings fail closed.
+  Regex parsing, regular-expression validity, and Unicode escapes remain out
+  of scope.
+- For template literals, the initial backtick scans a
+  `No_Substitution_Template` or `Template_Head`; the parser reinterprets
+  an immediately preceding `Close_Brace` using
+  `scanner_rescan_close_brace_as_template`, yielding
+  `Template_Middle` or `Template_Tail`. Nested expression brace depth
+  belongs to the future parser, not to speculative scanner state.
+- An ordinary `Less_Than` may be classified by the parser as a
+  `Jsx_Tag_Start`, then a just-read `Greater_Than` can activate
+  `scanner_begin_jsx_text`. Only `scanner_next_jsx_text` reads raw text
+  containing whitespace, line separators and multibyte UTF-8; it exits on
+  `<` or `{`. These hooks do not implement TSX grammar, JSX entities,
+  attributes or nested-element recovery.
+
+Each rescan verifies that its argument is exactly the last contextual token
+and that the source/version profile is valid. Wrong-mode or stale requests
+fail closed and remain sticky errors, rather than rewinding to earlier offsets
+or accidentally interpreting syntax.
+
+The existing TS6 lexical witness uses a **fixed subset** and unchanged Odin
+token ordinals. New kinds are appended to preserve evidence comparability.
+M1-D unit tests cover the implemented contexts, but full TS7/TS8 grammar and
+scanner parity are **not** claimed.
+
+Next: TypeScript-oracle-backed contextual fixtures with specifically
+documented behavior and parser-owned nested mode tracking; no entire
+compiler work should be inferred from lexical tests.
