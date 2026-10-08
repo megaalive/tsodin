@@ -8,12 +8,14 @@ tsodin is an experimental, performance-first TypeScript checker/compiler designe
 
 ## Status
 
-M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. A complete TypeScript parser, binder, checker, C0/C1 compatibility and end-to-end performance are **not yet established**.
+M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. **M3-A is implemented**: a single-file declaration binder with dense symbol IDs, forward name resolution and internal duplicate/unresolved-name issues. A complete TypeScript parser, multi-file binder, type checker, C0/C1 compatibility and end-to-end performance are **not yet established**.
 
 - [M1-A: source-version/index contract](docs/M1_SOURCE.md)
 - [M1-B–E: scanner and contextual witness](docs/M1_SCANNER.md)
 - [M2-A: declaration-parser subset](docs/M2_PARSER.md)
 - [M2-B/C: expression syntax, recovery, and diagnostic trace](docs/M2_EXPRESSION.md)
+- [M3-A: single-file binder](docs/M3_BINDER.md)
+- [Official TypeScript conformance strategy](docs/OFFICIAL_CONFORMANCE.md)
 
 There are **no TypeScript compatibility or compiler performance claims**.
 
@@ -44,6 +46,7 @@ odin test src/compat
 odin test src/scanner
 odin test src/context
 odin test src/parser
+odin test src/binder
 odin build src/cli -out:tsodin
 ./tsodin --version
 ./tsodin check    # intentionally exits 2 (not implemented)
