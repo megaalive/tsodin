@@ -554,8 +554,9 @@ Snapshots and compact per-depth guard slots extend from two to three;
 straight-line source still allocates no branch snapshots.
 
 The three-operand case excludes equality leaves, repeated bindings,
-mixed/chained operator trees, four-or-more operands, side effects and
-unproved expressions. It is not a general Boolean formula evaluator.
+complex/mixed-left operator trees, four-or-more operands, side effects and
+unproved expressions. G5F7A separately permits two restricted mixed-RHS
+forms; this G5F5 rule does not imply general mixed-form support. It is not a general Boolean formula evaluator.
 Two-operand idempotence and contradiction behavior are preserved as-is.
 
 `checker-flow-three-guards-{valid,errors}` extend pinned TS7.0.2
@@ -577,3 +578,21 @@ and TS2322 assignment mismatches are asserted in their source order.
 code/start UTF-16 differential fixtures with TS6.0.2 supplementary
 structured spans. This is a correctness regression milestone, **not**
 additional grammar support, official conformance, or a speed claim.
+
+## M4-G5F7A — restricted mixed Boolean RHS
+
+The bounded checker accepts two **effect-free mixed formulas**:
+`a && (b || c)` and `a || (b && c)`, with three distinct,
+initialized, proven-wide Boolean `let` name operands.
+An optional outer `!` reverses the arm. The only unconditional
+fact derived is `a=true` on the conjunction's true path, or
+`a=false` on the disjunction's false path; the other arm and
+both `b`/`c` remain unconstrained. No other mixed form, repeated
+symbol, nested formula, literal operand or side-effecting construct
+is admitted. Source-order comparison diagnostics remain fail-closed.
+
+No generalized CFG is introduced; the existing compact guard metadata
+stores one fact, not a fabricated fact for every nested operand.
+`checker-flow-mixed-rhs-{valid,errors}` provide pinned TS7.0.2
+diagnostic-code/UTF-16-start witnesses and supplemental TS6.0.2
+structured spans. Public `tsodin check` remains disabled.

@@ -1222,7 +1222,7 @@ primitive_checker_three_guard_fail_closed_boundaries :: proc(t: ^testing.T) {
     cases := [?]string {
         prefix + "if (a && b && a) { out = true; } else { out = false; }",
         prefix + "if (a || b || b) { out = true; } else { out = false; }",
-        prefix + "if (a && (b || c)) { out = true; } else { out = false; }",
+        prefix + "if (a && (b || (c && a))) { out = true; } else { out = false; }",
         prefix + "if (a && b && (c === true)) { out = true; } else { out = false; }",
         prefix + "if (a && b && c && a) { out = true; } else { out = false; }",
     }
@@ -1306,4 +1306,73 @@ primitive_checker_three_way_guard_nested_diagnostics :: proc(t: ^testing.T) {
     binder.binding_report_destroy(&bound)
     parser.syntax_report_destroy(&ast)
     source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_mixed_rhs_boolean_guard_decisive_facts :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let n: number = 1; n = 1 + 2;" +
+        "let a: boolean = false; a = n === 2;" +
+        "let b: boolean = false; b = n === 3;" +
+        "let c: boolean = false; c = n === 4;" +
+        "let out: boolean = false;" +
+        "if (a && (b || c)) { out = a === true; out = b === false; }" +
+        "else { out = a === false; }" +
+        "if (a || (b && c)) { out = a === false; }" +
+        "else { out = a === false; out = c === false; }" +
+        "const after: boolean = a === false;",
+        "let n: number = 1; n = 1 + 2;" +
+        "let a: boolean = false; a = n === 2;" +
+        "let b: boolean = false; b = n === 3;" +
+        "let c: boolean = false; c = n === 4;" +
+        "let out: boolean = false;" +
+        "if (!(a && (b || c))) { out = a === false; }" +
+        "else { out = a === true; }" +
+        "if (!(a || (b && c))) { out = a === false; }" +
+        "else { out = b === false; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(820), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                       !checked.fatal && len(checked.diagnostics)==0,
+                       "only outer left Boolean is entailed by mixed RHS formula")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_mixed_rhs_boolean_guard_fail_closed :: proc(t: ^testing.T) {
+    prefix :: "let n: number = 1; n = 1 + 2;" +
+              "let a: boolean = false; a = n === 2;" +
+              "let b: boolean = false; b = n === 3;" +
+              "let c: boolean = false; c = n === 4;" +
+              "let out: boolean = false;"
+    cases := [?]string {
+        prefix + "if (a && (b || a)) { out = true; } else { out = false; }",
+        prefix + "if (a || (b && b)) { out = true; } else { out = false; }",
+        prefix + "if (a && (b || (c && a))) { out = true; } else { out = false; }",
+        prefix + "if ((a || b) && c) { out = true; } else { out = false; }",
+        prefix + "if (a && (b || true)) { out = true; } else { out = false; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(821), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                       !checked.complete && len(checked.diagnostics)>0,
+                       "unproved, repeated, mixed-left or computed guards remain unsupported")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
 }
