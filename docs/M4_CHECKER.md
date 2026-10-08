@@ -266,11 +266,13 @@ const merged: boolean = verdict === true;
 const possible: boolean = code === 9;
 ```
 
-The guard subset is intentionally narrower than TypeScript. Unsupported
-conditions (including `!==`, relational conditions, truthiness), negative
-branch exclusions, nested branches, branch-local declarations and scopes,
-`else if`, implicit else, loops, switch and closures **fail closed**.
-Multiple independent flat conditionals can reuse the same dense snapshots.
+The guard subset is intentionally narrower than TypeScript. The false arm
+starts with the original broad primitive domain: it **does not** subtract
+the equality guard's literal or claim negative-path exclusion. Unsupported
+guards (including `!==`, relational conditions, truthiness), nested
+branches, branch-local declarations and scopes, `else if`, implicit else,
+loops, switch and closures **fail closed**. Multiple independent flat
+conditionals reuse the same lazily allocated snapshots.
 
 `checker-flow-branch-valid` and `checker-flow-branch-errors`
 are checked against pinned **TypeScript 7.0.2** CLI diagnostic codes and
