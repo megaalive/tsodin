@@ -48,9 +48,9 @@ primitive_checker_reports_type_mismatches_without_success :: proc(t: ^testing.T)
         _, valid := source.source_position(&v, issue.byte_start)
         testing.expect(t, valid, "UTF-16 projection exists")
     }
-    testing.expect(t, text[result.diagnostics[0].byte_start:result.diagnostics[0].byte_end]=="'oops'" &&
-                   text[result.diagnostics[1].byte_start:result.diagnostics[1].byte_end]=="5",
-                   "diagnostics point to both initializer expressions")
+    testing.expect(t, text[result.diagnostics[0].byte_start:result.diagnostics[0].byte_end]=="n" &&
+                   text[result.diagnostics[1].byte_start:result.diagnostics[1].byte_end]=="s",
+                   "assignment mismatch markers point to declared identifiers")
 }
 
 @(test)

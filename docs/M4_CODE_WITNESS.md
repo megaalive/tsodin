@@ -16,3 +16,18 @@ other TypeScript diagnostic code fails the gate, rather than being filtered.
 The CI job pins both the Odin toolchain and TypeScript 7.0.2. It emits a
 machine-readable code witness in logs, with `spanParityChecked:false`
 and `messageParityChecked:false`.
+
+## M4-C — exact code + UTF-16 start-position witness
+
+The same pinned CLI 7.0.2 and the Odin `checktrace` now compare **both**
+TS2322 diagnostic codes **and one-based UTF-16 line/column starts** on the
+declared three-file fixture set: successful types, two primitive mismatches,
+and a CRLF file with non-BMP Unicode trivia. The checker projects source byte
+spans using `source_position`; comparisons fail on any unexpected count,
+code or start coordinate.
+
+This is still **not full TS7 diagnostic parity**. The native CLI in
+`--pretty false` mode does not provide authoritative end spans, diagnostic
+categories or complete structured messages. Those dimensions remain
+explicitly unverified in the machine-readable test log, and no official
+Microsoft conformance score is published. No previous benchmark is imported.

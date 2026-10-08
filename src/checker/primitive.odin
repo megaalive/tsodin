@@ -237,8 +237,10 @@ check_file :: proc(
         expression_type := inferred[decl.initializer]
         node_cursor = decl.initializer+1
         if declared_type != .Unknown && expression_type != declared_type {
-            node := syntax.nodes[decl.initializer]
-            fail(&result, .Assignment_Type_Mismatch, node.byte_start, node.byte_end, false)
+            // TS7 reports a variable-declaration type mismatch at the
+            // declared name. Keep full name bytes for UTF-16 projection.
+            fail(&result, .Assignment_Type_Mismatch,
+                 decl.name_start, decl.name_end, false)
         }
         declared[declaration_index] = declared_type
         if declared_type == .Unknown {
