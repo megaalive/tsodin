@@ -4,7 +4,7 @@ import "core:fmt"
 import "core:os"
 import "../source"
 import "../scanner"
-import "../context"
+import lexcontext "../context"
 
 // Developer-only fixture driver; "regex" mode explicitly marks one slash
 // as the start of a regexp. This is NOT a TypeScript parser or heuristic.
