@@ -68,7 +68,7 @@ Two additional pinned projects, `checker-flow-assign-valid` and
 `checker-flow-assign-errors`, exercise sequential `let` assignments.
 TS7 CLI diagnostic **code and UTF-16 start** must exactly match the Odin
 trace. The independent supplemental TS6 lane checks complete diagnostic
-spans. `TS2322` on a simple assignment starts at the LHS assignment expression;
+spans. `TS2322` on a simple assignment covers the LHS identifier;
 `TS2367` on an impossible comparison covers that comparison expression.
 No official conformance score or unconditional flow-parity claim follows.
 

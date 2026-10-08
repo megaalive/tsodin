@@ -521,7 +521,7 @@ primitive_checker_assignment_errors_continue_without_false_success :: proc(t: ^t
                        checked.diagnostics[1].issue == .Assignment_Type_Mismatch,
                        "existing TS2367/TS2322 candidate kinds are preserved")
         testing.expect(t, input[checked.diagnostics[0].byte_start:checked.diagnostics[0].byte_end] == "low === high" &&
-                       input[checked.diagnostics[1].byte_start:checked.diagnostics[1].byte_end] == "count = 'wrong'",
+                       input[checked.diagnostics[1].byte_start:checked.diagnostics[1].byte_end] == "count",
                        "comparison and assignment RHS diagnostics have real source spans")
     }
     report_destroy(&checked)

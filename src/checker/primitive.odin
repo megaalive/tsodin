@@ -414,11 +414,12 @@ check_file :: proc(
         if assignment {
             result.checked_assignments += 1
             if expression_type != declared_type {
-                // TS7 locates TS2322 on the assignment expression at
-                // the target's start, not at the start of the RHS literal.
-                // Preserve source-backed spans for TS6 structured checks.
+                // Native TS7 starts TS2322 at the assignment target;
+                // supplemental TS6 structured diagnostics cover precisely
+                // the target identifier, not the entire RHS expression.
+                target := syntax.nodes[event.target_node]
                 fail(&result, .Assignment_Type_Mismatch,
-                     event.byte_start, event.byte_end-1, false)
+                     target.byte_start, target.byte_end, false)
                 literal_decls[target_index] = Literal_Fact{}
                 wide_decls[target_index] = false
             } else {

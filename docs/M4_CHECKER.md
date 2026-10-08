@@ -233,8 +233,8 @@ not yet a control-flow graph or conditional type narrowing.
 `checker-flow-assign-valid` and `checker-flow-assign-errors` extend the
 native pinned TS7.0.2 diagnostic-code/UTF-16-start assertions. The TS6.0.2
 structured end-span lane remains separately labeled as supplemental.
-An incompatible `let` RHS produces candidate TS2322 starting at the
-assignment target and spanning the assignment expression (pending structured
-TS6 verification); disjoint immutable `const` literals produce candidate
-TS2367. No permanent numeric/string singleton fact is inferred from a
+An incompatible `let` RHS produces candidate TS2322 covering the
+assignment target identifier, supported by the TS7 start and TS6 complete
+structured span witnesses; disjoint immutable `const` literals produce
+candidate TS2367. No permanent numeric/string singleton fact is inferred from a
 mutable assignment. No official conformance score is published.
