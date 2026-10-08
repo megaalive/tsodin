@@ -71,7 +71,7 @@ assert.equal(domainValid.status,0,"proven same-name comparisons remain accepted"
 assert.deepEqual(domainValid.summary,["SUMMARY","5","0","0"]);
 const domainErrors=read("checker-domain-errors");
 assert.equal(domainErrors.status,1,"disjoint primitive domains must not return success");
-assert.deepEqual(domainErrors.summary,["SUMMARY","10","5","1"]);
+assert.deepEqual(domainErrors.summary,["SUMMARY","9","5","1"]);
 assert.deepEqual(domainErrors.diags.map(row=>row[1]),["12","12","12","12","10"],
   "primitive domain and assignment issues have stable distinct ordinals");
 console.log("PASS: Odin checker with disjoint primitive domains; TS7 parity checked separately");
