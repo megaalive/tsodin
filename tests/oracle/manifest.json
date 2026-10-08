@@ -100,6 +100,26 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": true
+    },
+    {
+      "id": "script-globals-valid",
+      "path": "tests/oracle/script-globals-valid",
+      "files": [
+        "first.ts",
+        "second.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "script-globals-conflicts",
+      "path": "tests/oracle/script-globals-conflicts",
+      "files": [
+        "first.ts",
+        "second.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
     }
   ]
 }
