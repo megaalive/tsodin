@@ -1,15 +1,14 @@
-# Odin blue-glass theme previews
+# Odin blue-glass visual variants
 
-The two candidate designs are published on **GitHub Pages under /preview/** so the main Observatory homepage remains unchanged until visual approval.
+**Blue Glassy Soft is the approved production theme**, selected on 8 October 2026.
 
+- Live homepage: https://megaalive.github.io/tsodin/
 - Comparison landing page: https://megaalive.github.io/tsodin/preview/
 - Blue Glassy Soft: https://megaalive.github.io/tsodin/preview/soft/
-- Blue Neon Odin: https://megaalive.github.io/tsodin/preview/neon/
+- Blue Neon Odin (alternative): https://megaalive.github.io/tsodin/preview/neon/
 
-These preview pages are static, share the existing root `styles.css`, `app.js` and Odin benchmark archive, and add only supplemental theme styles. Benchmark values and checker implementation are unchanged.
+The selected style is maintained once as `/soft-glass.css`, loaded after the shared base `/styles.css` on the homepage and the soft preview. The former `preview/soft.css` copy is retired.
 
-Both previews contain a bottom theme switcher. Preview pages remain separated from the homepage; a selected design should eventually be applied to root styling in a **separate change**, not by silently replacing the homepage.
+Neon remains isolated under `/preview/neon.css`, applied over the common base style only on the optional comparison page. Compiler logic, synthetic benchmark archive and claims are unchanged.
 
-**Deployment requirement:** GitHub Pages configured to use `main / (root)`. The PR must pass preview integrity and Odin CI before merging. A published preview needs its files in `main` because Pages is not serving this branch automatically.
-
-No external raw.githack renderer is required.
+Pages is served from `main / (root)`. Future visual changes require explicit approval. Keep the selected production stylesheet canonical.

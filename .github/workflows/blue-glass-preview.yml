@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "preview/**"
+      - "soft-glass.css"
       - ".github/workflows/blue-glass-preview.yml"
   pull_request:
     paths:
       - "preview/**"
+      - "soft-glass.css"
       - ".github/workflows/blue-glass-preview.yml"
   workflow_dispatch:
 

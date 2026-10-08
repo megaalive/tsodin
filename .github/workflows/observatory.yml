@@ -6,6 +6,7 @@ on:
     paths:
       - "index.html"
       - "styles.css"
+      - "soft-glass.css"
       - "app.js"
       - "favicon.svg"
       - "data/**"
@@ -16,6 +17,7 @@ on:
     paths:
       - "index.html"
       - "styles.css"
+      - "soft-glass.css"
       - "app.js"
       - "favicon.svg"
       - "data/**"
