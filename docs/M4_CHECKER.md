@@ -318,3 +318,59 @@ literal-exclusion types, branch-local declarations, nested branches,
 implicit else and loops remain outside the proof boundary: **fail closed**.
 No public checker, official Microsoft conformance pass, or real-world
 performance win is claimed by this milestone.
+
+## M4-G5D — negated comparisons and proven-wide boolean guards
+
+G5D extends the **existing event-only, flat, explicit if/else** slice;
+it does not introduce a heap-allocated CFG. The checker strips only
+transparent parentheses and unary `!` from a guard, tracking inverted
+polarity. The inner guard must remain a direct `name === literal` or
+`name !== literal` (number, string or boolean), or a direct **boolean**
+`let` name. The name must resolve to an initialized mutable `let` with
+a proven-wide primitive domain at the entry snapshot.
+
+A direct `if (flag)` narrows `flag` to true in the then branch and
+false in the else branch; `if (!flag)` reverses the facts. Strict
+comparisons against a boolean literal can also narrow the *opposite*
+branch because the boolean domain contains exactly two values. For
+number/string, opposite branches remain broad; we do **not** fabricate
+exclusion types. Arbitrary truthiness for number/string is unsupported.
+
+```ts
+let count: number = 1;
+count = 1 + 2;
+let flag: boolean = false;
+flag = count === 2;
+let outcome: boolean = false;
+if (!flag) {
+    outcome = flag === false; // proven false
+} else {
+    outcome = flag === true;  // proven true
+}
+if (!(count === 2)) {
+    outcome = count === 3;   // no exclusion fact inferred
+} else {
+    outcome = count === 2;   // proven literal
+}
+```
+
+For boolean-only flow facts, a reserved, **internal** `Literal_Fact`
+marker (`byte_start=-1`, `byte_end=0/1`) encodes proved
+false/true without allocating strings or widening the fact structure.
+It is NEVER treated as a source span or surfaced as a diagnostic
+position. `literal_overlap` handles this marker alongside real source
+boolean literal tokens. A branch-local mutation replaces the fact;
+the existing join retains only facts independently proved on both arms.
+
+`checker-flow-guards-valid` and `checker-flow-guards-errors`
+add pinned native TS7.0.2 code/UTF-16-start witnesses and independently
+labeled TS6.0.2 structured full-span witnesses. Unit tests cover
+double negation, direct boolean guards, complementary literal guards,
+branch-local disjoint facts, source-backed errors, and fail-closed
+unsupported guards.
+
+Not supported: `&&`/`||` as guards, nested branches, optional
+`else`, unproven/widening-free names, property accesses, reversed
+operands, side-effecting conditions, closures, or general truthiness.
+Public `tsodin check` stays disabled; official Microsoft conformance
+is NOT RUN. No speed comparison to Rust/Go is claimed.
