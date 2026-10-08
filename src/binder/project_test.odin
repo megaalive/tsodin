@@ -116,3 +116,32 @@ script_project_rejects_incomplete_files :: proc(t: ^testing.T) {
                    r.issues[0].file_index==1,
                    "one invalid file prevents incomplete global success")
 }
+
+@(test)
+script_project_rejects_explicit_external_modules :: proc(t: ^testing.T) {
+    text := "const local: number = 42;"
+    version, ok := source.source_version_create(source.File_Id(509), 1, text)
+    testing.expect(t, ok, "verified UTF-8")
+    defer source.source_version_destroy(&version)
+    ast := parser.parse_expression_program(&version, compat.ts7_profile())
+    defer parser.syntax_report_destroy(&ast)
+    testing.expect(t, ast.complete, "restricted grammar accepts simple local declaration")
+    modules := [?]Project_File{
+        Project_File{source_version=&version,syntax=&ast,mode=.External_Module},
+    }
+    refused := bind_script_project(modules[:])
+    testing.expect(t, refused.fatal && !refused.complete &&
+                   len(refused.symbols)==0 && len(refused.references)==0 &&
+                   len(refused.issues)==1 &&
+                   refused.issues[0].kind==.Unsupported_File_Mode,
+                   "external module must never be merged as script global")
+    project_report_destroy(&refused)
+
+    // Exactly the same syntax can be a script if its loader proves that mode.
+    modules[0].mode=.Script
+    accepted := bind_script_project(modules[:])
+    testing.expect(t, accepted.complete && !accepted.fatal &&
+                   len(accepted.symbols)==1,
+                   "verified script retains previous M3-B behavior")
+    project_report_destroy(&accepted)
+}

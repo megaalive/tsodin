@@ -5,7 +5,14 @@ import "../source"
 
 // M3-B: explicitly-selected, script-global multi-file scope.
 // No imports, exports, modules, packages, or tsconfig resolution.
+// Supplied by a verified project loader, never guessed from file extension.
+File_Mode :: enum {
+    Script,
+    External_Module,
+}
+
 Project_File :: struct {
+    mode: File_Mode, // default Script in existing M3-B callers
     source_version: ^source.Source_Version,
     syntax: ^parser.Syntax_Report,
 }
@@ -78,6 +85,10 @@ project_fatal :: proc(r: ^Project_Report, issue: Issue_Kind, file_index: int) {
 // The caller retains ownership of all source versions and ASTs.
 project_preflight :: proc(files: []Project_File, r: ^Project_Report) -> bool {
     for f, i in files {
+        if f.mode != .Script {
+            project_fatal(r, .Unsupported_File_Mode, i)
+            return false
+        }
         if f.source_version == nil || !f.source_version.initialized || f.syntax == nil {
             project_fatal(r, .Invalid_Source, i)
             return false

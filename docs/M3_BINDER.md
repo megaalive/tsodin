@@ -50,3 +50,17 @@ block scopes, or TypeScript's complete global declaration-merging rules.
 Unit tests validate cross-file forward references and conflicts. Two
 independent pinned TypeScript 7 CLI projects provide acceptance and diagnostic
 existence evidence, NOT matching internal tsodin diagnostics.
+
+## M3-C — explicit module boundary (fail-closed)
+
+A project loader must classify each file as `Script` or
+`External_Module` before invoking `bind_script_project`. The M3-B script
+binder **refuses** explicitly marked external modules, rather than leaking
+their declarations into the shared script-global symbol table. This is a
+safety boundary, not an import/export implementation. An omitted mode in the
+M3-B legacy API defaults to Script; future project-loading APIs must supply
+and validate mode explicitly. No automatic module detection is claimed.
+
+Until parsing and module graph resolution exist, external-module projects
+are **unsupported**. Never treat their rejection as passing an upstream
+TypeScript conformance case.
