@@ -5,6 +5,8 @@
 import assert from "node:assert/strict";
 import {spawnSync} from "node:child_process";
 import {createRequire} from "node:module";
+import {readFileSync} from "node:fs";
+import {dirname} from "node:path";
 import {resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 
@@ -13,8 +15,12 @@ const api=process.env.TSODIN_TS6_API;
 const checker=process.env.TSODIN_CHECKTRACE;
 if (!api || !checker) throw new Error("Set TSODIN_TS6_API and TSODIN_CHECKTRACE");
 const ts=createRequire(import.meta.url)(api);
-if (ts.version !== "6.0.2" || typeof ts.getPreEmitDiagnostics !== "function") {
-  throw new Error("Wrong pinned TS6 structured reference API");
+const packageVersion=JSON.parse(readFileSync(resolve(dirname(api),"../package.json"),"utf8")).version;
+if (packageVersion !== "6.0.2") {
+  throw new Error("Wrong TS6 package version: "+packageVersion);
+}
+if (!String(ts.version).startsWith("6.") || typeof ts.getPreEmitDiagnostics !== "function") {
+  throw new Error("Unsupported TS6 structured API version: "+String(ts.version));
 }
 
 const fixtures=[
