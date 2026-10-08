@@ -94,3 +94,16 @@ the editor uses 16px text to reduce mobile automatic zoom.
 The existing Unicode reference responds immediately to `input` events.
 No TypeScript parsing, Odin execution, persistence, network request, or
 conformance result is implied by this editor interaction.
+
+### Animated architecture orbit (presentation only)
+
+Overview's orbit is a live **interaction**, not a live compiler execution
+or progress visualization. Lightweight CSS rotates subtle rings and signals,
+while three native, keyboard-usable buttons select Source, Symbols and Types.
+The inspector links to actual checked-in Odin files without claiming
+semantic completeness. The stage label cycles only while Overview is visible,
+the document is visible, animation is permitted and the pointer/focus is
+not interacting. Manual pause stops animation and cycling; the browser's
+`prefers-reduced-motion` setting automatically stops both. No new network
+request, timer faster than 4.8 seconds, framework or worker was introduced.
+The explanatory warning is always visible, including without JavaScript.
