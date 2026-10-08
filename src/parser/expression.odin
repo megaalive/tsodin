@@ -112,6 +112,11 @@ syntax_node :: proc(p: ^Syntax_State, node: Expr_Node) -> int {
 // Only the documented ASCII expression operators are accepted. Left
 // associativity follows precedence climbing (rhs minimum = priority + 1).
 binary_priority :: proc(kind: scanner.Token_Kind) -> int {
+    if kind == .Bar_Bar { return 1 }
+    if kind == .Ampersand_Ampersand { return 2 }
+    if kind == .Equals_Equals_Equals || kind == .Exclamation_Equals_Equals { return 3 }
+    if kind == .Less_Than || kind == .Greater_Than ||
+       kind == .Less_Than_Equals || kind == .Greater_Than_Equals { return 4 }
     if kind == .Plus || kind == .Minus {
         return 10
     }
@@ -154,7 +159,7 @@ syntax_expression :: proc(p: ^Syntax_State, min_priority: int) -> (int, bool) {
             right = -1,
         })
         syntax_advance(p)
-    } else if start.kind == .Plus || start.kind == .Minus {
+    } else if start.kind == .Plus || start.kind == .Minus || start.kind == .Exclamation {
         syntax_advance(p)
         child, valid := syntax_expression(p, 30)
         if !valid {
