@@ -31,3 +31,24 @@ This is still **not full TS7 diagnostic parity**. The native CLI in
 categories or complete structured messages. Those dimensions remain
 explicitly unverified in the machine-readable test log, and no official
 Microsoft conformance score is published. No previous benchmark is imported.
+
+## M4-D — supplementary full-span diagnostic evidence
+
+The TypeScript 7.0.2 CLI remains our authoritative reference for diagnostic
+codes and **starting UTF-16 coordinates**. Its plain-text CLI output does not
+directly expose authoritative end positions or structured diagnostic categories.
+
+To validate full diagnostic ranges without pretending TS7 provides a JS
+compiler API, the CI now installs the separately pinned
+`@typescript/typescript6@6.0.2` **supplemental** API and runs
+`tools/oracle/compare-primitive-structured.mjs`. Against the same three
+primitive fixtures, it asserts all emitted codes, error categories,
+start/end line and UTF-16 column positions match Odin's `checktrace`.
+Any unexpected extra TS6 diagnostic, missing source span, or unmapped Odin
+issue fails the job.
+
+**Evidence must remain version-scoped**: TS6 structured end-span agreement
+is *not* proof of native TS7 end-span parity. Messages are not compared.
+No score is added to official Microsoft conformance; the Pages panel remains
+NOT RUN. Future work must expose or reproduce TS7's exact structured
+diagnostic semantics before full TS7 parity can be claimed.
