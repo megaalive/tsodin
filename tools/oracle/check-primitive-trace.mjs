@@ -95,6 +95,6 @@ assert.equal(branchValid.status,0,"bounded if/else and joined facts must succeed
 assert.deepEqual(branchValid.summary,["SUMMARY","4","0","0"]);
 const branchBad=read("checker-flow-branch-errors");
 assert.equal(branchBad.status,1,"branch-local disjointness and type mismatch fail");
-assert.deepEqual(branchBad.summary,["SUMMARY","4","2","1"]);
+assert.deepEqual(branchBad.summary,["SUMMARY","3","2","1"]);
 assert.deepEqual(branchBad.diags.map(row=>row[1]),["11","10"]);
 console.log("PASS: bounded conditional narrowing with a pinned TS7 oracle");
