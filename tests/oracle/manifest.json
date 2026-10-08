@@ -64,6 +64,24 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": false
+    },
+    {
+      "id": "expression-subset",
+      "path": "tests/oracle/expression-subset",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "expression-syntax-errors",
+      "path": "tests/oracle/expression-syntax-errors",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
     }
   ]
 }

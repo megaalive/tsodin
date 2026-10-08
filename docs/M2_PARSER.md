@@ -46,3 +46,7 @@ Extend expression parsing/recovery with oracle-backed expected diagnostics,
 produce a stable syntax representation for the binder, and enter the
 first narrow real source-to-diagnostics checker slice. Only after useful
 equivalent work exists should end-to-end benchmarks become product evidence.
+
+## M2-B
+
+The independent expression parser and its recovery contract are documented in [M2-B: Expression syntax and recovery](M2_EXPRESSION.md). M2-A's original narrow API remains for regression tests; neither constitutes the full C0 language gate.
