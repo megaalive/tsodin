@@ -183,7 +183,12 @@ check_file :: proc(
     node_cursor := 0
     for event in syntax.statements {
         assignment := event.kind == .Assignment
+        // An assignment has no declaration index of its own. References in
+        // its RHS may only see declarations already processed in source order.
         declaration_index := event.declaration_index
+        if assignment {
+            declaration_index = result.checked_declarations
+        }
         target_index := -1
         decl: parser.Expr_Declaration
         declared_type := Primitive.Unknown
