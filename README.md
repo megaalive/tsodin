@@ -30,7 +30,7 @@ There are **no TypeScript compatibility or compiler performance claims**.
 
 **https://megaalive.github.io/tsodin/**
 
-The Observatory is a lightweight, Blue Glassy Soft static dashboard that fetches **current public GitHub repository commits, workflow runs and source paths on demand**, explicitly identifying unavailable data. It includes a separate browser-only Unicode position reference. It does not publish historical prototype benchmarks or claim an operational Odin TypeScript checker. See [Observatory maintenance](docs/OBSERVATORY.md).
+A static dashboard that fetches **current public GitHub repository commits, workflow runs and source paths on demand**, explicitly identifying unavailable data. It includes a separate browser-only Unicode position reference. It does not publish historical prototype benchmarks or claim an operational Odin TypeScript checker. See [Observatory maintenance](docs/OBSERVATORY.md).
 
 ## Local bootstrap
 
