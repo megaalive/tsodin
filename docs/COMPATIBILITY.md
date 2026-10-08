@@ -24,6 +24,22 @@ the boundary, never encode upstream major numbers in the main hot path.
   version-scoped, and the TS7 corpus stays independent of later versions.
 - No checker, parser, full grammar, TS7 token parity, or TS8 support is claimed.
 
+## Independent lexical witness
+
+`src/scantrace/main.odin` emits token kinds and UTF-16 positions
+from the current Odin scanner for CLI fixture files. For the two
+ASCII-subset acceptance fixtures, `tools/oracle/compare-scanner.mjs`
+compares the emitted records against a pinned **TypeScript 6**
+`createScanner` API. The TypeScript 6 API is a *supplemental lexical
+reference*, not a TypeScript 7 native scanner implementation.
+
+The original pinned TypeScript 7 CLI separately compiles the same
+fixtures and verifies their acceptance. Passing both lanes means only:
+the restricted Odin token stream matches the older API on these two
+fixtures, and the TypeScript 7 compiler accepts those sources.
+It is not yet C0 syntax or diagnostic parity. Do not merge these
+evidence classes when evaluating future TS8 behavior.
+
 ## Upgrade contract: TS7 → TS8
 
 1. **Discover:** pin the actual published TS8 compiler, version and upstream

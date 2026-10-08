@@ -37,6 +37,15 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": false
+    },
+    {
+      "id": "scanner-utf16-crlf",
+      "path": "tests/oracle/scanner-utf16-crlf",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
     }
   ]
 }

@@ -24,3 +24,14 @@ Keep the TS7 baseline and its gates. Update the matrix only after the new
 profile's exact executable and CLI flags are independently verified.
 Do not dynamically install `latest`; failures and incompatible options are
 separate observable regressions, not a reason to silently downgrade.
+
+## Supplemental lexical witness
+
+`src/scantrace` emits Odin token ordinals + UTF-16 spans for real fixture
+files. `tools/oracle/compare-scanner.mjs` compares these with a pinned
+`@typescript/typescript6@6.0.2` API scanner on two accepted sources,
+including CRLF and a supplementary Unicode character inside trivia.
+The TypeScript 7 CLI's project-level acceptance is a separate CI gate.
+Neither comparison is token parity with the TypeScript 7 native compiler.
+The auxiliary tool is invoked only in the oracle workflow and adds no
+runtime dependency to tsodin itself.
