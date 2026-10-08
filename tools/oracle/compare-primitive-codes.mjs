@@ -21,6 +21,8 @@ const fixtures=[
   {id:"checker-logic-errors",expectedCount:2},
   {id:"checker-literal-valid",expectedCount:0},
   {id:"checker-literal-disjoint",expectedCount:3},
+  {id:"checker-const-literal-valid",expectedCount:0},
+  {id:"checker-const-literal-disjoint",expectedCount:3},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});

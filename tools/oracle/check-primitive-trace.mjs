@@ -58,4 +58,12 @@ assert.equal(disjoint.status,1,"disjoint comparisons must never report success")
 assert.deepEqual(disjoint.summary,["SUMMARY","3","3","1"]);
 assert.deepEqual(disjoint.diags.map(x=>x[1]),["11","11","11"],
   "the new disjoint-literal issue is distinct from TS2322 candidates");
-console.log("PASS: Odin bounded semantic checker with disjoint literal issues; TS7 parity checked separately");
+const constValid=read("checker-const-literal-valid");
+assert.equal(constValid.status,0,"equal inferred const aliases must pass");
+assert.deepEqual(constValid.summary,["SUMMARY","12","0","0"]);
+const constBad=read("checker-const-literal-disjoint");
+assert.equal(constBad.status,1,"disjoint const aliases must fail");
+assert.deepEqual(constBad.summary,["SUMMARY","10","3","1"]);
+assert.deepEqual(constBad.diags.map(row=>row[1]),["11","11","11"],
+  "all disjoint const alias comparisons use the TS2367-candidate issue");
+console.log("PASS: Odin bounded checker with source-backed const literal provenance; TS7 parity checked separately");
