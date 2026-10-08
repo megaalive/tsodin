@@ -195,3 +195,42 @@ operators are **not** presumed broad. They retain the previous
 conservative refusal rules where exact TS flow rules are unimplemented.
 Full official TypeScript conformance and public `tsodin check` remain
 NOT RUN / unavailable.
+
+## M4-G5A — first ordered, straight-line assignment transfer
+
+The expression parser appends source-ordered `Expr_Statement` events alongside
+the existing dense postorder syntax nodes. `Declaration` events continue to
+point to the original declaration indices; `Assignment` events carry a
+source-backed target Name node and RHS expression root. The binder resolves
+assignment targets through the same stable symbol table and does not create
+a new declaration/symbol on assignment.
+
+The primitive checker executes events in source order. For an already
+initialized `let` whose target type is known, `name = expression;` first
+checks the RHS against the declared/inferred primitive domain, then replaces
+its current source-backed literal or computed-wide fact. This allows a later
+strict-equality comparison to observe the most recent assignment. The
+checker records `checked_assignments` separately; source-to-diagnostics
+`checktrace` keeps its existing external SUMMARY protocol unchanged.
+
+```ts
+let count: number = 1;
+count = 2;
+const okay: boolean = count === 2;
+const impossible = count === 3; // candidate TS2367
+count = 1 + 2;
+const broad: boolean = count === 9;
+```
+
+Assignments to `const` and `var`, uninitialized targets, forward targets,
+chained/compound assignments, branches, loops, destructuring, closures,
+imports and exports **remain unsupported**. They must not return a false
+successful check. The new parser event model is a foundation for CFG work,
+not yet a control-flow graph or conditional type narrowing.
+
+`checker-flow-assign-valid` and `checker-flow-assign-errors` extend the
+native pinned TS7.0.2 diagnostic-code/UTF-16-start assertions. The TS6.0.2
+structured end-span lane remains separately labeled as supplemental.
+An incompatible `let` RHS produces candidate TS2322 at the RHS expression;
+disjoint proven current literals produce candidate TS2367 with the
+comparison-expression span. No official conformance score is published.

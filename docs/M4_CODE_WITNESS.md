@@ -61,3 +61,13 @@ TS6 structured-span auxiliary checks now also include
 (2 primitive TS2322 mismatches). The same strict count, code, and source
 span assertions apply: no unsupported or skipped test is counted as a
 success. This expands fixture coverage, **not** official conformance.
+
+## M4-G5A — straight-line assignment differential witnesses
+
+Two additional pinned projects, `checker-flow-assign-valid` and
+`checker-flow-assign-errors`, exercise sequential `let` assignments.
+TS7 CLI diagnostic **code and UTF-16 start** must exactly match the Odin
+trace. The independent supplemental TS6 lane checks complete diagnostic
+spans. `TS2322` on a simple assignment is anchored to its RHS expression;
+`TS2367` on an impossible comparison covers that comparison expression.
+No official conformance score or unconditional flow-parity claim follows.

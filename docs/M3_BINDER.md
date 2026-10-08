@@ -64,3 +64,10 @@ and validate mode explicitly. No automatic module detection is claimed.
 Until parsing and module graph resolution exist, external-module projects
 are **unsupported**. Never treat their rejection as passing an upstream
 TypeScript conformance case.
+
+## M4-G5A — assignment references in the existing symbol table
+
+An assignment target is represented as a Name node and resolved in the
+existing binder reference pass. It does not add or duplicate a symbol.
+Mutation validity is checked by the semantic checker, not inferred from
+successful binding. Forward and uninitialized targets remain rejected.

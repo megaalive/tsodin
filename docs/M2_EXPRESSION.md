@@ -81,3 +81,13 @@ process status.
 successful and erroneous pinned fixtures, an emoji+CRLF source and a fatal
 unsupported-token source. The reference TS7 CLI still runs independently
 and does **not** yet compare normalized diagnostics with this developer tool.
+
+## M4-G5A — source-ordered statement event extension
+
+The developer expression parser now records `Syntax_Report.statements`
+containing source-order declaration or restricted assignment events.
+Exactly `identifier = expression;` is recognized in statement position.
+An assignment target is a source-spanned Name node, not a declaration.
+Nodes remain postorder per expression; failures recover without committing
+a partial event or retaining its nodes. The older `parse_declarations` API
+remains unchanged, and no TypeScript syntax-parity claim is made.
