@@ -1030,6 +1030,14 @@ primitive_checker_boolean_contradiction_empty_arm_and_live_join :: proc(t: ^test
         "if (flag && !flag) { } else { flag = n === 3; }" +
         "if (flag || !flag) { flag = n === 4; } else { }" +
         "const restored: boolean = flag === false;",
+        "let n: number = 1; n = 1 + 2; let flag: boolean = false;" +
+        "flag = n === 2; let other: boolean = false; other = n === 3;" +
+        "let out: boolean = false;" +
+        "if (flag) {" +
+        "if (other && !other) { } else { out = flag === true; }" +
+        "if (other || !other) { out = flag === true; } else { }" +
+        "} else { out = flag === false; }" +
+        "const after: boolean = flag === false;",
     }
     for input in cases {
         v, ok := source.source_version_create(source.File_Id(780), 1, input)

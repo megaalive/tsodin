@@ -511,3 +511,7 @@ has been introduced.
 diagnostic-code and UTF-16-start witnesses and TS6.0.2 supplemental
 structured-span checks. This is narrowly scoped checker evidence,
 not official conformance. Public `tsodin check` remains disabled.
+
+A nested live parent guard with a contradictory child guard is included in
+both Odin unit tests and the TS7 valid witness to prevent per-depth
+reachability flags from leaking into the enclosing branch.

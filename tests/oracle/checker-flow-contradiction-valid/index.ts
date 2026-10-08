@@ -29,3 +29,18 @@ if (flag || !flag) {
 } else {
 }
 const after: boolean = flag === false;
+let other: boolean = false;
+other = n === 3;
+if (flag) {
+    if (other && !other) {
+    } else {
+        out = flag === true;
+    }
+    if (other || !other) {
+        out = flag === true;
+    } else {
+    }
+} else {
+    out = flag === false;
+}
+const nestedAfter: boolean = flag === false;
