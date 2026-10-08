@@ -32,9 +32,8 @@
     "benchmarkOptimization": "-o:speed"
   },
   "provenance": {
-    "source": "megaalive/ts-fp/bench/manifests/phase0-baselines.json",
-    "sourceCommit": "6306143660eac352fdbfe37be60f41f5b9e6b740",
-    "policy": "reverify exact binaries, corpus and reference compatibility before formal comparisons"
+    "origin": "tsodin M0 bootstrap toolchain candidates",
+    "policy": "reverify exact binaries, corpus and reference compatibility before formal comparisons; these are not performance results"
   },
   "headlinePerformanceAllowed": false
 }

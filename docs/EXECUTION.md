@@ -2,7 +2,7 @@
 
 Status: M0 IMPLEMENTATION / NO CHECKER CLAIMS  
 Baseline: tsodin main 775bb0c5c53f4d6ed9544942cb7e28a56eeed3a2  
-Source inspiration: ts-fp-plan-v3.md; **not** a direct Pascal-to-Odin architectural conversion.
+Architecture: Odin-native; historical language-selection benchmarks are not tsodin product measurements.
 
 ## Mission and product boundary
 
@@ -10,7 +10,7 @@ Build a maintainable, Odin-native TypeScript checker whose primary product mode 
 
 The long-term G2 ambition inherited from the original plan is end-to-end full-project checking at C1 diagnostic parity, including a geometric-mean speedup of at least 1.5x vs TypeScript 7 T1 and TD, at least 1.3x normalized all-core, a strong memory result (target at most 65% TS7 TD peak RSS), and an honest comparison to the best eligible Rust checker. The original 2.0x Rust goal is aspirational, not a premise or a microbenchmark inference. Thresholds and bootstrap confidence intervals must be frozen before formal runs. No win exists until a locked real-project corpus passes every applicable gate.
 
-## What transfers from ts-fp v3
+## Engineering principles
 
 - Semantic reference and diagnostic compatibility, not upstream implementation structure.
 - UTF-8 source storage, byte-oriented internal spans, TypeScript-compatible UTF-16 external positions.
@@ -22,9 +22,9 @@ The long-term G2 ambition inherited from the original plan is end-to-end full-pr
 
 ## What must be redesigned for Odin
 
-No FPC lanes, RTL avoidance rules, Pascal-specific thread stacks or ABI adaptations. Use Odin allocators, typed IDs, scopes, slices, multi-pointers, context and procedures because they fit the compiler's semantics and lifetimes. Do not pre-commit to 16-byte tokens, 16-byte AST nodes, a particular hash table, an arena everywhere, shared checker state, or assembly. Each remains a candidate with explicit retirement criteria.
+Use Odin allocators, typed IDs, scopes, slices, multi-pointers, context and procedures because they fit the compiler's semantics and lifetimes. Do not pre-commit to 16-byte tokens, 16-byte AST nodes, a particular hash table, an arena everywhere, shared checker state, or assembly. Each remains a candidate with explicit retirement criteria.
 
-The pre-existing K1/K2/K3 optimizations are evidence about synthetic workloads, not copy/paste requirements. In particular the P6 uninitialized-value-buffer technique may be used only with a proven write-before-read invariant and real-workload measurement.
+Do not transfer microbenchmark-specific optimization decisions. Every tsodin hot-path change needs a proven invariant, a diagnostic-equivalence gate, and measurement on an actual TypeScript workload.
 
 ## Milestones and release gates
 

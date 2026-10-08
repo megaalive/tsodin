@@ -1,222 +1,226 @@
-import { geometricMean, inspectSource, utf16AtByteOffset, validateResearchArchive } from "./lib/observatory-core.mjs";
-
+import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome} from "./lib/observatory-core.mjs";
 const $ = id => document.getElementById(id);
-const formatRatio = value => value.toFixed(4) + "×";
-const roundSelect = $("round-select");
-const timeline = $("timeline");
-let archive = null;
-let chosenRound = "P6";
+const REPO = "https://github.com/megaalive/tsodin";
+const API = "https://api.github.com/repos/megaalive/tsodin";
+let refreshing = false;
 
-function node(tag, className = "", text = "") {
-  const element = document.createElement(tag);
-  if (className) element.className = className;
-  if (text !== "") element.textContent = text;
-  return element;
+function element(tag, className="", content="") {
+  const x = document.createElement(tag);
+  if (className) x.className = className;
+  if (content !== "") x.textContent = content;
+  return x;
 }
+function setStatus(elementRef,label,tone) {
+  elementRef.className = "state-pill " + tone;
+  elementRef.textContent = label;
+}
+function safeGitHubLink(url,fallback=REPO) {
+  // API payload is untrusted. Restrict navigation to this public repository.
+  return typeof url==="string" && url.startsWith(REPO+"/") ? url : fallback;
+}
+function shortSha(sha) {return typeof sha==="string" && /^[0-9a-f]{40}$/.test(sha) ? sha.slice(0,8) : "—";}
+function humanTime(iso) {
+  const date=new Date(iso);
+  return Number.isNaN(date.getTime())?"Time unavailable":date.toLocaleString(undefined,{dateStyle:"medium",timeStyle:"short"});
+}
+async function githubJSON(path) {
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),9000);
+  try {
+    const response=await fetch(API+path,{
+      signal:controller.signal,cache:"no-store",
+      headers:{Accept:"application/vnd.github+json"}
+    });
+    if(!response.ok) throw new Error("GitHub HTTP "+response.status+" for "+path);
+    return await response.json();
+  } finally {clearTimeout(timeout);}
+}
+function unavailable(container,message) {
+  container.replaceChildren(element("p","pending-text",message));
+}
+function displayCommits(commits) {
+  if(!Array.isArray(commits) || !commits.length)throw new Error("No commit records");
+  const sha=commits[0]?.sha;
+  $("latest-sha").textContent=shortSha(sha);
+  $("latest-sha").href=safeGitHubLink(commits[0]?.html_url,REPO+"/commits/main");
+  $("latest-time").textContent=humanTime(commits[0]?.commit?.committer?.date||commits[0]?.commit?.author?.date);
 
-function selectRound(id) {
-  const round = archive?.rounds.find(item => item.id === id);
-  if (!round) return;
-  chosenRound = id;
-  $("round-label").textContent = round.id;
-  const status = $("round-status");
-  status.textContent = round.status;
-  status.className = "state-pill " + round.statusTone;
-
-  const chart = $("bar-chart");
-  const chartRows = archive.kernels.map(kernel => {
-    const ratio = round.values[kernel.id];
-    const row = node("div", "bar-group");
-    const title = node("div", "bar-title");
-    const label = node("span", "", kernel.id);
-    label.append(node("small", "", kernel.title));
-    const number = node("strong", ratio > 1 ? "over" : "", formatRatio(ratio));
-    title.append(label, number);
-    const track = node("div", "bar-track");
-    const value = node("div", "bar-value" + (ratio > 1 ? " over" : ""));
-    value.style.width = Math.min(100, ratio / 1.2 * 100).toFixed(3) + "%";
-    const rust = node("span", "rust-line");
-    track.append(value, rust);
-    row.append(title, track);
+  const rows=commits.slice(0,5).map(commit=>{
+    const row=element("div","feed-row");
+    const left=element("div","feed-primary");
+    const anchor=element("a","commit-title",String(commit?.commit?.message||"No title").split("\n")[0].slice(0,150));
+    anchor.href=safeGitHubLink(commit?.html_url,REPO+"/commits/main");
+    anchor.target="_blank";anchor.rel="noopener noreferrer";
+    const note=element("span","feed-note",shortSha(commit?.sha)+" · "+humanTime(commit?.commit?.committer?.date||commit?.commit?.author?.date));
+    left.append(anchor,note);row.append(left,element("span","feed-arrow","↗"));
     return row;
   });
-  chart.replaceChildren(...chartRows);
-
-  const entries = Object.entries(round.values);
-  const [worstKernel, worstValue] = entries.reduce((worst, next) => next[1] > worst[1] ? next : worst);
-  $("geomean").textContent = formatRatio(geometricMean(entries.map(([, v]) => v))) + (id === "P3" ? "†" : "");
-  $("worst-kernel").textContent = worstKernel + " · " + formatRatio(worstValue);
-  $("round-qualification").textContent = round.resultNote;
-  roundSelect.querySelectorAll("button").forEach(button => {
-    const selected = button.dataset.round === id;
-    button.classList.toggle("active", selected);
-    button.setAttribute("aria-pressed", String(selected));
-  });
-
-  $("experiment-index").textContent = "ROUND " + String(round.ordinal).padStart(2, "0") + " / 06";
-  $("experiment-title").textContent = round.title;
-  $("experiment-description").textContent = round.subtitle;
-  $("experiment-decision").textContent = round.decision;
-  $("experiment-link").href = round.url;
-  timeline.querySelectorAll("button").forEach(button => {
-    const selected = button.dataset.timeline === id;
-    button.classList.toggle("active", selected);
-    button.setAttribute("aria-pressed", String(selected));
-  });
+  $("commit-feed").replaceChildren(...rows);
+  return sha;
 }
-
-function buildTimeline() {
-  const labels = {
-    P1:"Raw table access",
-    P2:"Compact state hypothesis",
-    P3:"Branch-light cache",
-    P4:"u32 specialization",
-    P5:"Unchecked input view",
-    P6:"Skip redundant zero-fill"
-  };
-  const items = archive.rounds.slice().reverse().map(round => {
-    const button = node("button", "timeline-item");
-    button.type = "button";
-    button.dataset.timeline = round.id;
-    button.setAttribute("aria-pressed", "false");
-    button.append(node("span", "timeline-step", String(round.ordinal).padStart(2, "0")));
-    const body = node("span", "timeline-text");
-    body.append(node("strong", "", round.id + " / " + labels[round.id]));
-    body.append(node("small", "", round.status));
-    button.append(body, node("span", "", "↗"));
-    button.addEventListener("click", () => selectRound(round.id));
-    return button;
-  });
-  timeline.replaceChildren(...items);
+function displayWorkflows(payload,headSha) {
+  const runs=payload?.workflow_runs;
+  if(!Array.isArray(runs))throw new Error("Missing workflow runs");
+  const current=latestMainWorkflow(runs,headSha);
+  const summary=workflowOutcome(current);
+  $("main-ci").textContent=summary.label;
+  $("main-ci").className="metric-ci status-"+summary.tone;
+  $("main-ci-detail").textContent=current?
+    "On main "+shortSha(current.head_sha)+" · "+humanTime(current.created_at):
+    "No pinned CI run found for loaded HEAD";
+  const seen=new Set();
+  const chosen=runs.filter(run=>{
+    if(!run?.name||seen.has(run.name))return false;
+    seen.add(run.name);
+    return true;
+  }).slice(0,6);
+  if(!chosen.length) {unavailable($("workflow-feed"),"No workflow runs were reported.");return;}
+  $("workflow-feed").replaceChildren(...chosen.map(run=>{
+    const row=element("div","feed-row");
+    const left=element("div","feed-primary");
+    const title=element("a","commit-title",String(run.name));
+    title.href=safeGitHubLink(run.html_url,REPO+"/actions");
+    title.target="_blank";title.rel="noopener noreferrer";
+    const same=run.head_sha===headSha && typeof headSha==="string" && headSha.length===40;
+    left.append(title,element("span","feed-note",shortSha(run.head_sha)+" · "+(same?"loaded HEAD":"earlier/other revision")+" · "+humanTime(run.created_at)));
+    const badge=element("span");
+    const outcome=workflowOutcome(run);
+    setStatus(badge,outcome.label,outcome.tone);
+    row.append(left,badge);
+    return row;
+  }));
 }
-
-roundSelect.addEventListener("click", event => {
-  const button = event.target.closest("button[data-round]");
-  if (button && roundSelect.contains(button)) selectRound(button.dataset.round);
-});
-
-async function initializeArchive() {
-  try {
-    const response = await fetch("./data/observatory.json", { cache: "no-store" });
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    const result = await response.json();
-    validateResearchArchive(result);
-    archive = result;
-    buildTimeline();
-    selectRound(chosenRound);
-  } catch (error) {
-    // Static P6 values remain readable when data is temporarily unavailable.
-    $("round-qualification").textContent =
-      "The interactive archive could not be loaded. The static P6 snapshot is shown; use the methodology link for the original evidence.";
-    roundSelect.querySelectorAll("button:not([data-round='P6'])").forEach(button => {
-      button.disabled = true;
-      button.title = "Archive data unavailable";
-    });
-    console.error("Observatory archive unavailable:", error);
+function displayTree(payload){
+  const summary=summarizeSourceTree(payload);
+  $("odin-count").textContent=String(summary.odinFiles);
+  $("oracle-count").textContent=String(summary.oracleProjects);
+  $("source-proof").textContent=summary.odinFiles+" Odin files detected";
+  setStatus($("tree-status"),"TREE READ","good");
+  $("capability-list").replaceChildren(...summary.capabilities.map(item=>{
+    const row=element("div","capability-item");
+    const primary=element("div","capability-primary");
+    const name=element("strong","",item.name);
+    primary.append(name,element("small","",item.detail));
+    const right=element("div","capability-state");
+    const badge=element("span");
+    setStatus(badge,item.found?"FILE FOUND":"NOT DETECTED",item.found?"good":"neutral");
+    right.append(badge);
+    if(item.found&&item.path){
+      const link=element("a","tiny-link","Source ↗");
+      link.href=REPO+"/blob/main/"+item.path;
+      link.target="_blank";link.rel="noopener noreferrer";right.append(link);
+    }
+    row.append(primary,right);
+    return row;
+  }));
+}
+async function refreshLive(){
+  if(refreshing)return;
+  refreshing=true;
+  const button=$("refresh-button");
+  button.disabled=true;
+  button.textContent="↻ Checking…";
+  setStatus($("live-connection"),"CONNECTING","inprogress");
+  const results=await Promise.allSettled([
+    githubJSON("/commits?sha=main&per_page=5"),
+    githubJSON("/actions/runs?branch=main&per_page=30"),
+    githubJSON("/git/trees/main?recursive=1")
+  ]);
+  const errors=[];
+  let sha=null,success=0;
+  if(results[0].status==="fulfilled"){
+    try {sha=displayCommits(results[0].value);success++;}
+    catch(e){errors.push("commits");unavailable($("commit-feed"),"Commit data unavailable.");}
+  }else {errors.push("commits");unavailable($("commit-feed"),"Commit data unavailable.");}
+  if(results[1].status==="fulfilled"){
+    try{displayWorkflows(results[1].value,sha);success++;}
+    catch(e){errors.push("workflow runs");unavailable($("workflow-feed"),"Workflow status unavailable.");}
+  }else {errors.push("workflow runs");unavailable($("workflow-feed"),"Workflow status unavailable.");}
+  if(results[2].status==="fulfilled"){
+    try{displayTree(results[2].value);success++;}
+    catch(e){errors.push("source tree");setStatus($("tree-status"),"UNAVAILABLE","warning");unavailable($("capability-list"),"Cannot verify source tree. No implementation state inferred.");}
+  }else {errors.push("source tree");setStatus($("tree-status"),"UNAVAILABLE","warning");unavailable($("capability-list"),"Cannot verify source tree. No implementation state inferred.");}
+  // Don't leave results from a previous refresh appearing fresh after a failed request.
+  if(errors.includes("commits")){
+    $("latest-sha").textContent="—";$("latest-sha").href=REPO+"/commits/main";$("latest-time").textContent="Not available";
   }
+  if(errors.includes("workflow runs") || (errors.includes("commits")&&results[1].status==="fulfilled")){
+    $("main-ci").textContent="—";$("main-ci").className="metric-ci status-neutral";
+    $("main-ci-detail").textContent="Cannot confirm CI for current HEAD";
+  }
+  if(errors.includes("source tree")){
+    $("odin-count").textContent="—";$("oracle-count").textContent="—";$("source-proof").textContent="Not verifiable";
+  }
+  setStatus($("live-connection"),success===3?"SYNCED":success>0?"PARTIAL":"UNAVAILABLE",success===3?"good":success>0?"warning":"neutral");
+  $("last-checked").textContent=humanTime(new Date().toISOString());
+  const notice=$("load-errors");
+  notice.hidden=errors.length===0;
+  notice.textContent=errors.length?"Could not load "+errors.join(", ")+". GitHub API can be unavailable or rate-limited. Missing data are not treated as successful tests. Use Refresh to retry.":"";
+  button.disabled=false;
+  button.textContent="↻ Refresh data";
+  refreshing=false;
 }
 
-const examples = {
-  emoji: 'const emoji = "😀";\nconst count: number = "wrong";',
-  ascii: 'let total: number = 42;\nconsole.log(total);',
-  crlf: 'const emoji = "😀"; const count: number = "wrong";\r\nconst next: boolean = 123;\r\n'
+const examples={
+  emoji:'const emoji = "😀";\nconst count: number = "wrong";',
+  ascii:'let total: number = 42;\nconsole.log(total);',
+  crlf:'const emoji = "😀";\r\nconst next: boolean = 123;\r\n'
 };
-const input = $("source-input");
-const slider = $("byte-offset");
-let inspection = inspectSource(input.value);
-
-function glyph(character) {
-  switch (character) {
-    case " ": return "␠";
-    case "\n": return "↵";
-    case "\r": return "␍";
-    case "\t": return "⇥";
-    default: return character;
-  }
+const input=$("source-input");
+const slider=$("byte-offset");
+let inspection=inspectSource(input.value);
+function glyph(character){return ({" ":"␠","\n":"↵","\r":"␍","\t":"⇥"})[character]||character;}
+function codePointLabel(point){return "U+"+point.toString(16).toUpperCase().padStart(4,"0");}
+function updatePosition(){
+  const byte=Number(slider.value);
+  const units=utf16AtByteOffset(inspection,byte);
+  $("byte-offset-label").textContent=byte+" / "+inspection.bytes;
+  $("position-label").textContent=units===null?"Inside UTF-8 scalar":"UTF-16 prefix length";
+  $("unit-at-offset").textContent=units===null?"—":String(units);
+  let focus=inspection.characters.find(item=>byte>item.byteStart&&byte<=item.byteEnd);
+  if(!focus && byte===0)focus=inspection.characters[0];
+  $("character-sequence").querySelectorAll("button[data-byte-end]").forEach(b=>b.classList.toggle("selected",focus!==undefined&&Number(b.dataset.byteEnd)===focus.byteEnd));
+  const note=$("boundary-note");
+  if(inspection.hasUnpairedSurrogate)note.textContent="Caution: TextEncoder replaces lone surrogates. This visualization is not lossless for malformed UTF-16 input.";
+  else if(units===null)note.textContent="Byte "+byte+" is inside a multibyte UTF-8 scalar; it is not a valid UTF-16 prefix boundary.";
+  else if(focus)note.textContent=codePointLabel(focus.point)+" · bytes ["+focus.byteStart+", "+focus.byteEnd+") · UTF-16 ["+focus.unitStart+", "+focus.unitEnd+")";
+  else note.textContent="Empty input. Both offsets are zero.";
 }
-function codePointLabel(point) {
-  return "U+" + point.toString(16).toUpperCase().padStart(4, "0");
-}
-
-function updatePosition() {
-  const byte = Number(slider.value);
-  const units = utf16AtByteOffset(inspection, byte);
-  $("byte-offset-label").textContent = byte + " / " + inspection.bytes;
-  $("position-label").textContent = units === null ? "Inside UTF-8 scalar" : "UTF-16 prefix length";
-  $("unit-at-offset").textContent = units === null ? "—" : String(units);
-
-  let focused = inspection.characters.find(character => byte > character.byteStart && byte <= character.byteEnd);
-  if (!focused && byte === 0) focused = inspection.characters[0];
-  const children = $("character-sequence").querySelectorAll("button[data-byte-end]");
-  children.forEach(button => {
-    button.classList.toggle("selected", focused !== undefined && Number(button.dataset.byteEnd) === focused.byteEnd);
+function renderSource(jump=false){
+  inspection=inspectSource(input.value);
+  $("byte-total").textContent=String(inspection.bytes);
+  $("unit-total").textContent=String(inspection.units);
+  $("scalar-total").textContent=String(inspection.scalars);
+  $("input-length").textContent=inspection.bytes+" B · "+inspection.units+" UTF-16";
+  slider.max=String(inspection.bytes);
+  let position=Math.min(Number(slider.value),inspection.bytes);
+  if(jump){const first=inspection.characters.find(x=>x.byteEnd-x.byteStart!==x.unitEnd-x.unitStart);position=first?first.byteEnd:Math.min(inspection.bytes,1);}
+  slider.value=String(position);
+  const max=64;
+  const chips=inspection.characters.slice(0,max).map(char=>{
+    const b=element("button","",glyph(char.character));
+    b.type="button";b.dataset.byteEnd=String(char.byteEnd);
+    b.title=codePointLabel(char.point)+" · byte "+char.byteEnd;
+    b.setAttribute("aria-label",codePointLabel(char.point)+", byte offset "+char.byteEnd+", UTF-16 units "+char.unitEnd);
+    b.addEventListener("click",()=>{slider.value=String(char.byteEnd);updatePosition();});
+    return b;
   });
-
-  const note = $("boundary-note");
-  if (inspection.hasUnpairedSurrogate) {
-    note.textContent = "CAUTION: The browser replaces unpaired UTF-16 surrogates when encoding UTF-8; this visualization is not lossless for that input.";
-  } else if (units === null) {
-    note.textContent = "Byte " + byte + " is inside a multibyte UTF-8 code point. No valid UTF-16 prefix boundary exists at this position.";
-  } else if (focused) {
-    note.textContent = codePointLabel(focused.point) + " · byte span [" + focused.byteStart + ", " + focused.byteEnd + ") · UTF-16 span [" + focused.unitStart + ", " + focused.unitEnd + ").";
-  } else {
-    note.textContent = "Empty source: both byte and UTF-16 offsets are zero.";
-  }
-}
-
-function renderSource(preferUnicode = false) {
-  inspection = inspectSource(input.value);
-  $("byte-total").textContent = String(inspection.bytes);
-  $("unit-total").textContent = String(inspection.units);
-  $("scalar-total").textContent = String(inspection.scalars);
-  $("input-length").textContent = inspection.bytes + " B · " + inspection.units + " UTF-16";
-  slider.max = String(inspection.bytes);
-  let position = Math.min(Number(slider.value), inspection.bytes);
-  if (preferUnicode) {
-    const first = inspection.characters.find(item => item.unitEnd - item.unitStart !== item.byteEnd - item.byteStart);
-    position = first ? first.byteEnd : Math.min(inspection.bytes, 1);
-  }
-  slider.value = String(position);
-
-  const maxChips = 64;
-  const visible = inspection.characters.slice(0, maxChips);
-  const buttons = visible.map(character => {
-    const button = node("button", "", glyph(character.character));
-    button.type = "button";
-    button.dataset.byteEnd = String(character.byteEnd);
-    button.title = codePointLabel(character.point) + " · click for byte offset " + character.byteEnd;
-    button.setAttribute("aria-label", codePointLabel(character.point) + ", UTF-8 byte offset " + character.byteEnd + ", UTF-16 units " + character.unitEnd);
-    button.addEventListener("click", () => {
-      slider.value = String(character.byteEnd);
-      updatePosition();
-    });
-    return button;
-  });
-  $("character-sequence").replaceChildren(...buttons);
-  $("sequence-limit").textContent = inspection.characters.length > maxChips ?
-    "FIRST " + maxChips + " OF " + inspection.characters.length : String(inspection.characters.length) + " POINTS";
+  $("character-sequence").replaceChildren(...chips);
+  $("sequence-limit").textContent=inspection.characters.length>max?"FIRST "+max+" / "+inspection.characters.length:inspection.characters.length+" POINTS";
   updatePosition();
 }
-
-input.addEventListener("input", () => {
-  document.querySelectorAll("[data-preset]").forEach(button => {
-    button.classList.remove("active");
-    button.setAttribute("aria-pressed", "false");
-  });
-  renderSource(false);
+input.addEventListener("input",()=>{
+  document.querySelectorAll("[data-preset]").forEach(b=>{b.classList.remove("active");b.setAttribute("aria-pressed","false");});
+  renderSource();
 });
-slider.addEventListener("input", updatePosition);
-document.querySelectorAll("[data-preset]").forEach(button => {
-  button.addEventListener("click", () => {
-    input.value = examples[button.dataset.preset];
-    document.querySelectorAll("[data-preset]").forEach(item => {
-      const active = item === button;
-      item.classList.toggle("active", active);
-      item.setAttribute("aria-pressed", String(active));
-    });
+slider.addEventListener("input",updatePosition);
+document.querySelectorAll("[data-preset]").forEach(button=>{
+  button.addEventListener("click",()=>{
+    input.value=examples[button.dataset.preset];
+    document.querySelectorAll("[data-preset]").forEach(other=>{const active=other===button;other.classList.toggle("active",active);other.setAttribute("aria-pressed",String(active));});
     renderSource(true);
   });
 });
-
+$("refresh-button").addEventListener("click",refreshLive);
 renderSource(true);
-initializeArchive();
+refreshLive();
