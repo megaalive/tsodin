@@ -52,6 +52,9 @@ Token_Kind :: enum {
     Ampersand_Ampersand,
     Bar_Bar,
     Exclamation,
+    // M4-G5B: append-only keywords for a bounded if/else subset.
+    If_Keyword,
+    Else_Keyword,
 }
 
 Scan_Error :: enum {
@@ -215,6 +218,10 @@ scanner_next :: proc(s: ^Scanner) -> Token {
             kind = .True_Keyword
         } else if lexeme == "false" {
             kind = .False_Keyword
+        } else if lexeme == "if" {
+            kind = .If_Keyword
+        } else if lexeme == "else" {
+            kind = .Else_Keyword
         }
         return Token{kind=kind, byte_start=start, byte_end=s.offset}
     }
