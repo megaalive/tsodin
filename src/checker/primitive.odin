@@ -463,6 +463,13 @@ check_file :: proc(
                         }
                     }
                 }
+                if kind == .Boolean &&
+                   (node.operator == .Equals_Equals_Equals ||
+                    node.operator == .Exclamation_Equals_Equals) {
+                    // Equality computes a boolean result, not a singleton
+                    // truth value. Its dynamic result can flow through joins.
+                    wide_nodes[i] = true
+                }
                 if kind == .Unknown {
                     fail(&result, .Incompatible_Operator, node.byte_start, node.byte_end, true)
                     return result
