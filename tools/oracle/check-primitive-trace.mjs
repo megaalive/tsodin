@@ -119,4 +119,10 @@ assert.equal(nestedErrors.status,1,"nested disjointness and mismatch cannot succ
 assert.deepEqual(nestedErrors.summary,["SUMMARY","4","5","1"]);
 assert.deepEqual(nestedErrors.diags.map(row=>row[1]),["11","11","11","11","10"],
   "child-local TypeScript candidate errors preserve source order");
-console.log("PASS: bounded nested branch fork/join and TS7 witnesses");
+const compoundValid=read("checker-flow-compound-valid");
+assert.equal(compoundValid.status,0,"bounded short-circuit paths remain valid");
+const compoundErrors=read("checker-flow-compound-errors");
+assert.equal(compoundErrors.status,1,"compound guard disjoint facts are rejected");
+assert.deepEqual(compoundErrors.diags.map(row=>row[1]),["11","11","10","11","11"],
+  "only implied branch facts produce disjointness diagnostics");
+console.log("PASS: compound boolean short-circuit fork/join smoke and scoped witnesses");

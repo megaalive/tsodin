@@ -420,3 +420,38 @@ Unit tests exercise nested ordering, parent fact preservation, branch
 mutation invalidation and depth-three refusal. These are scoped witnesses,
 NOT full official TypeScript conformance. Public `tsodin check` stays
 disabled and no Rust/Go build-time speedup is claimed.
+
+## M4-G5F1 — independent two-operand short-circuit guards
+
+The checker now recognizes **one** `&&` or `||` in a conditional guard,
+with two distinct, proven-wide `let` bindings. Each operand must independently
+match the prior M4-G5D narrowable form (`flag`, `!flag`, or a
+left-hand-name strict equality to a literal); outer `!` and grouped guards
+are accepted. The parser's pure expression subset contains no side-effecting
+assignment, call, or property access in a condition.
+
+TypeScript's short circuit does **not** prove both operands evaluated:
+- `a && b` proves **both true** only in the true arm; the false arm
+  receives neither inferred singleton.
+- `a || b` proves **both false** only in the false arm; the true arm
+  receives neither inferred singleton.
+- Wrapping either expression in `!` swaps those conclusions between arms;
+  negation on either individual operand reverses its Boolean fact.
+
+This is bounded conjunction/disjunction *branch implication*, NOT eager
+execution of an arbitrary right operand. Already-evaluated expression trees
+are side-effect-free under this grammar. Facts are stored in a fixed
+two-element per-depth metadata array; the existing lazy, dense snapshots
+retain independent nested fork/join state. Assignments still replace
+singleton facts, and joins preserve only values proven along both paths.
+
+Repeated guard bindings (`a && a`), chained/nested compound operators,
+unproved operands, and side-effecting syntax remain fail-closed rather than
+claiming contradiction resolution, conditional evaluation of effects, or
+full TypeScript flow behavior. The depth-two bound and public CLI restriction
+remain unchanged.
+
+`checker-flow-compound-valid` and `checker-flow-compound-errors`
+extend pinned TS7.0.2 diagnostic-code and UTF-16-start parity, with
+independent TS6.0.2 structured-span supplementary witnesses.
+No official TypeScript suite or build-time competitive benchmark is claimed.
