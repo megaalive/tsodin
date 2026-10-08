@@ -1,8 +1,71 @@
-import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome} from "./lib/observatory-core.mjs";
+import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport} from "./lib/observatory-core.mjs";
 const $ = id => document.getElementById(id);
 const REPO = "https://github.com/megaalive/tsodin";
 const API = "https://api.github.com/repos/megaalive/tsodin";
 let refreshing = false;
+
+const VIEWS = new Set(["overview","activity","pipeline","conformance","xray","principles"]);
+function selectView(id, updateHash = true) {
+  const active=VIEWS.has(id)?id:"overview";
+  document.querySelectorAll("[data-panel]").forEach(panel=>{
+    panel.hidden=panel.dataset.panel!==active;
+  });
+  document.querySelectorAll(".view-nav [data-view]").forEach(button=>{
+    const selected=button.dataset.view===active;
+    button.setAttribute("aria-pressed",String(selected));
+    button.classList.toggle("active",selected);
+  });
+  if(updateHash && location.hash!=="#"+active) location.hash=active;
+}
+document.querySelectorAll("[data-view]").forEach(button=>{
+  button.addEventListener("click",()=>selectView(button.dataset.view));
+});
+window.addEventListener("hashchange",()=>selectView(location.hash.slice(1),false));
+selectView(location.hash.slice(1),false);
+
+async function publishedConformance() {
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),9000);
+  try {
+    const response=await fetch("./data/conformance.json",{cache:"no-store",signal:controller.signal});
+    if(!response.ok) throw new Error("Conformance evidence unavailable");
+    return validateConformanceReport(await response.json());
+  } finally {clearTimeout(timeout);}
+}
+function displayConformance(evidence,head) {
+  if(evidence.status==="not_run") {
+    $("conformance-state").textContent="Official suite: not run";
+    $("conformance-note").textContent="No verified tsodin-vs-Microsoft-conformance run has been published. Do not interpret unavailable counts as zero failures.";
+    setStatus($("conformance-pill"),"NOT RUN","neutral");
+    $("conf-revision").textContent="Not run";
+    $("conf-date").textContent="Not run";
+    $("conf-run-link").hidden=true;
+    for(const id of ["conf-passed","conf-failed","conf-unsupported","conf-skipped","conf-not-run"]) $(id).textContent="—";
+    return;
+  }
+  const same=evidence.revision===head;
+  $("conformance-state").textContent=same?"Measured on current main":"Historical report — not current";
+  $("conformance-note").textContent="Evaluated-case match rate: "+(evidence.rate*100).toFixed(1)+"%. Unsupported/skipped/not-run are excluded from the rate and listed separately.";
+  setStatus($("conformance-pill"),same?"VERIFIED REVISION":"HISTORICAL",same?"good":"warning");
+  $("conf-revision").textContent=shortSha(evidence.revision)+(same?" · loaded HEAD":" · earlier commit");
+  $("conf-date").textContent=evidence.testedAt||"Unavailable";
+  const map={"conf-passed":"passed","conf-failed":"failed","conf-unsupported":"unsupported","conf-skipped":"skipped_by_scope","conf-not-run":"not_run"};
+  for(const [id,key] of Object.entries(map))$(id).textContent=String(evidence.counts[key]);
+  $("conf-run-link").href=evidence.workflowRunUrl;
+  $("conf-run-link").hidden=false;
+}
+function unavailableConformance() {
+  $("conformance-state").textContent="Evidence unavailable";
+  $("conformance-note").textContent="The report could not be verified; no pass rate or outcome count is inferred.";
+  setStatus($("conformance-pill"),"UNAVAILABLE","warning");
+  $("conf-run-link").hidden=true;
+  $("conf-version").textContent="Unavailable";
+  $("conf-upstream").textContent="Unavailable";
+  $("conf-revision").textContent="Unavailable";
+  $("conf-date").textContent="Unavailable";
+  for(const id of ["conf-passed","conf-failed","conf-unsupported","conf-skipped","conf-not-run"])$(id).textContent="—";
+}
+
 
 function element(tag, className="", content="") {
   const x = document.createElement(tag);
@@ -124,7 +187,8 @@ async function refreshLive(){
   const results=await Promise.allSettled([
     githubJSON("/commits?sha=main&per_page=5"),
     githubJSON("/actions/runs?branch=main&per_page=30"),
-    githubJSON("/git/trees/main?recursive=1")
+    githubJSON("/git/trees/main?recursive=1"),
+    publishedConformance()
   ]);
   const errors=[];
   let sha=null,success=0;
@@ -140,6 +204,16 @@ async function refreshLive(){
     try{displayTree(results[2].value);success++;}
     catch(e){errors.push("source tree");setStatus($("tree-status"),"UNAVAILABLE","warning");unavailable($("capability-list"),"Cannot verify source tree. No implementation state inferred.");}
   }else {errors.push("source tree");setStatus($("tree-status"),"UNAVAILABLE","warning");unavailable($("capability-list"),"Cannot verify source tree. No implementation state inferred.");}
+  // Conformance evidence is separate from TS7 reference CLI acceptance.
+  if(results[3].status==="fulfilled") {
+    try{
+      $("conf-version").textContent="TypeScript "+results[3].value.version+" · "+results[3].value.profile;
+      $("conf-upstream").textContent=shortSha(results[3].value.upstreamRevision);
+      $("conf-upstream").href="https://github.com/microsoft/TypeScript/commit/"+results[3].value.upstreamRevision;
+      displayConformance(results[3].value,sha);
+      success++;
+    }catch(e){errors.push("conformance evidence");unavailableConformance();}
+  }else{errors.push("conformance evidence");unavailableConformance();}
   // Don't leave results from a previous refresh appearing fresh after a failed request.
   if(errors.includes("commits")){
     $("latest-sha").textContent="—";$("latest-sha").href=REPO+"/commits/main";$("latest-time").textContent="Not available";
@@ -148,10 +222,16 @@ async function refreshLive(){
     $("main-ci").textContent="—";$("main-ci").className="metric-ci status-neutral";
     $("main-ci-detail").textContent="Cannot confirm CI for current HEAD";
   }
+  if(results[1].status==="fulfilled" && !errors.includes("workflow runs") && sha) {
+    const oracle=latestMainWorkflow(results[1].value.workflow_runs,sha,"Pinned TypeScript oracle capture");
+    $("conf-oracle-ci").textContent=oracle?workflowOutcome(oracle).label+" · "+shortSha(oracle.head_sha):"No oracle run for current HEAD";
+  }else{
+    $("conf-oracle-ci").textContent="Unavailable for current HEAD";
+  }
   if(errors.includes("source tree")){
     $("odin-count").textContent="—";$("oracle-count").textContent="—";$("source-proof").textContent="Not verifiable";
   }
-  setStatus($("live-connection"),success===3?"SYNCED":success>0?"PARTIAL":"UNAVAILABLE",success===3?"good":success>0?"warning":"neutral");
+  setStatus($("live-connection"),success===4?"SYNCED":success>0?"PARTIAL":"UNAVAILABLE",success===4?"good":success>0?"warning":"neutral");
   $("last-checked").textContent=humanTime(new Date().toISOString());
   const notice=$("load-errors");
   notice.hidden=errors.length===0;

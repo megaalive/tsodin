@@ -18,19 +18,24 @@
   <header class="site-header">
     <div class="shell header-inner">
       <a class="brand" href="#top" aria-label="tsodin Observatory home"><span class="brand-mark" aria-hidden="true">t<span>ꜱ</span></span><span class="brand-word">tsodin<span class="brand-suffix">/observatory</span></span></a>
-      <nav class="top-nav" aria-label="Primary navigation">
-        <a href="#activity">Activity</a><a href="#pipeline">Compiler map</a><a href="#xray">Source X-Ray</a><a href="#principles">About</a>
+      <nav class="top-nav view-nav" aria-label="Observatory sections">
+        <button type="button" data-view="overview" aria-controls="top" aria-pressed="true">Overview</button>
+        <button type="button" data-view="activity" aria-controls="activity" aria-pressed="false">Activity</button>
+        <button type="button" data-view="pipeline" aria-controls="pipeline" aria-pressed="false">Compiler</button>
+        <button type="button" data-view="conformance" aria-controls="conformance" aria-pressed="false">Conformance</button>
+        <button type="button" data-view="xray" aria-controls="xray" aria-pressed="false">X-Ray</button>
+        <button type="button" data-view="principles" aria-controls="principles" aria-pressed="false">About</button>
       </nav>
       <a class="github-link" href="https://github.com/megaalive/tsodin" target="_blank" rel="noopener noreferrer">Repository ↗</a>
     </div>
   </header>
   <main id="main">
-    <section id="top" class="hero shell hero-live">
+    <section id="top" class="hero shell hero-live" data-panel="overview">
       <div class="hero-copy">
         <div class="eyebrow"><span class="pulse" aria-hidden="true"></span> ODIN-NATIVE TYPESCRIPT CHECKER <span class="eyebrow-divider">/</span> WORK IN PROGRESS</div>
         <h1>Watch a compiler<br><em>take shape.</em></h1>
         <p class="hero-lead">An experimental TypeScript checker written in <strong>Odin</strong>. What you see here comes from the project's current public repository—not benchmarks of a different prototype.</p>
-        <div class="hero-actions"><a class="primary-link" href="#activity">Explore live activity ↘</a><a class="quiet-link" href="#pipeline">Inspect the code map →</a></div>
+        <div class="hero-actions"><button class="primary-link view-action" type="button" data-view="activity">Explore activity ↘</button><button class="quiet-link view-action" type="button" data-view="conformance">See conformance →</button></div>
         <p class="honesty-line"><span class="star-mark" aria-hidden="true">✳</span> No TypeScript checker performance claim until an equivalent end-to-end checker exists.</p>
       </div>
       <div class="hero-instrument live-instrument" aria-label="Compiler pipeline diagram, not performance data">
@@ -41,14 +46,14 @@
       </div>
     </section>
 
-    <section class="shell live-status-band" aria-label="Live data status">
+    <section class="shell live-status-band" data-panel="overview" aria-label="Live data status">
       <div><span class="mini-key">DATA SOURCE</span><strong>GitHub public API</strong></div>
       <div><span class="mini-key">LAST CHECKED</span><strong id="last-checked">Not checked yet</strong></div>
       <div class="live-refresh-area"><span id="live-connection" class="state-pill pending" role="status" aria-live="polite">Connecting…</span><button id="refresh-button" type="button" class="refresh-btn">↻ Refresh data</button></div>
     </section>
     <div id="load-errors" class="shell live-notice" role="status" hidden></div>
 
-    <section id="activity" class="section shell">
+    <section id="activity" class="section shell" data-panel="activity" hidden>
       <div class="section-heading"><div><p class="section-kicker">01 / GITHUB · CURRENT STATE</p><h2>Engineering, <span class="accent-text">as it happens.</span></h2><p class="section-subtitle">Repository activity is retrieved directly when the page opens or you press Refresh. It is not a simulated realtime feed.</p></div><a class="section-link" href="https://github.com/megaalive/tsodin/actions" target="_blank" rel="noopener noreferrer">All Actions ↗</a></div>
       <div class="live-metrics" aria-label="Current repository indicators">
         <article class="panel metric-tile"><span class="micro-label">HEAD COMMIT · MAIN</span><a id="latest-sha" href="https://github.com/megaalive/tsodin/commits/main" target="_blank" rel="noopener noreferrer">—</a><span id="latest-time" class="metric-detail">Awaiting GitHub</span></article>
@@ -63,7 +68,7 @@
       <p class="chart-footnote">Workflow outcomes are the last results reported by GitHub. A run for an earlier commit is labeled with its own SHA; an old successful run is not proof that the newest commit passed.</p>
     </section>
 
-    <section id="pipeline" class="section shell">
+    <section id="pipeline" class="section shell" data-panel="pipeline" hidden>
       <div class="section-heading"><div><p class="section-kicker">02 / VERIFIED FILE INVENTORY</p><h2>Inside the <span class="accent-text">compiler.</span></h2><p class="section-subtitle">Detected paths on the live <code>main</code> tree. File presence is not the same as finished functionality or semantic conformance.</p></div><a class="section-link" href="https://github.com/megaalive/tsodin/tree/main/src" target="_blank" rel="noopener noreferrer">Browse src/ ↗</a></div>
       <div class="pipeline-layout">
         <article class="panel pipeline-card"><div class="panel-head"><div><span class="micro-label">SOURCE TREE · MAIN</span><h3>Implementation map</h3></div><span id="tree-status" class="state-pill pending">Checking…</span></div><div id="capability-list" class="capability-list" aria-live="polite"><p class="pending-text">Inspecting source paths…</p></div></article>
@@ -78,7 +83,37 @@
       </div>
     </section>
 
-    <section id="xray" class="section shell">
+    <section id="conformance" class="section shell" data-panel="conformance" hidden>
+      <div class="section-heading"><div><p class="section-kicker">03 / OFFICIAL MICROSOFT TYPESCRIPT TESTS</p><h2>Conformance <span class="accent-text">evidence.</span></h2><p class="section-subtitle">A test report is published here only after tsodin has actually been run against the pinned Microsoft TypeScript compiler/conformance cases. Passing upstream TypeScript's own tests is not evidence that tsodin passes them.</p></div><a class="section-link" href="https://github.com/megaalive/tsodin/blob/main/docs/OFFICIAL_CONFORMANCE.md" target="_blank" rel="noopener noreferrer">Methodology ↗</a></div>
+      <div class="panel conformance-summary">
+        <div><span class="micro-label">TSODIN VS OFFICIAL TESTS</span><h3 id="conformance-state">Checking published evidence…</h3><p id="conformance-note" class="section-subtitle">No compatibility score is assumed.</p></div>
+        <span id="conformance-pill" class="state-pill neutral">NOT VERIFIED</span>
+      </div>
+      <div class="conformance-results" aria-label="Official suite outcome categories">
+        <article class="panel conformance-count"><span class="micro-label">PASSED</span><strong id="conf-passed">—</strong></article>
+        <article class="panel conformance-count"><span class="micro-label">FAILED</span><strong id="conf-failed">—</strong></article>
+        <article class="panel conformance-count"><span class="micro-label">UNSUPPORTED</span><strong id="conf-unsupported">—</strong></article>
+        <article class="panel conformance-count"><span class="micro-label">SKIPPED BY SCOPE</span><strong id="conf-skipped">—</strong></article>
+        <article class="panel conformance-count"><span class="micro-label">NOT RUN</span><strong id="conf-not-run">—</strong></article>
+      </div>
+      <div class="activity-columns">
+        <article class="panel activity-card"><div class="panel-head"><div><span class="micro-label">SOURCE PROVENANCE</span><h3>Pinned upstream</h3></div></div>
+          <p class="conformance-line">Compiler: <strong id="conf-version">—</strong></p>
+          <p class="conformance-line">Upstream revision: <a id="conf-upstream" href="https://github.com/microsoft/TypeScript" target="_blank" rel="noopener noreferrer">—</a></p>
+          <p class="conformance-line">tsodin tested revision: <span id="conf-revision">Not run</span></p>
+          <p class="conformance-line">Test execution: <span id="conf-date">Not run</span></p>
+          <a id="conf-run-link" class="inline-link" href="https://github.com/megaalive/tsodin/actions" target="_blank" rel="noopener noreferrer" hidden>Open verified run ↗</a>
+        </article>
+        <article class="panel activity-card"><div class="panel-head"><div><span class="micro-label">SEPARATE EVIDENCE</span><h3>CLI oracle ≠ tsodin conformance</h3></div></div>
+          <p class="evidence-explain">The TypeScript 7 oracle workflow captures how Microsoft's compiler behaves. It does not execute equivalent tsodin type checking yet. CI build success and Odin unit tests are not conformance passes.</p>
+          <p class="conformance-line">Oracle workflow for current main: <strong id="conf-oracle-ci">Checking…</strong></p>
+          <a class="inline-link" href="https://github.com/megaalive/tsodin/actions/workflows/oracle.yml" target="_blank" rel="noopener noreferrer">View oracle Actions ↗</a>
+        </article>
+      </div>
+      <p class="chart-footnote">When measured, the score uses passed / (passed + failed) only, and publishes every excluded category separately. Reports for older tsodin commits must be labeled historical, never current. No previous-prototype microbenchmarks are included.</p>
+    </section>
+
+    <section id="xray" class="section shell" data-panel="xray" hidden>
       <div class="section-heading"><div><p class="section-kicker">03 / BROWSER REFERENCE LAB</p><h2>Source <span class="accent-text">X-Ray.</span></h2><p class="section-subtitle">Explore the UTF-8 ↔ UTF-16 position boundary used by TypeScript diagnostics. It responds to your input locally.</p></div><span class="lab-tag">REFERENCE TOOL · NOT ODIN EXECUTION</span></div>
       <div class="xray-layout">
         <div class="panel editor-panel"><div class="editor-top"><div class="editor-tab"><span class="ts-icon">TS</span> source.ts</div><span class="micro-label">EDIT ANY TIME</span></div>
@@ -101,7 +136,7 @@ const count: number = "wrong";</textarea>
       <div class="lab-disclaimer"><span class="disclaimer-mark" aria-hidden="true">◎</span><p>The interactive visualization runs independently in your browser using JavaScript encoding rules. It is <strong>not</strong> the Odin checker. The actual <a href="https://github.com/megaalive/tsodin/blob/main/src/source/utf16.odin" target="_blank" rel="noopener noreferrer">Odin reference implementation</a> lives in the repository. The browser replaces unpaired surrogates on UTF-8 encoding.</p></div>
     </section>
 
-    <section id="principles" class="section shell">
+    <section id="principles" class="section shell" data-panel="principles" hidden>
       <div class="section-heading"><div><p class="section-kicker">04 / ENGINEERING CONTRACT</p><h2>Built for <span class="accent-text">evidence.</span></h2><p class="section-subtitle">Correctness first, meaningful performance measurements second. No speed claims for unfinished work.</p></div></div>
       <div class="status-grid">
         <article class="panel status-card"><div class="status-head"><span>01</span><span class="state-pill neutral">SEMANTICS</span></div><h3>Fail closed</h3><p>Unsupported TypeScript semantics must not return fake green diagnostics.</p><a class="inline-link" href="https://github.com/megaalive/tsodin/blob/main/docs/ORACLE.md" target="_blank" rel="noopener noreferrer">Oracle contract ↗</a></article>
