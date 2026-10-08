@@ -8,10 +8,11 @@ tsodin is an experimental, performance-first TypeScript checker/compiler designe
 
 ## Status
 
-M0 is **closed**: the pinned CLI intentionally rejects `check`, with source UTF-8/UTF-16 reference tests and green CI. **M1 is active**: the first immutable source-version line index and a deliberately bounded, fail-closed ASCII scanner are implemented and tested. Scanner oracle parity, a parser, binder, and type checker are **not yet implemented or proven**.
+M0 is **closed**: the pinned CLI intentionally rejects `check`, with Unicode reference tests and CI. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested template tracking are implemented, but full scanner parity is not yet established. **M2-A is implemented**: an intentionally narrow parser handles basic `var`/`let`/`const` declarations with primitive annotations and simple literal initializers. A complete TypeScript parser, binder, checker, C0/C1 compatibility and end-to-end performance are **not yet established**.
 
 - [M1-A: source-version/index contract](docs/M1_SOURCE.md)
-- [M1-B: scanner subset and its limits](docs/M1_SCANNER.md)
+- [M1-B–E: scanner and contextual witness](docs/M1_SCANNER.md)
+- [M2-A: declaration-parser subset](docs/M2_PARSER.md)
 
 There are **no TypeScript compatibility or compiler performance claims**.
 
@@ -38,6 +39,10 @@ The M0 toolchain is pinned in [bench/manifests/baselines.json](bench/manifests/b
 
 ```sh
 odin test src/source
+odin test src/compat
+odin test src/scanner
+odin test src/context
+odin test src/parser
 odin build src/cli -out:tsodin
 ./tsodin --version
 ./tsodin check    # intentionally exits 2 (not implemented)
