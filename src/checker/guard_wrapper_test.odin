@@ -2,7 +2,6 @@ package checker
 
 import "core:testing"
 import "../parser"
-import "../scanner"
 
 // The same pure unwrapping invariant must serve the short-circuit RHS,
 // full condition guards and Boolean identity guard recognition.

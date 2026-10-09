@@ -831,3 +831,31 @@ This is not general truthiness, official TS conformance, or a
 competitive performance measurement. Public `tsodin check` stays
 fail closed for unsupported semantics.
 
+## M4-G5F8N — shared bounded guard wrapper invariant
+
+A narrow structural review identified five independently implemented
+walks through `Group` and unary `!` wrappers: contextual RHS root,
+contextual RHS left operand, condition root, Boolean identity matching
+and individual condition leaves. Each relied on its own postorder
+child-index checks and polarity accounting.
+
+All five now call one **pure, allocation-free**
+`unwrap_guard_wrappers` helper that returns the terminal node index,
+negation parity and an explicit validity flag. Every traversed child
+must have an index strictly before its parent and at or after the
+current expression's `node_cursor` lower bound. The helper deliberately
+does not infer types, resolve symbols, evaluate expressions or alter
+the CFG/branch snapshot model. Non-`!` unary operators and arbitrary
+binary nodes remain untouched. The two optional contextual RHS
+observers conservatively infer no extra facts on an invalid wrapper;
+condition-guard consumers explicitly fail closed.
+
+Focused native tests cover a plain name, grouped and repeated
+negation, invalid negative/self/forward child references, expression
+lower-bound escape, and a nonlogical unary boundary. Existing pinned
+TS7.0.2 diagnostics/UTF-16 start and supplementary TS6.0.2 full-span
+oracle suites remain the independent semantic regression gate across
+the previously supported Boolean flow cases. This is a source-level
+duplication/invariant improvement, **not** a measured performance win,
+general Boolean formula engine or public checker enablement.
+
