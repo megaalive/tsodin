@@ -84,9 +84,9 @@ record_relation :: proc(
     report: ^Report, mode: Relation_Trace_Mode,
     source_type, target_type: Primitive,
     node_index, declaration_index: int, kind: Relation_Context,
+    compatible: bool,
 ) {
     if mode == .None || source_type == .Unknown || target_type == .Unknown { return }
-    compatible := source_type == target_type
     if compatible && mode != .All { return }
     append(&report.relations, Type_Relation{
         source=source_type, target=target_type,
@@ -1162,9 +1162,10 @@ check_file_with_relations :: proc(
         }
         if assignment {
             result.checked_assignments += 1
+            compatible := expression_type == declared_type
             record_relation(&result, trace_mode, expression_type, declared_type,
-                            expression_root, target_index, .Assignment)
-            if expression_type != declared_type {
+                            expression_root, target_index, .Assignment, compatible)
+            if !compatible {
                 // Native TS7 starts TS2322 at the assignment target;
                 // supplemental TS6 structured diagnostics cover precisely
                 // the target identifier, not the entire RHS expression.
@@ -1192,13 +1193,14 @@ check_file_with_relations :: proc(
             }
         } else {
             if declared_type != .Unknown {
+                compatible := expression_type == declared_type
                 record_relation(&result, trace_mode, expression_type, declared_type,
-                                expression_root, declaration_index, .Variable)
-            }
-            if declared_type != .Unknown && expression_type != declared_type {
-                // TS7 anchors declaration type mismatches at the name.
-                fail(&result, .Assignment_Type_Mismatch,
-                     decl.name_start, decl.name_end, false)
+                                expression_root, declaration_index, .Variable, compatible)
+                if !compatible {
+                    // TS7 anchors declaration type mismatches at the name.
+                    fail(&result, .Assignment_Type_Mismatch,
+                         decl.name_start, decl.name_end, false)
+                }
             }
             declared[declaration_index] = declared_type
             if declared_type == .Unknown {
