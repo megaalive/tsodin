@@ -1,6 +1,7 @@
 package project
 
 import "core:testing"
+import "core:fmt"
 import "../binder"
 
 @(test)
@@ -30,6 +31,9 @@ config_rejects_unsupported_semantics_and_aliases :: proc(t: ^testing.T) {
     }
     for entry in inputs {
         cfg, err := parse_config(entry.text)
+        if err != entry.reason || len(cfg.roots) != 0 {
+            fmt.printf("P0C invalid case %q: got %v expected %v roots=%d\\n", entry.text, err, entry.reason, len(cfg.roots))
+        }
         testing.expect(t, err == entry.reason && len(cfg.roots) == 0,
                        "fail closed and release any previously allocated roots")
         config_destroy(&cfg)
