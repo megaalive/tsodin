@@ -21,3 +21,5 @@ if (typeof mixed === "number") {
 }
 if (typeof mixed === "string") { textual = mixed; }
 else { numeric = mixed; }
+if (!(typeof value === "number")) { textual = value; }
+else { numeric = value; }

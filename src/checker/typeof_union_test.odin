@@ -14,6 +14,8 @@ typeof_guard_splits_both_arms_and_rejoins :: proc(t: ^testing.T) {
              "if (typeof value === 'number') { numeric = value; }" +
              "else { textual = value; }" +
              "if (typeof value !== 'number') { textual = value; }" +
+             "else { numeric = value; }" +
+             "if (!(typeof value === 'number')) { textual = value; }" +
              "else { numeric = value; }"
     v, ok := source.source_version_create(source.File_Id(951), 1, input)
     testing.expect(t, ok, "source valid")
@@ -26,7 +28,7 @@ typeof_guard_splits_both_arms_and_rejoins :: proc(t: ^testing.T) {
     defer report_destroy(&report)
     testing.expect(t, ast.complete && bound.complete && report.complete &&
                    !report.fatal && len(report.diagnostics)==0 &&
-                   report.checked_declarations==4 && report.checked_assignments==6,
+                   report.checked_declarations==4 && report.checked_assignments==8,
                    "both typeof operators narrow exact primitive union and rejoin")
 }
 
