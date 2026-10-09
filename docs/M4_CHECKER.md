@@ -926,3 +926,23 @@ JavaScript coercion semantics or performance improvement is claimed.
 number declarations are not yet generally proven-wide by the bounded
 checker; the new oracle fixture compares a computed `%` result directly
 instead of treating that unrelated unsupported proof as implemented.
+
+## M4-G5F8U — annotated primitive widening and Boolean flow facts
+
+The explicitly supported single-file primitive checker separates the declared
+primitive domain from its current equality fact. For `number`/`string`,
+an explicit primitive annotation (including on `const`) and inferred
+mutable `let`/`var` locations widen fresh literals to the broad primitive
+domain. An unannotated immutable `const` still retains its literal fact.
+
+For `boolean`, an initialized declaration (including an annotated `const`
+or `let`) may have a known singleton flow fact even though its declared
+domain is `boolean`. A supported assignment replaces the current fact;
+existing bounded branch joins merge facts conservatively. A computed
+Boolean remains wide when its expression is already proven wide.
+
+This is deliberately *not* general literal type annotations, numeric flow
+narrowing, CFG completeness, or structural TypeScript compatibility.
+Native regression tests and pinned TS7/auxiliary TS6 witnesses cover positive
+and negative examples. They do not count as Microsoft upstream conformance
+suite passes. Public `tsodin check` and Pages benchmarks remain disabled.

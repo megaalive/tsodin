@@ -335,11 +335,11 @@ primitive_checker_const_literal_alias_provenance :: proc(t: ^testing.T) {
 }
 
 @(test)
-primitive_checker_does_not_assume_mutable_or_annotated_literals :: proc(t: ^testing.T) {
+primitive_checker_widens_mutable_and_annotated_primitive_domains :: proc(t: ^testing.T) {
     cases := [?]string {
         "let flexible = 1; const result = flexible === 2;",
         "const widened: number = 1; const result = widened === 2;",
-        "var mutable = false; const result = mutable === true;",
+        "const typed: string = 'left'; const result = typed !== 'right';",
     }
     for input in cases {
         v, ok := source.source_version_create(source.File_Id(722), 1, input)
@@ -348,10 +348,9 @@ primitive_checker_does_not_assume_mutable_or_annotated_literals :: proc(t: ^test
         bound := binder.bind_program(&v, &ast)
         checked := check_file(&v, &ast, &bound)
         testing.expect(t, ast.complete && bound.complete &&
-                       checked.fatal && !checked.complete &&
-                       len(checked.diagnostics) == 1 &&
-                       checked.diagnostics[0].issue == .Incompatible_Operator,
-                       "no fabricated literal identity for let/var or annotations")
+                       !checked.fatal && checked.complete &&
+                       len(checked.diagnostics) == 0,
+                       "number/string domains widen without inventing literal facts")
         report_destroy(&checked)
         binder.binding_report_destroy(&bound)
         parser.syntax_report_destroy(&ast)

@@ -1,0 +1,16 @@
+const typedCount: number = 1;
+const targetCount = 2;
+const countCheck: boolean = typedCount === targetCount;
+const copiedCount = typedCount;
+const copyCheck: boolean = copiedCount !== 9;
+const typedLabel: string = 'first';
+const otherLabel = 'second';
+const labelCheck: boolean = typedLabel !== otherLabel;
+let flexibleCount = 1;
+const mutableCheck: boolean = flexibleCount === 2;
+const computedFlag: boolean = 1 < 2;
+const computedCheck: boolean = computedFlag === false;
+const trueFlag: boolean = true;
+const sameFlag: boolean = trueFlag === true;
+const inverse = !trueFlag;
+const inverseCheck: boolean = inverse === false;

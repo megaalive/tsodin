@@ -731,8 +731,9 @@ check_file_with_relations :: proc(
                     return result
                 }
                 kind = declared[symbol.declaration_index]
-                // Only inferred const declarations retain the literal type.
-                // An explicit annotation widens it; let/var flow is untracked.
+                // Declared primitive and current flow/literal facts are
+                // separate. Mutable bindings can narrow until reassigned;
+                // annotations to number/string stay wide at comparisons.
                 literal_nodes[i] = literal_decls[symbol.declaration_index]
                 wide_nodes[i] = wide_decls[symbol.declaration_index]
                 if kind == .Unknown {
@@ -1329,7 +1330,22 @@ check_file_with_relations :: proc(
             declared[declaration_index] = declared_type
             if declared_type == .Unknown {
                 declared[declaration_index] = expression_type
-                if decl.kind == .Const {
+            }
+            if expression_type == declared[declaration_index] {
+                if decl.kind == .Const && declared_type == .Unknown {
+                    // An unannotated const keeps its inferred literal type,
+                    // including immutable aliases and computed-wide results.
+                    literal_decls[declaration_index] = literal_nodes[expression_root]
+                    wide_decls[declaration_index] = wide_nodes[expression_root]
+                } else if expression_type == .Number || expression_type == .Text {
+                    // COMPAT: fresh literals widen at mutable locations;
+                    // explicit primitive annotations are declared-wide even
+                    // for const. Neither is a singleton equality operand.
+                    wide_decls[declaration_index] = true
+                } else if expression_type == .Boolean {
+                    // COMPAT: an initialized Boolean can still have a
+                    // singleton *flow type* despite its wide annotation.
+                    // Assignment and branch joins replace/merge this fact.
                     literal_decls[declaration_index] = literal_nodes[expression_root]
                     wide_decls[declaration_index] = wide_nodes[expression_root]
                 }
