@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./soft-glass.css?v=20261008-xray-editor">
   <link rel="stylesheet" href="./live.css?v=20261009-live-orbit">
-  <script src="./app.js?v=20261009-comparisons" type="module"></script>
+  <script src="./app.js?v=20261009-benchmark" type="module"></script>
   <link rel="stylesheet" href="./lab.css?v=20261009-type-relations">
 </head>
 <body>
@@ -24,6 +24,7 @@
         <button type="button" data-view="activity" aria-controls="activity" aria-pressed="false">Activity</button>
         <button type="button" data-view="pipeline" aria-controls="pipeline" aria-pressed="false">Compiler</button>
         <button type="button" data-view="conformance" aria-controls="conformance" aria-pressed="false">Conformance</button>
+        <button type="button" data-view="benchmark" aria-controls="benchmark" aria-pressed="false">Benchmark</button>
         <button type="button" data-view="xray" aria-controls="xray" aria-pressed="false">X-Ray</button>
         <button type="button" data-view="lab" aria-controls="lab" aria-pressed="false">Lab</button>
         <button type="button" data-view="principles" aria-controls="principles" aria-pressed="false">About</button>
@@ -124,6 +125,43 @@
         </article>
       </div>
       <p class="chart-footnote">When measured, the score uses passed / (passed + failed) only, and publishes every excluded category separately. Reports for older tsodin commits must be labeled historical, never current. No previous-prototype microbenchmarks are included.</p>
+    </section>
+
+    <section id="benchmark" class="section shell" data-panel="benchmark" hidden>
+      <div class="section-heading"><div>
+        <p class="section-kicker">04 / REPRODUCIBLE PERFORMANCE</p>
+        <h2>Performance <span class="accent-text">evidence.</span></h2>
+        <p class="section-subtitle">Benchmarks will appear here only after equivalent end-to-end TypeScript checking, diagnostic parity, and stable measurements on a documented dedicated host. Short internal CI microprobes are not competitive benchmark results.</p>
+      </div><a class="section-link" href="https://github.com/megaalive/tsodin/blob/main/docs/M4_CHECKER_PERFORMANCE.md" target="_blank" rel="noopener noreferrer">Method and current experiments ↗</a></div>
+      <div class="panel conformance-summary">
+        <div><span class="micro-label">PINNED · VERIFIED · COMPARABLE</span>
+          <h3 id="benchmark-state">Checking published evidence…</h3>
+          <p id="benchmark-note" class="section-subtitle">No result is assumed without verified source data.</p></div>
+        <span id="benchmark-pill" class="state-pill neutral">NOT VERIFIED</span>
+      </div>
+      <div class="status-grid">
+        <article class="panel status-card">
+          <div class="status-head"><span>01</span><span class="state-pill neutral">CORRECTNESS</span></div>
+          <h3>Same work, same result</h3>
+          <p>Equivalent projects, complete diagnostics or checksum parity, exact source digests and pinned competitors.</p>
+        </article>
+        <article class="panel status-card">
+          <div class="status-head"><span>02</span><span class="state-pill neutral">MEASUREMENT</span></div>
+          <h3>Stable on a dedicated host</h3>
+          <p>Sample order, warmups, median, MAD, drift, toolchain identity, CPU and reproducible timing evidence are required.</p>
+        </article>
+        <article class="panel status-card">
+          <div class="status-head"><span>03</span><span class="state-pill neutral">PROVENANCE</span></div>
+          <h3>No invented leaderboard</h3>
+          <p>Each published figure must link to its exact GitHub Actions record. Exploratory VM results remain in engineering notes.</p>
+        </article>
+      </div>
+      <div class="panel" style="margin-top:18px">
+        <div class="status-head"><span>ELIGIBLE BENCHMARK RESULTS</span><span id="benchmark-revision" class="micro-label">Not measured</span></div>
+        <div id="benchmark-results" class="chart-empty" role="status" aria-live="polite">No eligible end-to-end checker benchmark has been published.</div>
+        <a id="benchmark-run-link" class="inline-link" href="https://github.com/megaalive/tsodin/actions" target="_blank" rel="noopener noreferrer" hidden>Verification run ↗</a>
+      </div>
+      <p class="chart-footnote">No tsodin-versus-TypeScript, Rust, Go or other-language performance win is claimed. Historical results are never silently relabeled as current. Missing evidence is not a zero score.</p>
     </section>
 
     <section id="xray" class="section shell" data-panel="xray" hidden>
