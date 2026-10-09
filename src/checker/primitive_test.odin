@@ -1358,7 +1358,7 @@ primitive_checker_mixed_rhs_boolean_guard_fail_closed :: proc(t: ^testing.T) {
         prefix + "if (a && (b || a)) { out = true; } else { out = false; }",
         prefix + "if (a || (b && b)) { out = true; } else { out = false; }",
         prefix + "if (a && (b || (c && a))) { out = true; } else { out = false; }",
-        prefix + "if ((a || b) && c) { out = true; } else { out = false; }",
+        prefix + "if ((a || (b && c)) && a) { out = true; } else { out = false; }",
         prefix + "if (a && (b || true)) { out = true; } else { out = false; }",
     }
     for input in cases {
@@ -1370,6 +1370,74 @@ primitive_checker_mixed_rhs_boolean_guard_fail_closed :: proc(t: ^testing.T) {
         testing.expect(t, ast.complete && bound.complete && checked.fatal &&
                        !checked.complete && len(checked.diagnostics)>0,
                        "unproved, repeated, mixed-left or computed guards remain unsupported")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_mixed_left_decisive_facts :: proc(t: ^testing.T) {
+    prefix :: "let n: number = 1; n = 1 + 2;" +
+              "let a: boolean = false; a = n === 2;" +
+              "let b: boolean = false; b = n === 3;" +
+              "let c: boolean = false; c = n === 4;" +
+              "let out: boolean = false;"
+    cases := [?]string {
+        prefix +
+        "if ((a && b) || c) { out = a === false; out = c === false; }" +
+        "else { out = c === false; out = b === true; }" +
+        "if ((a || b) && c) { out = c === true; out = a === false; }" +
+        "else { out = c === true; out = a === true; }" +
+        "const after: boolean = c === true;",
+        prefix +
+        "if (!((a && b) || c)) { out = c === false; }" +
+        "else { out = a === true; out = c === true; }" +
+        "if (!((a || b) && c)) { out = c === false; }" +
+        "else { out = c === true; out = b === false; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(822), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                       !checked.fatal && len(checked.diagnostics)==0,
+                       "only the rightmost Boolean is proven on a decisive arm")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_mixed_left_fail_closed :: proc(t: ^testing.T) {
+    prefix :: "let n: number = 1; n = 1 + 2;" +
+              "let a: boolean = false; a = n === 2;" +
+              "let b: boolean = false; b = n === 3;" +
+              "let c: boolean = false; c = n === 4;" +
+              "let out: boolean = false;"
+    cases := [?]string {
+        prefix + "if ((a && a) || c) { out = true; } else { out = false; }",
+        prefix + "if ((a || b) && a) { out = true; } else { out = false; }",
+        prefix + "if ((!a && b) || c) { out = true; } else { out = false; }",
+        prefix + "if ((a && (b || c)) || b) { out = true; } else { out = false; }",
+        prefix + "if ((a && b) || (n === 4)) { out = true; } else { out = false; }",
+        prefix + "a = true; if ((a && b) || c) { out = true; } else { out = false; }",
+        prefix + "c = false; if ((a || b) && c) { out = true; } else { out = false; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(823), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                       !checked.complete && len(checked.diagnostics)>0,
+                       "repeated, negated, computed, nested or non-wide guards fail closed")
         report_destroy(&checked)
         binder.binding_report_destroy(&bound)
         parser.syntax_report_destroy(&ast)
