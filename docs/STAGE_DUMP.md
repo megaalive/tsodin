@@ -86,14 +86,12 @@ provenance is therefore the **Git commit containing source, generated JSON
 and passing CI**, rather than a fabricated fixed commit field inside each
 JSON file. No timestamps or reference-code parity badges are emitted.
 
-### Follow-on scope (not yet implemented)
+### Beyond this milestone (not yet implemented)
 
-Generate a versioned gallery from curated `examples/*.ts` using a pinned
-CI/Pages pipeline without manual hand-written traces. Let the client
-present hover-linked token/node/symbol facts, never perform its own fake
-binding or checker inference. When detailed lookup paths and type relations
-exist in the engine, extend a separate versioned schema with exact records
-and positive/negative differential tests.
+Hierarchical scope lookup trails, per-expression type tables, a general
+assignability graph and full TS7 diagnostic-code/message parity remain
+out of scope. Extend the versioned schema only when Odin emits those
+facts from its actual implementation; the Lab must not invent them.
 
 ### M4-G5F8C — bounded real type-relation evidence
 
