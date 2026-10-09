@@ -1,0 +1,74 @@
+package project
+
+import "core:testing"
+import "../binder"
+
+@(test)
+config_accepts_only_ordered_explicit_scripts :: proc(t: ^testing.T) {
+    cfg, err := parse_config("{\"files\":[\"./a.ts\",\"sub/../b.ts\"],\"compilerOptions\":{\"noEmit\":true}}")
+    defer config_destroy(&cfg)
+    testing.expect(t, err == .None && len(cfg.roots) == 2 &&
+                   cfg.roots[0] == "a.ts" && cfg.roots[1] == "b.ts" && cfg.no_emit,
+                   "explicit roots normalize but preserve selection order")
+}
+
+@(test)
+config_rejects_unsupported_semantics_and_aliases :: proc(t: ^testing.T) {
+    inputs := [?]struct{text:string, reason:Config_Error}{
+        {"{}", .Missing_Files},
+        {"{\"files\":[] ,\"compilerOptions\":{\"noEmit\":true}}", .Missing_Files},
+        {"{\"files\":[\"a.ts\"],\"extends\":\"base.json\",\"compilerOptions\":{\"noEmit\":true}}", .Unsupported_Config},
+        {"{\"files\":[\"a.ts\"],\"include\":[\"**/*\"],\"compilerOptions\":{\"noEmit\":true}}", .Unsupported_Config},
+        {"{\"files\":[\"a.ts\"],\"compilerOptions\":{\"strict\":true,\"noEmit\":true}}", .Unsupported_Option},
+        {"{\"files\":[\"a.ts\"],\"compilerOptions\":{\"noEmit\":false}}", .Unsupported_Option},
+        {"{\"files\":[\"a.ts\",\"./a.ts\"],\"compilerOptions\":{\"noEmit\":true}}", .Duplicate_File},
+        {"{\"files\":[\"../outside.ts\"],\"compilerOptions\":{\"noEmit\":true}}", .Invalid_File},
+        {"{\"files\":[\"a.d.ts\"],\"compilerOptions\":{\"noEmit\":true}}", .Invalid_File},
+        {"{\"files\":[\"a.tsx\"],\"compilerOptions\":{\"noEmit\":true}}", .Invalid_File},
+        {"{\"files\":[9],\"compilerOptions\":{\"noEmit\":true}}", .Invalid_File},
+        {"{\"files\":[\"a.ts\"],\"compilerOptions\":{\"noEmit\":true},}", .Invalid_Json},
+    }
+    for entry in inputs {
+        cfg, err := parse_config(entry.text)
+        testing.expect(t, err == entry.reason && len(cfg.roots) == 0,
+                       "fail closed and release any previously allocated roots")
+        config_destroy(&cfg)
+    }
+}
+
+@(test)
+loader_connects_config_snapshots_parser_and_project_binder :: proc(t: ^testing.T) {
+    p, err := load("tests/project/fixtures/valid/tsconfig.json")
+    defer project_destroy(&p)
+    testing.expect(t, err == .None && p.config_error == .None &&
+                   len(p.files) == 2 && p.binding.complete && !p.binding.fatal &&
+                   len(p.binding.symbols) == 2 && len(p.binding.references) == 1 &&
+                   p.binding.references[0].file_index == 0 &&
+                   p.binding.references[0].symbol_index == 1,
+                   "two source-backed files resolve an ordered cross-file reference")
+    if len(p.files) == 2 {
+        testing.expect(t, p.files[0].version.file_id != p.files[1].version.file_id,
+                       "loader assigns distinct stable file IDs")
+    }
+}
+
+@(test)
+loader_reports_first_cross_file_conflict_without_success :: proc(t: ^testing.T) {
+    p, err := load("tests/project/fixtures/conflict/tsconfig.json")
+    defer project_destroy(&p)
+    testing.expect(t, err == .None && !p.binding.complete && !p.binding.fatal &&
+                   len(p.binding.issues) == 1 &&
+                   p.binding.issues[0].kind == binder.Issue_Kind.Duplicate_Declaration &&
+                   p.binding.issues[0].file_index == 1,
+                   "second configured file owns duplicate diagnostic")
+}
+
+@(test)
+loader_refuses_missing_root_without_binding_partial_file_set :: proc(t: ^testing.T) {
+    p, err := load("tests/project/fixtures/missing/tsconfig.json")
+    defer project_destroy(&p)
+    testing.expect(t, err == .Root_Read && p.error_file_index == 1 &&
+                   len(p.files) == 1 && len(p.binding.symbols) == 0 &&
+                   !p.binding.complete,
+                   "a missing configured file never causes success on a prefix")
+}
