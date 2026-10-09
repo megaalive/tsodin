@@ -1022,6 +1022,37 @@ check_file_with_relations :: proc(
                         }
                     }
                 }
+
+                // M4-G5F8L: these four pure Boolean identities are exactly
+                // equivalent to the one name for BOTH paths, unlike generic
+                // &&/|| which only narrow a decisive path. No truthiness,
+                // computed literal, repeated name or side effect is admitted.
+                // Keep the original root/operator for expression checking;
+                // only the bounded guard metadata is reduced to one name.
+                if part_count == 2 {
+                    name_idx := -1
+                    literal_idx := -1
+                    if syntax.nodes[root.left].kind == .Name &&
+                       syntax.nodes[root.right].kind == .Boolean {
+                        name_idx = root.left
+                        literal_idx = root.right
+                    } else if syntax.nodes[root.left].kind == .Boolean &&
+                              syntax.nodes[root.right].kind == .Name {
+                        name_idx = root.right
+                        literal_idx = root.left
+                    }
+                    if name_idx >= 0 {
+                        fact := literal_fact_from_node(syntax.nodes[literal_idx])
+                        value, known := boolean_fact_value(fact, text)
+                        if known &&
+                           ((root.operator == .Ampersand_Ampersand && value) ||
+                            (root.operator == .Bar_Bar && !value)) {
+                            part_count = 1
+                            part_nodes[0] = name_idx
+                            compound = false
+                        }
+                    }
+                }
             }
             level := flow_depth
             // Do not carry metadata from an earlier conditional at this depth.
