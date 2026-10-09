@@ -84,6 +84,13 @@ for(const example of manifest.examples){
     moved.stages.types.comparisons[0].utf16[0]++;
     assert.throws(()=>validateStageDump(moved),/Comparison span/,
       "Moved binary comparison source span must fail");
+    const widened=trace.stages.types.comparisons.find(c=>c.proof==="Widened_Domain");
+    if(widened){
+      const wrongSymbol=structuredClone(trace);
+      wrongSymbol.stages.types.comparisons.find(c=>c.node_index===widened.node_index).proof="Same_Symbol";
+      assert.throws(()=>validateStageDump(wrongSymbol),/Same_Symbol proof disagrees/,
+        "A forged Same_Symbol proof must reference one actual binder symbol twice");
+    }
     if(trace.stages.types.comparisons.length>1){
       const reversed=structuredClone(trace);
       [reversed.stages.types.comparisons[0],reversed.stages.types.comparisons[1]]=

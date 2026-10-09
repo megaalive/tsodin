@@ -661,3 +661,27 @@ feature: `tsodin.dump/2`, generated gallery traces and the Lab remain
 unchanged. An explicitly versioned future dump schema will expose these
 facts only after the compact contract is validated; no parallel JavaScript
 checker or general CFG is introduced.
+
+## M4-G5F8H — nested-flow comparison evidence fidelity
+
+The actual Odin equality decision stream is now covered by two targeted
+nested `if/else` regression programs. A mutation of a narrowed Boolean
+binding changes the comparison proof from `Same_Literal` to
+`Widened_Domain`, and that widened fact must survive the child join and
+the outer join without reusing a stale singleton. The complementary
+negative case has three lexically ordered
+`Disjoint_Literal_Comparison` diagnostics in branch-local contexts and
+three valid widened comparisons after mutation/join.
+
+Both programs compare `.None`, `.Failures` and `.All`: exact diagnostic
+anchors, proof kinds/order, node positions and checked work must be
+independent of tracing. The failure-only stream must be a strict ordered
+subset of all real decisions. No new CFG, allocations on normal
+`check_file`, unsupported grammar, or public semantic claims are added.
+
+The Lab independently verifies that a `Same_Symbol` comparison points
+to two Name nodes resolving to **the same existing binder symbol**;
+a merely plausible proof label can no longer bypass this provenance
+rule. Other proof categories remain checker-originated and are not
+re-inferred in JavaScript.
+
