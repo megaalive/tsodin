@@ -33,19 +33,21 @@ main :: proc() {
     if os.args[1] == "check" {
         if len(os.args) == 4 && os.args[2] == "-p" {
             p, err := project.load(os.args[3])
-            defer project.project_destroy(&p)
             if err != .None {
                 fmt.eprintf("error: project preflight failed (%v), config=%v, file=%d\n",
                             err, p.config_error, p.error_file_index)
+                project.project_destroy(&p)
                 os.exit(2)
             }
             if !p.binding.complete {
                 fmt.eprintf("error: project preflight incomplete (fatal=%v, issues=%d)\n",
                             p.binding.fatal, len(p.binding.issues))
+                project.project_destroy(&p)
                 os.exit(2)
             }
             fmt.eprintf("unsupported: %d project files parsed and bound; TypeScript type checking is not implemented\n",
                         len(p.files))
+            project.project_destroy(&p)
             os.exit(2)
         }
         fmt.eprintln("error: tsodin check is not implemented; refusing a false success")
