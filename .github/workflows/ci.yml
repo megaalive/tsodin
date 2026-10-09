@@ -59,6 +59,14 @@ jobs:
       - name: Validate primitive semantic checker
         run: odin test src/checker
 
+      - name: Validate checker probe driver and sampler
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/perf/compare-checker.mjs --self-test
+          odin build src/checkbench -o:speed -out:"$RUNNER_TEMP/checkbench"
+          "$RUNNER_TEMP/checkbench" tests/oracle/checker-flow-mixed-nested-valid/index.ts | grep -E 'RESULT[[:space:]]+8192[[:space:]]+0[[:space:]]+[0-9]+'
+
       - name: Run source-to-type-diagnostics smoke
         shell: bash
         run: |

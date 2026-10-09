@@ -888,3 +888,11 @@ mixed-left and nested mutations protect the full semantic behavior.
 This quality-only change makes no performance claim: allocation count
 in the helper is zero but its runtime cost is not benchmarked.
 
+## M4-G5F8P — bounded checker performance evidence
+
+The proof-preserving N/O refactors now have an opt-in three-revision
+same-runner performance probe. It compiles the exact pre-N/post-N/post-O
+checker implementations with one common driver and compares source-backed
+semantic output checksums before timing can count. Details, samples,
+limitations and the decision not to chase noisy CI ratios are in
+[the checker-specific reproducibility record](M4_CHECKER_PERFORMANCE.md).

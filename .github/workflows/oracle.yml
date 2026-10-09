@@ -14,6 +14,7 @@ on:
       - "src/parser/**"
       - "src/binder/**"
       - "src/checker/**"
+      - "src/checkbench/**"
       - "src/dump/**"
       - "tools/dump/**"
       - "src/checktrace/**"
