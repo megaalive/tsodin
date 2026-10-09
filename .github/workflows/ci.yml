@@ -66,6 +66,13 @@ jobs:
           odin build src/checktrace -out:"$RUNNER_TEMP/checktrace"
           TSODIN_CHECKTRACE="$RUNNER_TEMP/checktrace" node tools/oracle/check-primitive-trace.mjs
 
+      - name: Verify structured stage dump and UTF-16 spans
+        shell: bash
+        run: |
+          set -euo pipefail
+          odin build src/cli -out:"$RUNNER_TEMP/tsodin-dump"
+          TSODIN_BIN="$RUNNER_TEMP/tsodin-dump" node tools/dump/check.mjs
+
       - name: Validate developer syntax diagnostic trace
         shell: bash
         run: |
