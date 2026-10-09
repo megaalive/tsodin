@@ -16,8 +16,11 @@ const checksum=value=>createHash("sha256").update(value).digest("hex");
 function sourceText(n) {
   // Single line, unique declarations, a mix of ASCII and non-BMP literals.
   // Output and work grow together; source count is the only varied dimension.
-  return Array.from({length:n},(_,i)=>
-    i%4===0 ? `const v${i}: string = "é😀";`
+  // Non-BMP scalars in a supported comment exercise real UTF-16 offsets.
+  // Non-ASCII string *bodies* are currently deliberately fail-closed by
+  // scanner policy, and are not legal benchmark work for this subset.
+  return "/* é😀 */ " + Array.from({length:n},(_,i)=>
+    i%4===0 ? `const v${i}: string = "ascii";`
             : `const v${i}: number = ${i%11};`).join(" ");
 }
 function checkSpan(source,object,label) {
