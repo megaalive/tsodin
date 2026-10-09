@@ -896,3 +896,33 @@ checker implementations with one common driver and compares source-backed
 semantic output checksums before timing can count. Details, samples,
 limitations and the decision not to chase noisy CI ratios are in
 [the checker-specific reproducibility record](M4_CHECKER_PERFORMANCE.md).
+
+## M4-G5F8T — numeric remainder (percent)
+
+The **source-to-checker** subset now recognizes the TypeScript remainder
+operator `%` as a token, infix expression with the same left-associative
+precedence as `*` and `/`, and a computed `number` type **only**
+when both operands are already checked as numeric. The result is marked
+proven-wide, like ordinary arithmetic, rather than inventing an exact
+remainder literal or narrowing based on the operand spelling.
+
+This deliberately **does not** evaluate numeric literals, infer ranges,
+implement BigInt, support JavaScript string coercion or expose `%=`
+assignments. Unsupported `%=` is rejected by the scanner, while
+text/Boolean operands fail closed at the primitive checker.
+
+Focused Odin scanner, parser and checker tests lock token spans,
+rejection, multiplicative precedence, postorder associativity,
+unary/group structure, expression-wide facts, type error order,
+trace allocation policy and mixed-domain rejection. Independent
+pinned TS7.0.2 `checker-remainder-valid` and
+`checker-remainder-errors` projects require exact TS2322/TS2367
+codes and UTF-16 starting positions; supplemental TS6.0.2 structured
+diagnostics require full category and span parity. No general
+JavaScript coercion semantics or performance improvement is claimed.
+
+
+**Known boundary:** comparisons against explicitly annotated `const`
+number declarations are not yet generally proven-wide by the bounded
+checker; the new oracle fixture compares a computed `%` result directly
+instead of treating that unrelated unsupported proof as implemented.

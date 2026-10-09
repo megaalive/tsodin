@@ -55,6 +55,8 @@ Token_Kind :: enum {
     // M4-G5B: append-only keywords for a bounded if/else subset.
     If_Keyword,
     Else_Keyword,
+    // Append-only M4-G5F8T: preserve existing token IDs.
+    Percent,
 }
 
 Scan_Error :: enum {
@@ -285,6 +287,12 @@ scanner_next :: proc(s: ^Scanner) -> Token {
     case '+': kind = .Plus
     case '-': kind = .Minus
     case '*': kind = .Asterisk
+    case '%':
+        if start + 1 < len(text) && text[start+1] == '=' {
+            s.offset += 2
+            return scanner_error(s, start, .Unsupported_Syntax)
+        }
+        kind = .Percent
     case '/':
         if start + 1 < len(text) && text[start+1] == '=' {
             kind = .Slash_Equals

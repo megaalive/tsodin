@@ -224,4 +224,11 @@ assert.equal(mixedNestedBad.status,1,"mixed nested path-local errors remain visi
 assert.deepEqual(mixedNestedBad.diags.map(x=>x[1]),
   ["11","11","11","11","10","11","11","11","11"],
   "mixed nested disjointness and assignment mismatch preserve source order");
-console.log("PASS: G5F7C nested mixed Boolean mutation and join witnesses");
+const remainderValid=read("checker-remainder-valid");
+assert.equal(remainderValid.status,0,"multiplicative remainder source must typecheck");
+assert.equal(remainderValid.diags.length,0);
+const remainderErrors=read("checker-remainder-errors");
+assert.equal(remainderErrors.status,1,"remainder assignment/domain errors must not pass");
+assert.deepEqual(remainderErrors.diags.map(row=>row[1]),["10","10","12"],
+  "source-ordered remainder TS2322 and TS2367 issue mappings");
+console.log("PASS: G5F7C nested mixed Boolean mutation and join witnesses, numeric remainder");

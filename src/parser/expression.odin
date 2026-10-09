@@ -148,7 +148,7 @@ binary_priority :: proc(kind: scanner.Token_Kind) -> int {
     if kind == .Plus || kind == .Minus {
         return 10
     }
-    if kind == .Asterisk || kind == .Slash {
+    if kind == .Asterisk || kind == .Slash || kind == .Percent {
         return 20
     }
     return 0
