@@ -81,6 +81,8 @@ const fixtures=[
   ["checker-flow-mixed-left-errors",5],
   ["checker-flow-mixed-nested-valid",0],
   ["checker-flow-mixed-nested-errors",9],
+  ["checker-remainder-valid",0],
+  ["checker-remainder-errors",3],
 ];
 
 function structuredReference(cwd) {

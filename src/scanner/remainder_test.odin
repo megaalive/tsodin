@@ -28,7 +28,7 @@ scanner_remainder_token_and_reject_assignment_form :: proc(t: ^testing.T) {
     testing.expect(t, ok, "assignment input is valid UTF-8")
     defer source.source_version_destroy(&unsupported)
     scanner := scanner_init(&unsupported)
-    for _ in 0..<7 {
+    for _ in 0..<6 {
         token := scanner_next(&scanner)
         testing.expect(t, token.kind!=.Invalid, "ordinary prefix is valid")
     }

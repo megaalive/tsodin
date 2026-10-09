@@ -62,6 +62,16 @@ for(const [id,expected] of [
     item.files.includes("index.ts") && item.files.includes("tsconfig.json"),
     "negated identity guard witness must be independently captured");
 }
+for(const [id,expected] of [
+  ["checker-remainder-valid",false],
+  ["checker-remainder-errors",true],
+]){
+  const item=manifest.projects.find(p=>p.id===id);
+  assert.ok(item && item.expectDiagnostics===expected &&
+    item.path==="tests/oracle/"+id &&
+    item.files.includes("index.ts") && item.files.includes("tsconfig.json"),
+    "remainder TypeScript 7 oracle projects must remain registered");
+}
 for(const spelling of ["01","00","08"]){
   const id="scanner-leading-zero-"+spelling;
   const witness=manifest.projects.find(item=>item.id===id);
