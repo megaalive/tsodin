@@ -505,7 +505,9 @@ parse_expression_program :: proc(version: ^source.Source_Version, profile: compa
     }
     syntax_advance(&p)
     for !p.fatal && p.current.kind != .End_Of_File {
-        before := len(report.nodes)
+        before_nodes := len(report.nodes)
+        before_declarations := len(report.declarations)
+        before_statements := len(report.statements)
         ok := false
         if p.current.kind == .If_Keyword {
             ok = syntax_if(&p)
@@ -515,8 +517,11 @@ parse_expression_program :: proc(version: ^source.Source_Version, profile: compa
             ok = syntax_declaration(&p)
         }
         if !ok {
-            // Never retain nodes from a declaration that did not parse.
-            resize(&report.nodes, before)
+            // A failed conditional may already have emitted fork/assignment/
+            // join events. Roll back the entire attempted statement together.
+            resize(&report.nodes, before_nodes)
+            resize(&report.declarations, before_declarations)
+            resize(&report.statements, before_statements)
             syntax_recover(&p)
         }
     }

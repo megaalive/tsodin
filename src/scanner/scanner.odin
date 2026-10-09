@@ -231,6 +231,11 @@ scanner_next :: proc(s: ^Scanner) -> Token {
         for s.offset < len(text) && text[s.offset] >= '0' && text[s.offset] <= '9' {
             s.offset += 1
         }
+        // COMPAT: legacy leading-zero decimal/octal spellings are not part of
+        // the supported TypeScript integer subset; never accept them as decimal.
+        if text[start] == '0' && s.offset-start > 1 {
+            return scanner_error(s, start, .Unsupported_Syntax)
+        }
         return Token{kind=.Integer_Literal, byte_start=start, byte_end=s.offset}
     }
 
