@@ -859,6 +859,13 @@ check_file_with_relations :: proc(
                     fail(&result, .Invalid_Expression_Node, node.byte_start, node.byte_end, true)
                     return result
                 }
+                if left == .Union || right == .Union {
+                    // We do not yet reason about overlap or operations on
+                    // union constituents. Never report false disjointness.
+                    fail(&result, .Unsupported_Expression,
+                         node.byte_start, node.byte_end, true)
+                    return result
+                }
                 if node.operator == .Plus {
                     if left == .Text || right == .Text {
                         if (left == .Number || left == .Text) &&
