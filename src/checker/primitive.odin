@@ -223,6 +223,41 @@ operand_type :: proc(nodes: []parser.Expr_Node, inferred: []Primitive, child, cu
     return inferred[child], true
 }
 
+// Pure postorder wrapper traversal shared by condition recognition, contextual
+// RHS guards and identity reduction. No allocation, no type inference.
+// INVARIANT: every Group or unary ! child is strictly earlier than its
+// parent AND belongs to this expression (index >= lower_bound).
+// A malformed wrapper returns valid=false; callers decide whether a hard
+// condition failure or conservative no-context result is appropriate.
+Guard_Wrapper :: struct {
+    index: int,
+    flipped: bool,
+    valid: bool,
+}
+
+unwrap_guard_wrappers :: proc(
+    nodes: []parser.Expr_Node, start, lower_bound: int,
+) -> Guard_Wrapper {
+    if lower_bound < 0 || start < lower_bound || start >= len(nodes) {
+        return Guard_Wrapper{}
+    }
+    index := start
+    flipped := false
+    for {
+        node := nodes[index]
+        if node.kind != .Group &&
+           !(node.kind == .Unary && node.operator == .Exclamation) {
+            break
+        }
+        if node.left < lower_bound || node.left >= index {
+            return Guard_Wrapper{}
+        }
+        if node.kind == .Unary { flipped = !flipped }
+        index = node.left
+    }
+    return Guard_Wrapper{index=index, flipped=flipped, valid=true}
+}
+
 check_file_with_relations :: proc(
     version: ^source.Source_Version,
     syntax: ^parser.Syntax_Report,
@@ -532,33 +567,23 @@ check_file_with_relations :: proc(
         rhs_saved_fact: Literal_Fact
         rhs_saved_wide := false
         if condition_event {
+            root_unwrapped := unwrap_guard_wrappers(
+                syntax.nodes[:], expression_root, node_cursor)
             root_idx := expression_root
-            for {
-                outer := syntax.nodes[root_idx]
-                if outer.kind != .Group &&
-                   !(outer.kind == .Unary && outer.operator == .Exclamation) {
-                    break
-                }
-                if outer.left < node_cursor || outer.left >= root_idx { break }
-                root_idx = outer.left
-            }
+            if root_unwrapped.valid { root_idx = root_unwrapped.index }
             logical := syntax.nodes[root_idx]
             if logical.kind == .Binary &&
                (logical.operator == .Ampersand_Ampersand ||
                 logical.operator == .Bar_Bar) &&
                logical.left >= node_cursor && logical.left < logical.right &&
                logical.right < root_idx {
+                lhs_unwrapped := unwrap_guard_wrappers(
+                    syntax.nodes[:], logical.left, node_cursor)
                 lhs_idx := logical.left
                 lhs_flipped := false
-                for {
-                    lhs := syntax.nodes[lhs_idx]
-                    if lhs.kind != .Group &&
-                       !(lhs.kind == .Unary && lhs.operator == .Exclamation) {
-                        break
-                    }
-                    if lhs.left < node_cursor || lhs.left >= lhs_idx { break }
-                    if lhs.kind == .Unary { lhs_flipped = !lhs_flipped }
-                    lhs_idx = lhs.left
+                if lhs_unwrapped.valid {
+                    lhs_idx = lhs_unwrapped.index
+                    lhs_flipped = lhs_unwrapped.flipped
                 }
                 lhs := syntax.nodes[lhs_idx]
                 lhs_ref := -1
@@ -846,22 +871,14 @@ check_file_with_relations :: proc(
             // operands of &&/|| are checked independently (not evaluated as
             // mutations); TypeScript's short circuit controls WHICH arm may
             // infer facts, not whether this parser binds an operand.
-            guard_node := expression_root
-            flipped := false
-            for {
-                node := syntax.nodes[guard_node]
-                if node.kind == .Group ||
-                   (node.kind == .Unary && node.operator == .Exclamation) {
-                    if node.left < 0 || node.left >= guard_node {
-                        fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
-                        return result
-                    }
-                    if node.kind == .Unary { flipped = !flipped }
-                    guard_node = node.left
-                } else {
-                    break
-                }
+            guard_unwrapped := unwrap_guard_wrappers(
+                syntax.nodes[:], expression_root, node_cursor)
+            if !guard_unwrapped.valid {
+                fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                return result
             }
+            guard_node := guard_unwrapped.index
+            flipped := guard_unwrapped.flipped
             root := syntax.nodes[guard_node]
             compound := root.kind == .Binary &&
                         (root.operator == .Ampersand_Ampersand ||
@@ -1045,22 +1062,10 @@ check_file_with_relations :: proc(
                         if known &&
                            ((root.operator == .Ampersand_Ampersand && value) ||
                             (root.operator == .Bar_Bar && !value)) {
-                            leaf_idx := name_expr
-                            for {
-                                leaf := syntax.nodes[leaf_idx]
-                                if leaf.kind != .Group &&
-                                   !(leaf.kind == .Unary &&
-                                     leaf.operator == .Exclamation) {
-                                    break
-                                }
-                                if leaf.left < 0 || leaf.left >= leaf_idx {
-                                    leaf_idx = -1
-                                    break
-                                }
-                                leaf_idx = leaf.left
-                            }
-                            if leaf_idx >= 0 &&
-                               syntax.nodes[leaf_idx].kind == .Name {
+                            name_unwrapped := unwrap_guard_wrappers(
+                                syntax.nodes[:], name_expr, node_cursor)
+                            if name_unwrapped.valid &&
+                               syntax.nodes[name_unwrapped.index].kind == .Name {
                                 part_count = 1
                                 part_nodes[0] = name_expr
                                 compound = false
@@ -1080,22 +1085,14 @@ check_file_with_relations :: proc(
             dead_else[level] = false
             contradiction_guard[level] = -1
             for slot in 0..<part_count {
-                leaf_node := part_nodes[slot]
-                leaf_flipped := !compound && flipped
-                for {
-                    node := syntax.nodes[leaf_node]
-                    if node.kind == .Group ||
-                       (node.kind == .Unary && node.operator == .Exclamation) {
-                        if node.left < 0 || node.left >= leaf_node {
-                            fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
-                            return result
-                        }
-                        if node.kind == .Unary { leaf_flipped = !leaf_flipped }
-                        leaf_node = node.left
-                    } else {
-                        break
-                    }
+                leaf_unwrapped := unwrap_guard_wrappers(
+                    syntax.nodes[:], part_nodes[slot], node_cursor)
+                if !leaf_unwrapped.valid {
+                    fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
+                    return result
                 }
+                leaf_node := leaf_unwrapped.index
+                leaf_flipped := (!compound && flipped) != leaf_unwrapped.flipped
                 leaf := syntax.nodes[leaf_node]
                 if part_count == 3 && leaf.kind != .Name {
                     // No comparisons or computed operators on RHS of a
