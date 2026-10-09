@@ -1,0 +1,5 @@
+{
+  // Explicit roots only
+  "files": [ "a.ts", /* forward reference */ "b.ts", ],
+  "compilerOptions": { "noEmit": true, },
+}

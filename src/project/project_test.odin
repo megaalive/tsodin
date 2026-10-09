@@ -1,6 +1,7 @@
 package project
 
 import "core:testing"
+import "core:strings"
 import "../binder"
 
 @(test)
@@ -77,4 +78,76 @@ loader_refuses_missing_root_without_binding_partial_file_set :: proc(t: ^testing
                    len(p.files) == 1 && len(p.binding.symbols) == 0 &&
                    !p.binding.complete,
                    "a missing configured file never causes success on a prefix")
+}
+
+@(test)
+jsonc_trivia_matches_official_config_string_boundaries :: proc(t: ^testing.T) {
+    // Regressions based on Microsoft's pinned tsconfigparsing_test.go.
+    input := `{"files":[/* one
+    two */"a.ts"], // ignored
+    "compilerOptions":{"noEmit":true}}`
+    cleaned, ok := strip_jsonc_comments(input)
+    testing.expect(t, ok && len(cleaned) == len(input) &&
+                   strings.contains(string(cleaned), `"a.ts"`) &&
+                   !strings.contains(string(cleaned), "ignored") &&
+                   !strings.contains(string(cleaned), "one"),
+                   "line and block comments become same-width whitespace")
+    delete(cleaned)
+
+    quoted := `{"note":"literal // and /* */ and \\" escaped quote"}`
+    same, quoted_ok := strip_jsonc_comments(quoted)
+    testing.expect(t, quoted_ok && string(same) == quoted,
+                   "comment-like text inside quoted string stays untouched")
+    delete(same)
+
+    even_escapes := `{"note":"\\\\", /* actual comment */"files":["a.ts"]}`
+    even, even_ok := strip_jsonc_comments(even_escapes)
+    testing.expect(t, even_ok && len(even) == len(even_escapes) &&
+                   !strings.contains(string(even), "actual comment"),
+                   "paired backslashes do not hide the closing quote")
+    delete(even)
+}
+
+@(test)
+jsonc_config_accepts_comments_but_keeps_unsupported_options_closed :: proc(t: ^testing.T) {
+    valid := `{ // project roots
+        "files": [ /* one */ "a.ts", ],
+        "compilerOptions": { /* disable emit */ "noEmit": true, },
+    }`
+    c, err := parse_config(valid)
+    testing.expect(t, err == .None && len(c.roots)==1 && c.roots[0]=="a.ts",
+                   "JSONC comments and trailing commas compose with explicit roots")
+    config_destroy(&c)
+
+    quoted, quoted_err := parse_config(`{"files":["http://host/a.ts"],"compilerOptions":{"noEmit":true}}`)
+    testing.expect(t, quoted_err == .Invalid_File,
+                   "comment-like bytes inside a string remain source path data")
+    config_destroy(&quoted)
+
+    unsupported, unsupported_err := parse_config(`{/*hey*/"files":["a.ts"],"compilerOptions":{"noEmit":true,"strict":true}}`)
+    testing.expect(t, unsupported_err == .Unsupported_Option,
+                   "JSONC support does not bypass unsupported option rejection")
+    config_destroy(&unsupported)
+
+    invalid := [?]string{
+        `{/* unclosed`,
+        `{"files":["a.ts"],"compilerOptions":{"noEmit":true}}/*`,
+        `{"files":["a.ts"],"compilerOptions":{"noEmit":true}}/`,
+        `{"files":["a.ts"],"compilerOptions":{"noEmit":true}} garbage`,
+    }
+    for source_text in invalid {
+        rejected, rejection := parse_config(source_text)
+        testing.expect(t, rejection == .Invalid_Json && len(rejected.roots)==0,
+                       "unterminated block and stray slash fail closed")
+        config_destroy(&rejected)
+    }
+}
+
+@(test)
+project_loader_reads_jsonc_config_from_disk :: proc(t: ^testing.T) {
+    p, err := load("tests/project/fixtures/jsonc/tsconfig.json")
+    defer project_destroy(&p)
+    testing.expect(t, err == .None && len(p.files)==2 &&
+                   p.binding.complete && len(p.binding.references)==1,
+                   "physical commented tsconfig feeds the existing project binder")
 }
