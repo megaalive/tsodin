@@ -23,6 +23,30 @@ binaries, and independent strict TextDecoder validates all token/node UTF-16
 spans. Exact source reference unit tests exercise all offsets around a scalar
 crossing a 256-byte boundary and Unicode line separators.
 
-Record the final measured ratios only after the workflow succeeds. This
-is diagnostic stage-dump measurement, NOT an end-to-end TypeScript benchmark
-or a public language performance comparison.
+## Same-runner result — 9 October 2026
+
+GitHub Actions: [37954527513](https://github.com/megaalive/tsodin/actions/runs/37954527513)
+on feature revision `f93f64d`. Baseline is pinned at `7b82fdf`.
+Each lane uses the same Ubuntu 24.04 runner and Odin `-o:speed` toolchain,
+with two warmups and nine rotated/reversed full-process samples per size.
+Median wall-time is inclusive of startup, parsing, checking and JSON output.
+
+| One-line declarations | Base ms | Indexed ms | Indexed/base |
+|---:|---:|---:|---:|
+| 128 | 6.5606 | 4.9171 | 0.7495 |
+| 256 | 15.0385 | 7.6647 | 0.5097 |
+| 512 | 43.4505 | 13.1807 | 0.3033 |
+| 1024 | 146.5186 | 24.1927 | 0.1651 |
+
+All output byte checksums match baseline exactly for each input; every
+scanner/AST token position independently matches strict JavaScript TextDecoder,
+and native tests compare every possible byte offset across a multibyte
+scalar straddling a checkpoint to the original `source_position` function.
+Full raw samples and checksums are preserved in the `dump-span-probe`
+workflow artifact (retention 21 days). No measurements were discarded.
+
+**Decision:** retain the dump-only index: roughly 83.5% lower full-process
+wall-time at 1024 declarations, about 6.06x higher observed throughput on
+this limited workload. This is NOT an end-to-end TypeScript benchmark, a
+published language ranking, a claim about a general source-position path,
+or a promise of identical ratios on a different machine.
