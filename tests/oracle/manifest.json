@@ -347,6 +347,33 @@
       "expectDiagnostics": false
     },
     {
+      "id": "checker-boolean-identity-valid",
+      "path": "tests/oracle/checker-boolean-identity-valid",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "checker-boolean-identity-errors",
+      "path": "tests/oracle/checker-boolean-identity-errors",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
+    },
+    {
+      "id": "checker-boolean-identity-nested-valid",
+      "path": "tests/oracle/checker-boolean-identity-nested-valid",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
       "id": "checker-wide-errors",
       "path": "tests/oracle/checker-wide-errors",
       "files": [

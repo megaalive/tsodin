@@ -931,8 +931,10 @@ primitive_checker_compound_guard_fail_closed :: proc(t: ^testing.T) {
     cases := [?]string {
         prefix + "if (a && !a) { out = a; } else { out = false; }",
         prefix + "if (a || !a) { out = true; } else { out = !a; }",
-        prefix + "if (a && true) { out = true; } else { out = false; }",
-        prefix + "if (a || false) { out = true; } else { out = false; }",
+        // M4-G5F8L accepts a&&true / a||false as identities; these
+        // nonidentity constants remain unsafe for two-arm narrowing.
+        prefix + "if (a && false) { out = true; } else { out = false; }",
+        prefix + "if (a || true) { out = true; } else { out = false; }",
         prefix + "if (a && (b || a)) { out = true; } else { out = false; }",
     }
     for input in cases {

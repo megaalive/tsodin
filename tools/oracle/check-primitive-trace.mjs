@@ -111,6 +111,17 @@ assert.deepEqual(logicalBad.diags.map(row=>row[1]),["11","11","11","11","11","10
 const logicalFlow=read("checker-logical-facts-flow-valid");
 assert.equal(logicalFlow.status,0,"branch mutation and logical joins must typecheck");
 assert.equal(logicalFlow.diags.length,0);
+const identityValid=read("checker-boolean-identity-valid");
+assert.equal(identityValid.status,0,"four Boolean identities and outer negations narrow both paths");
+assert.equal(identityValid.diags.length,0);
+const identityErrors=read("checker-boolean-identity-errors");
+assert.equal(identityErrors.status,1,"proven disjoint guard facts must be diagnosed");
+assert.deepEqual(identityErrors.diags.map(row=>row[1]),
+  [...Array(12).fill("11"),"10"],
+  "twelve source-ordered TS2367 candidates and one TS2322 candidate");
+const identityNested=read("checker-boolean-identity-nested-valid");
+assert.equal(identityNested.status,0,"nested Boolean identity guards must preserve mutation joins");
+assert.equal(identityNested.diags.length,0);
 const flowValid=read("checker-flow-assign-valid");
 assert.equal(flowValid.status,0,"valid straight-line let assignment sequence");
 assert.deepEqual(flowValid.summary,["SUMMARY","7","0","0"]);
