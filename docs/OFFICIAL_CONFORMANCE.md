@@ -26,3 +26,20 @@ tests and Fourslash are excluded from early checker gates.
 
 When TypeScript 8 appears, add its separate profile and fixture gates.
 Keep TS7 evidence intact rather than replacing it.
+
+## Source-led conformance inventory
+
+The pinned [Microsoft TypeScript source/harness audit](UPSTREAM_AUDIT.md)
+documents the official Go compiler's scanner, parser, binder,
+module resolution, checker/flow/inference/relater and test harness,
+plus a small catalog of eight source-backed official conformance cases.
+Catalogued does **not** mean executed or passed. It separates an
+audited repository snapshot from the pinned TypeScript 7.0.2 CLI
+semantic oracle and disallows whole-suite pass claims before Tsodin
+can actually run the upstream test directives and file configurations.
+
+Before any new compiler feature: read the relevant official source
+and suite, derive independent TS7 positive/negative witnesses, keep
+unsupported behavior fail closed, then implement and differential test
+the Odin-native model. Do not transliterate Go object graphs.
+

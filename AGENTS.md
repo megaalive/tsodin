@@ -19,7 +19,8 @@ Do not "clean up" unusual code merely because it differs from ordinary applicati
 3. docs/MEMORY.md
 4. docs/PERFORMANCE.md
 5. docs/BENCHMARKING.md
-6. docs/HACKS.md
+6. docs/UPSTREAM_AUDIT.md
+7. docs/HACKS.md
 
 A contributor should be able to understand the repository shape, critical invariants, memory lifetimes, and benchmark rules in roughly fifteen minutes.
 
@@ -35,6 +36,28 @@ A contributor should be able to understand the repository shape, critical invari
       -> optional emit
 
 This map may evolve, but changes must be documented.
+
+## Upstream-first implementation protocol
+
+Before opening a new TypeScript semantic slice:
+
+1. Inspect the relevant **official Microsoft TypeScript** source and
+   compiler/conformance cases, with exact upstream revision and all
+   harness directives/file boundaries recorded.
+2. Separate the latest audited source snapshot from the pinned executable
+   TS7 reference used by `tests/oracle/profiles.json`.
+3. Add independent positive and negative oracle witnesses before treating
+   a behavior as compatible; catalogued upstream tests are not passes.
+4. Design the corresponding **Odin-native** data/ownership model,
+   then run native, TS7 and relevant supplemental TS6 tests.
+5. Maintain fail-closed unsupported status. Never turn an unsupported
+   upstream test into a false success, or publish a language speed
+   claim before equivalent end-to-end checker capability exists.
+
+See `docs/UPSTREAM_AUDIT.md` and
+`tests/oracle/upstream-triage.json`. Keep the catalog concise;
+do not vendor Microsoft's entire corpus or create per-feature PR
+fragmentation without a concrete review or correctness reason.
 
 ## Contributor rules
 
