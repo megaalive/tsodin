@@ -102,3 +102,113 @@ with the full pinned semantic witness gate *and* before/after
 benchmarks. If it does not win consistently, reject it.
 
 **No headline performance claim is authorized by this record.**
+
+## M4-G5F8Q — compiler-directed mixed-guard inline experiment
+
+Only the **two call sites** of `three_distinct_wide_boolean_lets`
+are forced inline using Odin's `#force_inline`. The predicate still
+validates all indexes, three independent declarations, proven-wide
+Boolean types and mutable `let` provenance. No optimization is
+allowed to change branch entailment, diagnostic order or allocation
+ownership.
+
+Q compares the precise historical `pre-N` and `post-O` revisions
+with the experimental PR commit in the same Ubuntu runner, using the
+**same** `src/checkbench/main.odin`, pinned Odin and balanced
+three-way execution orders. `tools/perf/compare-checker-q.mjs` emits
+complete machine-readable samples and checksums for all seven fixtures.
+
+### First exploratory Q measurement (9 October 2026)
+
+[Full Actions log and downloadable raw samples](https://github.com/megaalive/tsodin/actions/runs/37905740716)
+
+| Source-backed fixture | Candidate / post-O |
+|---|---:|
+| checker-primitives-valid | 0.9977× |
+| checker-boolean-identity-valid | 0.9730× |
+| checker-negated-identity-valid | 0.9788× |
+| checker-flow-mixed-rhs-valid | 0.9700× |
+| checker-flow-mixed-left-valid | 0.9611× |
+| checker-flow-mixed-nested-errors | 0.9808× |
+| checker-flow-three-nested-valid | 0.9686× |
+
+Every result checksum matched across all revisions. These ratios
+are *exploratory*, include process startup and cannot yet establish
+a stable overall speedup. Subsequent independent runs must support
+any keep/reject decision.
+
+### Second exploratory Q measurement (9 October 2026)
+
+[Independent Actions run and raw samples](https://github.com/megaalive/tsodin/actions/runs/37905967534)
+
+| Fixture | Q / post-O, first run | Q / post-O, second run |
+|---|---:|---:|
+| checker-primitives-valid | 0.9977× | 0.9987× |
+| checker-boolean-identity-valid | 0.9730× | 0.9608× |
+| checker-negated-identity-valid | 0.9788× | 0.9587× |
+| checker-flow-mixed-rhs-valid | 0.9700× | 0.9786× |
+| checker-flow-mixed-left-valid | 0.9611× | 0.9713× |
+| checker-flow-mixed-nested-errors | 0.9808× | 0.9768× |
+| checker-flow-three-nested-valid | 0.9686× | 1.0054× |
+
+Both runs passed full semantic checksums. Homogeneous three-way
+guard results disagree on direction, and runner variability remains
+a concern. The candidate improves mixed guards in both runs, but
+without controlled-host confirmation is still **exploratory**.
+
+### Third exploratory Q measurement and bounded decision
+
+[Third Actions run and raw samples](https://github.com/megaalive/tsodin/actions/runs/37906144224)
+
+| Fixture | Q / post-O, third run |
+|---|---:|
+| checker-primitives-valid | 1.0020× |
+| checker-boolean-identity-valid | 0.9679× |
+| checker-negated-identity-valid | 0.9812× |
+| checker-flow-mixed-rhs-valid | 0.9746× |
+| checker-flow-mixed-left-valid | 0.9691× |
+| checker-flow-mixed-nested-errors | 0.9796× |
+| checker-flow-three-nested-valid | 0.9889× |
+
+Across these three unpinned-host GitHub runner measurements,
+`checker-flow-mixed-rhs-valid` improved to 0.9700× / 0.9786× /
+0.9746× candidate/post-O; `checker-flow-mixed-left-valid` to
+0.9611× / 0.9713× / 0.9691×. All seven checksum witnesses
+matched exactly across each historical and candidate lane.
+
+**Bounded decision:** keep the two forced-inline call sites as a
+small, reversible code-generation candidate with supporting repeated
+exploratory evidence. They preserve every existing source-level guard
+and no extra allocation or analyzer path. Do not claim the project
+or TypeScript checker is categorically faster: the effect applies to
+this pinned optimized Odin build and selected fixtures, includes
+process startup, and is not yet corroborated on a controlled host.
+If a future Odin release or controlled benchmark reverses the
+result, remove the directives rather than weakening provenance
+validation.
+
+### GitHub Pages performance-publication contract
+
+The Observatory should eventually receive a dedicated
+**Benchmark** view, populated only by a versioned structured
+performance record, with *all* of the following gates:
+
+1. Exact commit SHA of **each** lane, pinned compiler/toolchains,
+   host CPU/OS, optimization flags, corpus ID and corpus digest.
+2. Explicit comparable semantic work, complete diagnostic or
+   checksum parity, independent oracle/conformance eligibility.
+3. Warmup, randomized or balanced order, complete raw sample links,
+   median, relative MAD, split-half drift and stated stability gate.
+4. Controlled physical host or comparable documented dedicated
+   environment for a **headline** benchmark; shared GitHub Actions
+   is exploratory, never eligible for global ranking.
+5. Clear distinction between checker-only microprobes and equivalent
+   end-to-end TypeScript checker comparisons. No mixing these ratios.
+6. A validator that defaults to `NOT MEASURED` and rejects incomplete,
+   stale, wrong-revision, or self-certified promotional results.
+
+The page should show **benchmarks only after eligible publication**,
+not turn pinned TS7 diagnostic witness counts into speed scores.
+The current status remains **no eligible headline benchmark**. A
+faster exploratory microprobe is evidence for engineering only.
+

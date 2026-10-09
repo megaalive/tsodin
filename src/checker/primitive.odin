@@ -264,6 +264,8 @@ unwrap_guard_wrappers :: proc(
 // Every source reference is range-checked before indexing; duplicate binder
 // declarations are rejected even when referenced through different nodes.
 // Pure and allocation-free; the caller still decides WHICH arm gets a fact.
+// M4-G5F8Q: caller-site forcing is an isolated candidate, not a
+// permanent speed claim. The pinned same-runner probe determines retention.
 three_distinct_wide_boolean_lets :: proc(
     nodes: []parser.Expr_Node,
     node_indices: [3]int,
@@ -983,7 +985,7 @@ check_file_with_relations :: proc(
                                  event.byte_start, event.byte_end, true)
                             return result
                         }
-                        if !three_distinct_wide_boolean_lets(
+                        if !#force_inline three_distinct_wide_boolean_lets(
                             syntax.nodes[:],
                             [3]int{root.left, rhs_inner.left, rhs_inner.right},
                             references, symbols.symbols[:], declared, wide_decls,
@@ -1020,7 +1022,7 @@ check_file_with_relations :: proc(
                                      event.byte_start, event.byte_end, true)
                                 return result
                             }
-                            if !three_distinct_wide_boolean_lets(
+                            if !#force_inline three_distinct_wide_boolean_lets(
                                 syntax.nodes[:],
                                 [3]int{inner.left, inner.right, root.right},
                                 references, symbols.symbols[:], declared, wide_decls,
