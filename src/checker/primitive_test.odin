@@ -1697,3 +1697,132 @@ primitive_checker_relation_trace_nested_flow_source_order :: proc(t: ^testing.T)
     parser.syntax_report_destroy(&ast)
     source.source_version_destroy(&v)
 }
+
+@(test)
+primitive_checker_comparison_evidence_is_not_assignability :: proc(t: ^testing.T) {
+    input := "const broad = 1 + 2;" +
+             "const disjoint = 1 !== 2;" +
+             "const identical = 'x' === 'x';" +
+             "const same = broad === broad;" +
+             "const possible = broad !== 9;" +
+             "const domains = broad === 'x';" +
+             "const mismatch: number = 'bad';"
+    v, ok := source.source_version_create(source.File_Id(830), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    ordinary := check_file(&v, &ast, &bound)
+    failed := check_file_with_relations(&v, &ast, &bound, .Failures)
+    all := check_file_with_relations(&v, &ast, &bound, .All)
+    testing.expect(t, ast.complete && bound.complete &&
+                   !ordinary.fatal && !failed.fatal && !all.fatal &&
+                   len(ordinary.relations)==0 && len(ordinary.comparisons)==0 &&
+                   len(ordinary.diagnostics)==3 &&
+                   len(failed.diagnostics)==len(ordinary.diagnostics) &&
+                   len(all.diagnostics)==len(ordinary.diagnostics),
+                   "ordinary checking has no trace allocation or diagnostic drift")
+    testing.expect(t, len(failed.comparisons)==2 && len(all.comparisons)==5 &&
+                   len(failed.relations)==1 && len(all.relations)==1,
+                   "failed/all modes separate comparison proofs from assignments")
+    if len(all.comparisons)==5 {
+        first := all.comparisons[0]
+        same := all.comparisons[1]
+        symbol := all.comparisons[2]
+        broad := all.comparisons[3]
+        different := all.comparisons[4]
+        testing.expect(t, first.proof==.Disjoint_Literals &&
+                       first.operator==.Exclamation_Equals_Equals && !first.overlaps &&
+                       same.proof==.Same_Literal && same.overlaps &&
+                       symbol.proof==.Same_Symbol && symbol.overlaps &&
+                       broad.proof==.Widened_Domain && broad.overlaps &&
+                       different.proof==.Disjoint_Domains && !different.overlaps &&
+                       different.left==.Number && different.right==.Text &&
+                       different.operator==.Equals_Equals_Equals,
+                       "record exactly the five actual comparison proof branches")
+        previous := -1
+        for comparison in all.comparisons {
+            testing.expect(t, comparison.node_index>previous &&
+                           comparison.node_index<len(ast.nodes) &&
+                           ast.nodes[comparison.node_index].kind==.Binary,
+                           "comparison records preserve postorder source IDs")
+            previous = comparison.node_index
+        }
+    }
+    if len(failed.comparisons)==2 {
+        testing.expect(t, !failed.comparisons[0].overlaps &&
+                       !failed.comparisons[1].overlaps &&
+                       failed.comparisons[0].proof==.Disjoint_Literals &&
+                       failed.comparisons[1].proof==.Disjoint_Domains,
+                       "failure trace has only proven disjoint comparisons")
+    }
+    if len(all.relations)==1 {
+        testing.expect(t, all.relations[0].source==.Text &&
+                       all.relations[0].target==.Number &&
+                       !all.relations[0].result,
+                       "incompatible initializer remains a distinct relation record")
+    }
+    report_destroy(&all)
+    report_destroy(&failed)
+    report_destroy(&ordinary)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_comparison_trace_fails_closed_and_preserves_joins :: proc(t: ^testing.T) {
+    // Neither trace mode can manufacture a proof for two untracked domains.
+    unsupported := "const a: number = 1; const b: number = 2;" +
+                   "const unproved = a === b;"
+    v, ok := source.source_version_create(source.File_Id(831), 1, unsupported)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file_with_relations(&v, &ast, &bound, .All)
+    testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                   len(checked.comparisons)==0,
+                   "same-domain equality without a proof stays unsupported")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+
+    // Existing nested mutation/join witness: opt-in comparison evidence is
+    // strictly observational and cannot change flow state or diagnoses.
+    nested := "let code: number = 1; code = 1 + 2; let ready: boolean = false;" +
+              "ready = code === 2; let result: boolean = false;" +
+              "if (code === 2) {" +
+              "  if (ready) { result = code === 2; result = ready === true; }" +
+              "  else { result = code === 2; result = ready === false; }" +
+              "  result = code === 2;" +
+              "} else {" +
+              "  if (!ready) { result = ready === false; }" +
+              "  else { result = ready === true; }" +
+              "  result = code === 9;" +
+              "} const after: boolean = code === 4;"
+    v2, ok2 := source.source_version_create(source.File_Id(832), 1, nested)
+    testing.expect(t, ok2, "nested source")
+    ast2 := parser.parse_expression_program(&v2, compat.ts7_profile())
+    bound2 := binder.bind_program(&v2, &ast2)
+    normal := check_file(&v2, &ast2, &bound2)
+    traced := check_file_with_relations(&v2, &ast2, &bound2, .All)
+    testing.expect(t, ast2.complete && bound2.complete &&
+                   normal.complete && traced.complete &&
+                   len(normal.comparisons)==0 && len(normal.diagnostics)==0 &&
+                   len(traced.diagnostics)==0 && len(traced.comparisons)>0 &&
+                   normal.checked_assignments==traced.checked_assignments,
+                   "comparison evidence leaves nested mutation and joins unchanged")
+    previous := -1
+    for comparison in traced.comparisons {
+        testing.expect(t, comparison.node_index>previous &&
+                       comparison.node_index<len(ast2.nodes) &&
+                       comparison.operator==.Equals_Equals_Equals,
+                       "nested comparison records remain source ordered")
+        previous=comparison.node_index
+    }
+    report_destroy(&traced)
+    report_destroy(&normal)
+    binder.binding_report_destroy(&bound2)
+    parser.syntax_report_destroy(&ast2)
+    source.source_version_destroy(&v2)
+}

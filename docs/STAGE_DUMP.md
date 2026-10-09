@@ -148,3 +148,12 @@ disabled, failures-only, and all mode. Comparison/disjointness diagnostics
 remain separate internal issues, **not** additional assignability relations.
 A future comparison-evidence stream requires a separately specified schema;
 no comparison decisions are fabricated for v2.
+
+### Pending M4-G5F8E publication
+
+The Odin checker has a separately owned opt-in `comparisons` evidence
+buffer for proved strict-equality operand overlap/disjointness. This internal
+report is **not serialized** by `tsodin.dump/2`; the Lab intentionally shows
+only v2 assignment relations. Publishing comparison records requires an
+explicitly new schema, an Odin-generated deterministic gallery and independent
+source-span validation. Do not synthesize comparison facts in JavaScript.
