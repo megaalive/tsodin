@@ -58,6 +58,9 @@ jobs:
       - name: Validate single-file binder and symbol references
         run: odin test src/binder
 
+      - name: Validate canonical primitive TypeId kernel
+        run: odin test src/typecore
+
       - name: Validate primitive semantic checker
         run: odin test src/checker
 
