@@ -10,6 +10,7 @@ tsodin is an experimental, performance-first TypeScript checker/compiler designe
 
 M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, contextual rescans and nested templates are implemented; full scanner parity is not yet established. **M2-A–C are implemented**: declaration parsing, expression precedence and syntax recovery, plus a developer-only source-to-syntax diagnostic tracer with UTF-16 positions. **M3-A–C are implemented**: a one-file binder, cross-file script-global binding, and explicit rejection of unsupported external modules. **M4-A–G5A are implemented as a narrow semantic slice**: primitive number/string/boolean expression checking (including bounded comparisons, strict equality and logical operators), selected TS2322/TS2367 code/UTF-16-start comparisons against native TypeScript 7, and separate supplemental TS6 structured full-span checks. A complete parser, module-aware binder, full type checker, official C0/C1 conformance, native TS7 end-span/message parity and end-to-end performance are **not yet established**.
 
+- [P0D-1: JSONC configuration and P0D → P1A plan](docs/P0D_PROJECT_PLAN.md)
 - [M1-A: source-version/index contract](docs/M1_SOURCE.md)
 - [M1-B–E: scanner and contextual witness](docs/M1_SCANNER.md)
 - [M2-A: declaration-parser subset](docs/M2_PARSER.md)
@@ -20,7 +21,7 @@ M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, con
 - [Official TypeScript conformance strategy](docs/OFFICIAL_CONFORMANCE.md)
 - [Audited Microsoft source/test inventory and next implementation priorities](docs/UPSTREAM_AUDIT.md)
 
-There are **no full TypeScript compatibility or compiler performance claims**. The CLI `check` command never reports success. The P0C `check -p <tsconfig.json>` entry point now loads and binds a narrowly supported explicit-root project, but exits 2 even after successful preflight: there is no operational project type checker. See [P0C project preflight](docs/P0C_PROJECT.md).
+There are **no full TypeScript compatibility or compiler performance claims**. The CLI `check` command never reports success. The P0C/P0D-1 `check -p <tsconfig.json>` entry point now loads and binds a narrowly supported explicit-root project (including JSONC comments), but exits 2 even after successful preflight: there is no operational project type checker. See [P0C project preflight](docs/P0C_PROJECT.md).
 
 **Developer evidence:** `tsodin dump --stage=all examples/typed-mismatch.ts` emits a versioned JSON snapshot of the actual supported scanner/parser/binder/checker slice. Stage statuses and internal error IDs are explicit; M4-G5F8C additionally captures bounded primitive assignment relations at their real checker decision sites. Use `--trace-relations` to include successful decisions; missing general relations are never invented. M4-G5F8F publishes source-backed strict-equality proof categories separately in `tsodin.dump/3`, never claiming that possible overlap means an expression evaluates to true. See [Stage dump contract](docs/STAGE_DUMP.md).
 
