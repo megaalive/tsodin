@@ -13,6 +13,8 @@ on:
       - "src/context/**"
       - "src/parser/**"
       - "src/binder/**"
+      - "src/project/**"
+      - "tests/project/**"
       - "src/checker/**"
       - "src/typecore/**"
       - "src/checkbench/**"
