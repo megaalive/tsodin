@@ -57,6 +57,20 @@ assert.match(html, /<title>tsodin — Compiler Observatory<\/title>/);
 assert.match(html, /href="\.\/live\.css\?v=20261009-live-orbit"/);
 assert.match(html, /href="\.\/soft-glass\.css\?v=20261008-xray-editor"/);
 assert.match(html, /GITHUB · CURRENT STATE/);
+const sparkCount=(html.match(/<svg class="spark-icon"/g)??[]).length;
+assert.equal(sparkCount,3,"Hero note, Product Truth and footer use consistent SVG sparks");
+assert.doesNotMatch(html,/✳|&#x2733;|&#10035;/i,
+  "Emoji-presentable Unicode star must not return to the site");
+assert.match(html,/<span class="tiny-cross" aria-hidden="true"><svg class="spark-icon"/,
+  "Product Truth icon must be font- and emoji-independent");
+assert.match(html,/<span class="footer-spark" aria-hidden="true"><svg class="spark-icon"/,
+  "Footer icon must be font- and emoji-independent");
+assert.match(html,/<span class="star-mark" aria-hidden="true"><svg class="spark-icon"/,
+  "Overview note icon must be font- and emoji-independent");
+assert.match(get("styles.css"),/\.tiny-cross \{ color:var\(--green\)/,
+  "Product Truth icon must follow the blue-glass theme token");
+assert.match(get("styles.css"),/\.spark-icon \{[^}]*width:20px;[^}]*height:20px;/,
+  "Symbols must have explicit stable dimensions on mobile");
 assert.match(html, /data-panel="conformance" hidden/);
 assert.match(html, /data-view="overview"/);
 assert.match(html, /aria-controls="conformance"/);
