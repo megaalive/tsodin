@@ -13,17 +13,17 @@ assert.equal(v.status,0);
 assert.match(v.stdout,/7\.0\.2\s*$/);
 const root=mkdtempSync(join(tmpdir(),"tsodin-unary-ts7-"));
 const cases={
-  not_true_assign_false:"const negated = !true; const literal: false = negated;\\n",
-  not_false_assign_true:"const negated = !false; const literal: true = negated;\\n",
-  twice_true_assign_true:"const twice = !!true; const literal: true = twice;\\n",
-  not_true_compare_true:"const negated = !true; const compared = negated === true;\\n",
-  not_true_compare_false:"const negated = !true; const compared = negated === false;\\n",
-  narrowed_branch_assign_false:"let flag: boolean = false; flag = 2 < 3; if(flag){ const inverted = !flag; const literal: false = inverted; }\\n",
+  not_true_assign_false:{source:"const negated = !true; const literal: false = negated;",codes:[]},
+  not_false_assign_true:{source:"const negated = !false; const literal: true = negated;",codes:[]},
+  twice_true_assign_true:{source:"const twice = !!true; const literal: true = twice;",codes:[]},
+  not_true_compare_true:{source:"const negated = !true; const compared = negated === true;",codes:[2367]},
+  not_true_compare_false:{source:"const negated = !true; const compared = negated === false;",codes:[]},
+  narrowed_branch_assign_false:{source:"let flag: boolean = false; flag = 2 < 3; if(flag){ const inverted = !flag; const literal: false = inverted; }",codes:[]},
 };
 try{
- for(const [id,raw] of Object.entries(cases)){
+ for(const [id,witness] of Object.entries(cases)){
   const dir=join(root,id);mkdirSync(dir);
-  writeFileSync(join(dir,"index.ts"),raw.replaceAll("\\n","\n"));
+  writeFileSync(join(dir,"index.ts"),witness.source+"\n");
   writeFileSync(join(dir,"tsconfig.json"),JSON.stringify({
    compilerOptions:{noEmit:true,strict:true,types:[],lib:["es2022"],skipLibCheck:true,incremental:false},
    files:["index.ts"],
@@ -33,6 +33,13 @@ try{
   });
   if(run.error||run.signal||run.status===null)throw Error(id+": compiler did not finish");
   const diagnostics=[...(run.stdout+"\n"+run.stderr).matchAll(/error TS(\d+):/g)].map(x=>Number(x[1]));
-  console.log("TSODIN_UNARY_PROBE|"+JSON.stringify({id,exit:run.status,diagnostics,output:run.stdout.trim()}));
+  assert.deepEqual(diagnostics,witness.codes,id+": pinned TypeScript 7 unary literal inference changed");
+  assert.equal(run.status,witness.codes.length?1:0,id+": unexpected TS7 CLI exit");
+  if(id==="not_true_compare_true"){
+    assert.match(run.stdout,/index\\.ts\\(1,41\\): error TS2367:/,
+      "independent TS7 UTF-16 diagnostic position changed");
+  }
+  console.log("PASS native TS7 unary singleton "+id+": "+diagnostics.join(","));
+
  }
 }finally{rmSync(root,{recursive:true,force:true});}

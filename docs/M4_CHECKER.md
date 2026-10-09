@@ -707,3 +707,34 @@ diagnostics, and the conservative no-folding boundary.
 diagnostic code/UTF-16-start witness and TS6.0.2 supplementary
 full-span witness; they do not imply complete TypeScript semantics.
 
+## M4-G5F8J — proven Boolean singleton negation
+
+The pinned native TypeScript 7.0.2 CLI independently demonstrates that
+`!true` carries type `false`, `!false` carries type `true`,
+`!!true` carries type `true`, and `!flag` in a path where
+`flag` is proven true can be assigned to a `false` literal. A
+comparison of the `!true` result with `true` produces TS2367
+at its pinned UTF-16 start position.
+
+Only where the current operand has a **proven Boolean singleton**
+does unary `!` now set the inverse synthetic `Literal_Fact`.
+It reuses the already documented negative-byte-start sentinel and
+keeps the proven-wide propagation from G5F8I unchanged. Unknown
+annotated operands are not guessed or folded. The proof may come from
+a direct literal, a retained inferred const alias, repeated or grouped
+negation, or an existing bounded branch narrowing; there is no new
+general control-flow graph.
+
+Unit regressions exercise valid alias comparisons, disjoint TS2367-like
+comparisons, an unrelated TS2322-like assignment mismatch, and
+one-arm mutation followed by join. Opt-in `.Failures`/`.All` traces
+remain a read-only subset of real Odin decisions, with no trace
+allocation in ordinary `check_file`. Three independent pinned
+`checker-unary-singleton-{valid,errors,flow-errors}` projects undergo
+native TS7 diagnostic-code/UTF-16-start comparison and supplemental
+TS6 full-span checking. Six further native TS7 literal-inference
+microprojects lock the distinction between runtime Boolean value and
+actual inferred literal type. Unsupported and broader TypeScript
+semantics remain fail closed; no public `tsodin check` unlock or
+conformance/performance claim is introduced.
+
