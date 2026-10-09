@@ -76,6 +76,9 @@ const fixtures=[
   // M4-G5F8W2: new source-to-source TS7 code/UTF-16 start assertion.
   {id:"checker-typeof-flow-valid",expectedCount:0},
   {id:"checker-typeof-flow-errors",expectedCount:2},
+  {id:"checker-var-redeclaration-valid",expectedCount:0},
+  {id:"checker-var-redeclaration-errors",expectedCount:1},
+  {id:"checker-var-redeclaration-flow-errors",expectedCount:1},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});
@@ -102,12 +105,14 @@ for(const fixture of fixtures){
   assert.equal(upstream.length,fixture.expectedCount,fixture.id+": expected TS7 errors");
   assert.equal(actual.length,fixture.expectedCount,fixture.id+": expected Odin diagnostics");
   for(const item of actual){
-    assert.ok(item.kind===10 || item.kind===11 || item.kind===12,fixture.id+": unmapped Odin issue");
+    assert.ok(item.kind===10 || item.kind===11 || item.kind===12 || item.kind===15,
+      fixture.id+": unmapped Odin issue");
     assert.ok(item.endLine>item.line ||
              (item.endLine===item.line && item.endColumn>item.column),
              fixture.id+": invalid Odin diagnostic span");
   }
-  const mapped=actual.map(d=>({code:d.kind===10?2322:2367,line:d.line,column:d.column}));
+  const mapped=actual.map(d=>({code:d.kind===10?2322:d.kind===15?2403:2367,
+    line:d.line,column:d.column}));
   if(fixture.id==="checker-primitives-utf16") {
     // Emoji precedes the declaration ON THE SAME LINE. UTF-8 byte columns
     // are different from UTF-16 units; this locks the real TS7 coordinate.

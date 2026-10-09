@@ -750,6 +750,12 @@
       "path": "tests/oracle/checker-var-redeclaration-errors",
       "files": ["index.ts", "tsconfig.json"],
       "expectDiagnostics": true
+    },
+    {
+      "id": "checker-var-redeclaration-flow-errors",
+      "path": "tests/oracle/checker-var-redeclaration-flow-errors",
+      "files": ["index.ts", "tsconfig.json"],
+      "expectDiagnostics": true
     }
   ]
 }

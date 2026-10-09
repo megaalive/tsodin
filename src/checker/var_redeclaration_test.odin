@@ -39,6 +39,35 @@ var_redeclaration_conflicting_type_never_succeeds :: proc(t: ^testing.T) {
     report := check_file(&v, &ast, &bound)
     defer report_destroy(&report)
     testing.expect(t, ast.complete && bound.complete, "binder merges names")
-    testing.expect(t, !report.complete && len(report.diagnostics)>0,
-                   "conflicting var redeclaration must not report checker success")
+    testing.expect(t, !report.complete && !report.fatal &&
+                   len(report.diagnostics)==1 &&
+                   report.diagnostics[0].issue==.Conflicting_Var_Redeclaration &&
+                   report.diagnostics[0].byte_end > report.diagnostics[0].byte_start,
+                   "TS2403 candidate must anchor the second declaration name")
+}
+
+@(test)
+var_redeclaration_replaces_canonical_union_flow :: proc(t: ^testing.T) {
+    cases := [?]struct {input: string, valid: bool}{
+        {"var x: number | string = 1; var x: string | number = 'text'; const s: string = x;", true},
+        {"var x: number | string = 1; var x: string | number = 'text'; const n: number = x;", false},
+    }
+    for c in cases {
+        v, ok := source.source_version_create(source.File_Id(966), 1, c.input)
+        testing.expect(t, ok, "source valid")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete &&
+                       checked.complete == c.valid, "redeclared union flow is current")
+        if !c.valid {
+            testing.expect(t, len(checked.diagnostics)==1 &&
+                           checked.diagnostics[0].issue==.Assignment_Type_Mismatch,
+                           "incompatible read follows the latest initializer")
+        }
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
 }

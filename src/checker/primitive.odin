@@ -34,6 +34,7 @@ Check_Issue :: enum {
     Disjoint_Primitive_Domains,
     Unsupported_Assignment_Target, // fail closed on const/var and unknown flow
     Unsupported_Condition, // unproved branch guard or malformed CFG event
+    Conflicting_Var_Redeclaration, // appended TS2403 candidate, issue ID 15
 }
 
 Diagnostic :: struct {
@@ -475,6 +476,7 @@ check_file_with_relations :: proc(
     guard_indices: [parser.FLOW_NEST_LIMIT][3]int
     guard_then_facts: [parser.FLOW_NEST_LIMIT][3]Literal_Fact
     guard_else_facts: [parser.FLOW_NEST_LIMIT][3]Literal_Fact
+    var_cursor := 0
     for event in syntax.statements {
         if event.kind == .Else {
             if flow_depth == 0 || event.declaration_index != -1 ||
@@ -1637,8 +1639,42 @@ check_file_with_relations :: proc(
                     wide_decls[declaration_index] = wide_nodes[expression_root]
                 }
             }
+            // A later var declaration must match the canonical first
+            // declaration's type, not merely typecheck its own initializer.
+            if var_cursor < len(symbols.var_redeclarations) &&
+               symbols.var_redeclarations[var_cursor].subsequent_index == declaration_index {
+                first := symbols.var_redeclarations[var_cursor].first_index
+                if first < 0 || first >= declaration_index ||
+                   syntax.declarations[first].kind != .Var || decl.kind != .Var ||
+                   text[syntax.declarations[first].name_start:syntax.declarations[first].name_end] !=
+                       text[decl.name_start:decl.name_end] {
+                    fail(&result, .Invalid_Input, decl.name_start, decl.name_end, true)
+                    return result
+                }
+                same_type := declared[first] == declared[declaration_index]
+                if same_type && declared[first] == .Union {
+                    same_type = declared_ids[first] == declared_ids[declaration_index]
+                }
+                if !same_type {
+                    fail(&result, .Conflicting_Var_Redeclaration,
+                         decl.name_start, decl.name_end, false)
+                } else {
+                    // Both declarations have one symbol. Transfer the latest
+                    // initializer's flow facts to its canonical owner.
+                    literal_decls[first] = literal_decls[declaration_index]
+                    wide_decls[first] = wide_decls[declaration_index]
+                    if union_file {
+                        flow_ids[first] = flow_ids[declaration_index]
+                    }
+                }
+                var_cursor += 1
+            }
             result.checked_declarations += 1
         }
+    }
+    if var_cursor != len(symbols.var_redeclarations) {
+        fail(&result, .Invalid_Input, 0, 0, true)
+        return result
     }
     if flow_depth != 0 {
         fail(&result, .Unsupported_Condition, 0, 0, true)
