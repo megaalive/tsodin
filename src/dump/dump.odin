@@ -197,16 +197,40 @@ write :: proc(filename: string, trace_all: bool) -> bool {
     defer delete(nodes)
     syntax_issues := make([dynamic]Diagnostic)
     defer delete(syntax_issues)
+    // Tokens are in source order with non-overlapping spans. Exclude the
+    // terminal EOF/failure token from AST mappings, exactly as before.
+    span_token_count := len(tokens)
+    if span_token_count > 0 {
+        tail := tokens[span_token_count-1].kind
+        if tail == .End_Of_File || tail == .Invalid { span_token_count -= 1 }
+    }
     for node in syntax.nodes {
         units, ok := unit_span(&version, node.byte_start, node.byte_end)
         if !ok { fmt.eprintln("error: invalid syntax node position"); return false }
         first, last := -1, -1
-        for token, i in tokens {
-            if token.kind == .End_Of_File || token.kind == .Invalid { continue }
-            if token.bytes[0] >= node.byte_start && token.bytes[1] <= node.byte_end {
-                if first == -1 { first = i }
-                last = i
+        // PERF: two monotone binary searches replace scanning every token
+        // for every AST node. Retain the exact inclusive token-ID contract.
+        low, high := 0, span_token_count
+        for low < high {
+            mid := low + (high-low)/2
+            if tokens[mid].bytes[0] < node.byte_start {
+                low = mid+1
+            } else {
+                high = mid
             }
+        }
+        if low < span_token_count && tokens[low].bytes[1] <= node.byte_end {
+            first = low
+            high = span_token_count
+            for low < high {
+                mid := low + (high-low)/2
+                if tokens[mid].bytes[1] <= node.byte_end {
+                    low = mid+1
+                } else {
+                    high = mid
+                }
+            }
+            last = low-1
         }
         append(&nodes, Node{
             kind=node.kind, operator=node.operator,

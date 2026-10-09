@@ -61,7 +61,13 @@ for(const [name,expected] of cases){
   for(const [i,n] of data.stages.ast.nodes.entries()){
     checkSpan(n,"ast "+i);
     for(const child of [n.left,n.right])assert.ok(child===-1||(child>=0&&child<i),"postorder node index");
-    if(n.tokens[0]!==-1)assert.ok(n.tokens[0]<=n.tokens[1]&&n.tokens[1]<tokens.length);
+    // Deliberately slow independent reference for the optimized Odin
+    // token-range lookup; exact token IDs must not change with the algorithm.
+    const covered=tokens.flatMap((t,j)=>
+      t.kind==="End_Of_File"||t.kind==="Invalid"||t.bytes[0]<n.bytes[0]||t.bytes[1]>n.bytes[1]
+        ? [] : [j]);
+    assert.deepEqual(n.tokens,covered.length?[covered[0],covered.at(-1)]:[-1,-1],
+      "AST node "+i+": binary token range matches independent full scan");
   }
   for(const r of data.stages.symbols.references) {
     assert.ok(r.node_index>=0 && r.node_index<data.stages.ast.nodes.length);
