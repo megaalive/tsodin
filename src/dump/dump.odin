@@ -262,7 +262,7 @@ write :: proc(filename: string) -> bool {
         node_types_status="not_implemented",relations_status="not_implemented",
     }
 
-    data, encode_error := json.marshal(output, {.use_enum_names=true})
+    data, encode_error := json.marshal(output, {use_enum_names=true})
     if encode_error != nil { fmt.eprintln("error: JSON serialization failed"); return false }
     defer delete(data)
     fmt.printf("%s\n", transmute(string)data)
