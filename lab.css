@@ -45,3 +45,43 @@
 .lab-json { max-height:240px; overflow:auto; font:11px/1.5 ui-monospace,Consolas,monospace; white-space:pre; color:var(--muted); }
 .lab-honesty { color:var(--muted); font-size:13px; margin:18px 0 0; max-width:95ch; }
 @media(max-width:760px){.lab-grid{grid-template-columns:1fr}.lab-wide{grid-column:1}.lab-card{padding:16px}.lab-branch{padding-left:9px}.lab-toolbar select{flex:1;min-width:0}.lab-trust{width:100%}}
+
+/* Match every independently scrolling Lab surface to the Observatory blue.
+   Firefox uses scrollbar-color; Chromium/WebKit (including iOS when it paints
+   custom scrollbars) use the pseudo-elements. Native touch scrolling remains. */
+#lab .lab-pre,
+#lab .lab-caps,
+#lab .lab-tree,
+#lab .lab-json {
+  scrollbar-color: var(--blue) var(--surface-2);
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+#lab .lab-pre::-webkit-scrollbar,
+#lab .lab-caps::-webkit-scrollbar,
+#lab .lab-tree::-webkit-scrollbar,
+#lab .lab-json::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+#lab .lab-pre::-webkit-scrollbar-track,
+#lab .lab-caps::-webkit-scrollbar-track,
+#lab .lab-tree::-webkit-scrollbar-track,
+#lab .lab-json::-webkit-scrollbar-track {
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+#lab .lab-pre::-webkit-scrollbar-thumb,
+#lab .lab-caps::-webkit-scrollbar-thumb,
+#lab .lab-tree::-webkit-scrollbar-thumb,
+#lab .lab-json::-webkit-scrollbar-thumb {
+  background: var(--blue);
+  border-radius: 8px;
+  border: 2px solid var(--surface-2);
+}
+#lab .lab-pre::-webkit-scrollbar-thumb:hover,
+#lab .lab-caps::-webkit-scrollbar-thumb:hover,
+#lab .lab-tree::-webkit-scrollbar-thumb:hover,
+#lab .lab-json::-webkit-scrollbar-thumb:hover {
+  background: #aedbff;
+}

@@ -52,6 +52,17 @@ assert.equal(workflowOutcome({status:"completed",conclusion:"failure"}).label,"F
 assert.equal(workflowOutcome({status:"completed",conclusion:"cancelled"}).label,"CANCELLED");
 assert.equal(workflowOutcome({status:"completed",conclusion:"success"}).label,"PASS");
 
+const labCss=get("lab.css");
+for(const surface of [".lab-pre",".lab-caps",".lab-tree",".lab-json"]){
+  assert.ok(labCss.includes("#lab "+surface),
+    "Lab must explicitly theme scrollable "+surface);
+  assert.ok(labCss.includes("#lab "+surface+"::-webkit-scrollbar-thumb"),
+    "Blink/WebKit thumb must follow Lab blue for "+surface);
+}
+assert.match(labCss,/scrollbar-color:\s*var\(--blue\) var\(--surface-2\)/,
+  "Firefox scrollbar uses Observatory blue and dark track");
+assert.match(labCss,/scrollbar-width:\s*thin/,
+  "Keep compact but visible Firefox scrollbars");
 const html=get("index.html");
 assert.match(html, /<title>tsodin — Compiler Observatory<\/title>/);
 assert.match(html, /href="\.\/live\.css\?v=20261009-live-orbit"/);
