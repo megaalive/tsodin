@@ -861,6 +861,9 @@ check_file_with_relations :: proc(
             }
         }
         expression_type := inferred[expression_root]
+        // The postorder condition still needs this expression's first node.
+        // node_cursor advances for the NEXT statement before guard matching.
+        expression_begin := node_cursor
         node_cursor = expression_root + 1
         if condition_event {
             if expression_type != .Boolean {
@@ -872,7 +875,7 @@ check_file_with_relations :: proc(
             // mutations); TypeScript's short circuit controls WHICH arm may
             // infer facts, not whether this parser binds an operand.
             guard_unwrapped := unwrap_guard_wrappers(
-                syntax.nodes[:], expression_root, node_cursor)
+                syntax.nodes[:], expression_root, expression_begin)
             if !guard_unwrapped.valid {
                 fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                 return result
@@ -1063,7 +1066,7 @@ check_file_with_relations :: proc(
                            ((root.operator == .Ampersand_Ampersand && value) ||
                             (root.operator == .Bar_Bar && !value)) {
                             name_unwrapped := unwrap_guard_wrappers(
-                                syntax.nodes[:], name_expr, node_cursor)
+                                syntax.nodes[:], name_expr, expression_begin)
                             if name_unwrapped.valid &&
                                syntax.nodes[name_unwrapped.index].kind == .Name {
                                 part_count = 1
@@ -1086,7 +1089,7 @@ check_file_with_relations :: proc(
             contradiction_guard[level] = -1
             for slot in 0..<part_count {
                 leaf_unwrapped := unwrap_guard_wrappers(
-                    syntax.nodes[:], part_nodes[slot], node_cursor)
+                    syntax.nodes[:], part_nodes[slot], expression_begin)
                 if !leaf_unwrapped.valid {
                     fail(&result, .Unsupported_Condition, event.byte_start, event.byte_end, true)
                     return result
