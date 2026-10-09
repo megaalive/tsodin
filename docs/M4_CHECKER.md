@@ -770,3 +770,33 @@ and supplementary TS6.0.2 full-span witness. They do not unlock
 the public `tsodin check` endpoint, prove official conformance,
 or establish a performance win.
 
+## M4-G5F8L — Boolean identity guards with complete two-arm facts
+
+The restricted `if/else` checker accepts four pure Boolean identities:
+`flag && true`, `true && flag`, `flag || false` and
+`false || flag`, with an optional outer `!`. Here `flag` must
+be an initialized, proven-wide Boolean `let` name. **Unlike generic
+compound guards, each identity is logically equivalent to `flag`
+on BOTH arms**, so it is safe to infer `flag=true` in the true arm
+and `flag=false` in the false arm (reversed by outer negation).
+
+The implementation reduces only existing guard metadata to a single
+name. Expression evaluation still uses the original postorder tree,
+no eager evaluation of the short-circuit RHS occurs, and the existing
+per-depth snapshots and joins enforce mutation invalidation. Literal
+operands must be direct, source-backed Boolean tokens of the exact
+identity value. Non-identities such as `flag && false` and
+`true || flag` remain fail-closed rather than inventing arm facts.
+Computed constants, grouped operands, arbitrary truthiness, branch
+declarations and general CFG constructs are not added.
+
+The positive and negative Odin regressions prove exact source-ordered
+comparison evidence, trace-mode diagnostic independence, outer negation,
+a nested mutation and two joins, and fail-closed non-identities.
+Three pinned TS7.0.2 oracle projects witness zero diagnostic success
+for valid/nested flows and twelve TS2367 plus one TS2322 for disjoint
+branches, with independent TS7 code/UTF-16 starts and supplemental
+TS6.0.2 category/start/end positions. These are bounded correctness
+witnesses, not public `tsodin check` enablement, full TS7 parity or
+a measured performance claim.
+

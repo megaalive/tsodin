@@ -40,6 +40,17 @@ for(const [id,expected] of [
     item.files.includes("index.ts") && item.files.includes("tsconfig.json"),
     "Boolean logical oracle project must remain independently captured");
 }
+for(const [id,expected] of [
+  ["checker-boolean-identity-valid",false],
+  ["checker-boolean-identity-errors",true],
+  ["checker-boolean-identity-nested-valid",false],
+]){
+  const item=manifest.projects.find(p=>p.id===id);
+  assert.ok(item && item.expectDiagnostics===expected &&
+    item.path==="tests/oracle/"+id &&
+    item.files.includes("index.ts") && item.files.includes("tsconfig.json"),
+    "Boolean identity guard witness must remain independently pinned");
+}
 for(const spelling of ["01","00","08"]){
   const id="scanner-leading-zero-"+spelling;
   const witness=manifest.projects.find(item=>item.id===id);
