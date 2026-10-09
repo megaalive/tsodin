@@ -335,11 +335,11 @@ primitive_checker_const_literal_alias_provenance :: proc(t: ^testing.T) {
 }
 
 @(test)
-primitive_checker_does_not_assume_mutable_or_annotated_literals :: proc(t: ^testing.T) {
+primitive_checker_widens_mutable_and_annotated_primitive_domains :: proc(t: ^testing.T) {
     cases := [?]string {
         "let flexible = 1; const result = flexible === 2;",
         "const widened: number = 1; const result = widened === 2;",
-        "var mutable = false; const result = mutable === true;",
+        "const typed: string = 'left'; const result = typed !== 'right';",
     }
     for input in cases {
         v, ok := source.source_version_create(source.File_Id(722), 1, input)
@@ -348,10 +348,9 @@ primitive_checker_does_not_assume_mutable_or_annotated_literals :: proc(t: ^test
         bound := binder.bind_program(&v, &ast)
         checked := check_file(&v, &ast, &bound)
         testing.expect(t, ast.complete && bound.complete &&
-                       checked.fatal && !checked.complete &&
-                       len(checked.diagnostics) == 1 &&
-                       checked.diagnostics[0].issue == .Incompatible_Operator,
-                       "no fabricated literal identity for let/var or annotations")
+                       !checked.fatal && checked.complete &&
+                       len(checked.diagnostics) == 0,
+                       "number/string domains widen without inventing literal facts")
         report_destroy(&checked)
         binder.binding_report_destroy(&bound)
         parser.syntax_report_destroy(&ast)
@@ -392,17 +391,16 @@ primitive_checker_proves_disjoint_base_domains_without_literal_flow :: proc(t: ^
 }
 
 @(test)
-primitive_checker_does_not_invent_same_domain_overlap :: proc(t: ^testing.T) {
+primitive_checker_accepts_annotated_wide_same_domain_overlap :: proc(t: ^testing.T) {
     input := "const a: number = 1; const b: number = 2; const uncertain = a === b;"
     v, ok := source.source_version_create(source.File_Id(724), 1, input)
     testing.expect(t, ok, "valid source")
     ast := parser.parse_expression_program(&v, compat.ts7_profile())
     bound := binder.bind_program(&v, &ast)
     checked := check_file(&v, &ast, &bound)
-    testing.expect(t, ast.complete && bound.complete && checked.fatal &&
-                   !checked.complete && len(checked.diagnostics) == 1 &&
-                   checked.diagnostics[0].issue == .Incompatible_Operator,
-                   "widened same-base types remain unsupported without flow proof")
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && len(checked.diagnostics) == 0,
+                   "explicit number annotations provide wide same-base overlap")
     report_destroy(&checked)
     binder.binding_report_destroy(&bound)
     parser.syntax_report_destroy(&ast)
@@ -460,17 +458,16 @@ primitive_checker_wide_domains_preserve_disjointness :: proc(t: ^testing.T) {
 }
 
 @(test)
-primitive_checker_mutable_computation_does_not_gain_const_provenance :: proc(t: ^testing.T) {
+primitive_checker_mutable_computation_remains_wide :: proc(t: ^testing.T) {
     input := "let mutable = 1 + 2; const uncertain = mutable === 7;"
     v, ok := source.source_version_create(source.File_Id(727), 1, input)
     testing.expect(t, ok, "valid source snapshot")
     ast := parser.parse_expression_program(&v, compat.ts7_profile())
     bound := binder.bind_program(&v, &ast)
     checked := check_file(&v, &ast, &bound)
-    testing.expect(t, ast.complete && bound.complete && checked.fatal &&
-                   !checked.complete && len(checked.diagnostics) == 1 &&
-                   checked.diagnostics[0].issue == .Incompatible_Operator,
-                   "mutable inferred value is not granted unproven flow semantics")
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && len(checked.diagnostics) == 0,
+                   "computed mutable numbers have a wide domain, not a literal identity")
     report_destroy(&checked)
     binder.binding_report_destroy(&bound)
     parser.syntax_report_destroy(&ast)
@@ -1773,17 +1770,24 @@ primitive_checker_comparison_evidence_is_not_assignability :: proc(t: ^testing.T
 
 @(test)
 primitive_checker_comparison_trace_fails_closed_and_preserves_joins :: proc(t: ^testing.T) {
-    // Neither trace mode can manufacture a proof for two untracked domains.
-    unsupported := "const a: number = 1; const b: number = 2;" +
-                   "const unproved = a === b;"
-    v, ok := source.source_version_create(source.File_Id(831), 1, unsupported)
+    // Explicit number annotations establish wide domains, not singletons.
+    // Trace mode observes that decision without changing the checker result.
+    annotated := "const a: number = 1; const b: number = 2;" +
+                 "const overlap = a === b;"
+    v, ok := source.source_version_create(source.File_Id(831), 1, annotated)
     testing.expect(t, ok, "source")
     ast := parser.parse_expression_program(&v, compat.ts7_profile())
     bound := binder.bind_program(&v, &ast)
     checked := check_file_with_relations(&v, &ast, &bound, .All)
-    testing.expect(t, ast.complete && bound.complete && checked.fatal &&
-                   len(checked.comparisons)==0,
-                   "same-domain equality without a proof stays unsupported")
+    testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                   !checked.fatal && len(checked.diagnostics)==0 &&
+                   len(checked.comparisons)==1,
+                   "annotated same-domain comparison has one genuine overlap proof")
+    if len(checked.comparisons)==1 {
+        testing.expect(t, checked.comparisons[0].proof==.Widened_Domain &&
+                       checked.comparisons[0].overlaps,
+                       "trace records widened annotation at the comparison site")
+    }
     report_destroy(&checked)
     binder.binding_report_destroy(&bound)
     parser.syntax_report_destroy(&ast)

@@ -52,10 +52,10 @@ checker_unary_not_preserves_wide_boolean_domain :: proc(t: ^testing.T) {
     }
 }
 
-// An explicitly annotated Boolean const is not retained as an inferred
-// singleton in this bounded checker. Negating it cannot fabricate a fact.
+// The declared boolean domain is wide, but its proven initial flow value
+// remains a singleton. Unary ! inverts only that proven flow fact.
 @(test)
-checker_unary_not_unproved_annotated_operand_stays_closed :: proc(t: ^testing.T) {
+checker_unary_not_preserves_annotated_boolean_flow_fact :: proc(t: ^testing.T) {
     input := "const typed: boolean = true; const negated = !typed;" +
              "const comparison = negated === false;"
     v, ok := source.source_version_create(source.File_Id(836), 1, input)
@@ -68,11 +68,11 @@ checker_unary_not_unproved_annotated_operand_stays_closed :: proc(t: ^testing.T)
     checked := check_file_with_relations(&v, &ast, &bound, .All)
     defer report_destroy(&checked)
     testing.expect(t, ast.complete && bound.complete &&
-                   checked.fatal && !checked.complete &&
-                   len(checked.comparisons)==0 &&
-                   len(checked.diagnostics)==1 &&
-                   checked.diagnostics[0].issue==.Incompatible_Operator,
-                   "unproven annotated const Boolean remains explicitly unsupported")
+                   checked.complete && !checked.fatal &&
+                   len(checked.comparisons)==1 &&
+                   checked.comparisons[0].proof==.Same_Literal &&
+                   len(checked.diagnostics)==0,
+                   "annotated Boolean flow and unary inversion prove the same literal")
 }
 
 @(test)

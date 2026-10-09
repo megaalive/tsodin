@@ -1,0 +1,13 @@
+const typedFlag: boolean = true;
+const oppositeFlag = false;
+const disjointFlag: boolean = typedFlag === oppositeFlag;
+const aliasFlag: boolean = typedFlag;
+const disjointAlias: boolean = aliasFlag !== false;
+let mutableFlag: boolean = false;
+const disjointFlow: boolean = mutableFlag === true;
+mutableFlag = true;
+const disjointAfterWrite: boolean = mutableFlag === false;
+const inferredOne = 1;
+const inferredTwo = 2;
+const disjointNumber: boolean = inferredOne === inferredTwo;
+const wrong: string = typedFlag;
