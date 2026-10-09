@@ -19,7 +19,11 @@ const manifest=JSON.parse(readFileSync(resolve(root,pinned.manifest),'utf8'));
 assert.equal(manifest.oracleVersion,pinned.version);
 assert.equal(manifest.schemaVersion,1);
 assert.ok(manifest.projects.some(item=>item.id==='scanner-ascii' && !item.expectDiagnostics));
-for(const [id,expected] of [["checker-unary-wide-valid",false],["checker-unary-wide-errors",true]]){
+for(const [id,expected] of [
+  ["checker-unary-wide-valid",false],["checker-unary-wide-errors",true],
+  ["checker-unary-singleton-valid",false],["checker-unary-singleton-errors",true],
+  ["checker-unary-singleton-flow-errors",true],
+]){
   const item=manifest.projects.find(p=>p.id===id);
   assert.ok(item && item.expectDiagnostics===expected &&
     item.path==="tests/oracle/"+id && item.files.includes("index.ts"),
