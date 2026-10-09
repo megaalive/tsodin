@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "pinnedSourceRepository": "microsoft/TypeScript",
+  "sourceRevision": "1e4744d68260a7cb91b62b12edc3f6a2187faaf1",
+  "pinnedExecutableProfile": "ts7",
+  "selection": "selective_official_source_fixtures_not_official_baselines",
+  "cases": [
+    {
+      "id": "annotated-initializers",
+      "upstreamPath": "tests/cases/conformance/statements/VariableStatements/everyTypeWithAnnotationAndInitializer.ts",
+      "localPath": "tests/oracle/official-selected/sources/annotated-initializers.ts",
+      "gitBlobSha1": "dc8fbb53f6ecff29b4a4e367387d62858c1dd8cb",
+      "tsodinDisposition": "unsupported",
+      "reason": "Requires interface/class/function/namespace/generics/any and other unsupported syntax"
+    },
+    {
+      "id": "typeof-number-guard",
+      "upstreamPath": "tests/cases/conformance/expressions/typeGuards/typeGuardOfFormTypeOfNumber.ts",
+      "localPath": "tests/oracle/official-selected/sources/typeof-number-guard.ts",
+      "gitBlobSha1": "05c4670d98042eeea650e619c3140a1848085935",
+      "tsodinDisposition": "unsupported",
+      "reason": "Requires class types, uninitialized globals and nested declarations outside current scope"
+    },
+    {
+      "id": "strict-octal-literals",
+      "upstreamPath": "tests/cases/conformance/expressions/literals/strictModeOctalLiterals.ts",
+      "localPath": "tests/oracle/official-selected/sources/strict-octal-literals.ts",
+      "gitBlobSha1": "69b9267f9994ad8b5b6dbefd4ffe939cd03562c1",
+      "tsodinDisposition": "unsupported",
+      "reason": "Requires enum declarations and historical numeric literal handling"
+    }
+  ]
+}
