@@ -32,7 +32,8 @@ position_index_preserves_scalar_boundaries_and_source_reference :: proc(t: ^test
 
 @(test)
 position_index_preserves_line_separators_and_empty_source :: proc(t: ^testing.T) {
-    for input in [?]string{"", "a😀é\r\nB\u2028C\u2029D\rE\n", "abc"} {
+    cases := [?]string{"", "a😀é\r\nB\u2028C\u2029D\rE\n", "abc"}
+    for input in cases {
         v, ok := source.source_version_create(source.File_Id(778), 1, input)
         testing.expect(t, ok, "valid UTF-8 source")
         idx, indexed := position_index_create(&v)
