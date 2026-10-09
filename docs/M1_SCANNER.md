@@ -136,3 +136,18 @@ diagnostic parity. Context drivers are not a complete statement parser.
 Future performance must be evaluated on true source-to-diagnostics project
 workloads after compatibility gates. Token benchmark wins do not imply that
 whole-program checking beats any previous prototype or competing checker.
+
+## TS7 numeric lexical follow-up — leading-zero forms
+
+The pinned TypeScript 7.0.2 CLI capture now runs three independent
+`strict`, `noEmit` projects for `01`, `00`, and `08`, each expecting
+a nonzero TypeScript diagnostic exit. Keeping separate projects means
+one spelling cannot be masked by diagnostics from another. The
+fixture registry verifies the exact source lexemes in the profile test.
+
+Tsodin's scanner already rejects these legacy spellings with a sticky
+internal `Unsupported_Syntax` (PR #58). The independent native TS7
+CLI projects test the error boundary, **not** token-kind or exact
+TypeScript diagnostic-code parity. No semantic checker expansion,
+runtime allocation or unsupported numeric grammar is added.
+
