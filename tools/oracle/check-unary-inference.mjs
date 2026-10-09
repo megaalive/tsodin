@@ -36,7 +36,7 @@ try{
   assert.deepEqual(diagnostics,witness.codes,id+": pinned TypeScript 7 unary literal inference changed");
   assert.equal(run.status,witness.codes.length?1:0,id+": unexpected TS7 CLI exit");
   if(id==="not_true_compare_true"){
-    assert.match(run.stdout,/index\\.ts\\(1,41\\): error TS2367:/,
+    assert.match(run.stdout,/index\.ts\(1,41\): error TS2367:/,
       "independent TS7 UTF-16 diagnostic position changed");
   }
   console.log("PASS native TS7 unary singleton "+id+": "+diagnostics.join(","));
