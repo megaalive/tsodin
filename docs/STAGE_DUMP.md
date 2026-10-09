@@ -126,3 +126,25 @@ versioned v2 data, and the checked-in examples must be regenerated from
 the pinned Odin binary. The schema version is deliberately changed so
 consumers can reject incompatible records instead of silently
 misinterpreting them.
+
+### M4-G5F8D — relation evidence integrity
+
+This milestone keeps `tsodin.dump/2` unchanged. The browser rejects a
+relation unless its RHS node is the root of a matching parser declaration or
+assignment event, its declaration/assignment target agrees with the parser
+and binder, and the records occur once in source expression order.
+For annotated targets, the primitive target must match the original
+annotation; inferred targets are **not** re-inferred in JavaScript.
+Because v2 compares only supported primitive compatibility, the recorded
+YES/NO must agree with the primitive-domain identity check already used by
+Odin. These are **integrity checks of existing evidence**, not a second
+browser-side type checker.
+
+The verifier deliberately rejects corrupted source spans, forged node IDs,
+shuffled decisions, wrong relation contexts, false YES/NO results, or wrong
+binder targets. Odin regression coverage additionally checks relation
+ordering across two nested if/else levels, mutations and joins with tracing
+disabled, failures-only, and all mode. Comparison/disjointness diagnostics
+remain separate internal issues, **not** additional assignability relations.
+A future comparison-evidence stream requires a separately specified schema;
+no comparison decisions are fabricated for v2.

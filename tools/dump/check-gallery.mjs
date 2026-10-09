@@ -26,6 +26,43 @@ for(const example of manifest.examples){
     forged.stages.types.relations[0].node_index=999999;
     assert.throws(()=>validateStageDump(forged),/relation node index/,
       "Forged checker relation IDs must fail");
+    const inverted=structuredClone(trace);
+    inverted.stages.types.relations[0].result=!inverted.stages.types.relations[0].result;
+    assert.throws(()=>validateStageDump(inverted),/Inconsistent primitive compatibility/,
+      "A forged YES/NO answer must not pass structural validation");
+    const misclassified=structuredClone(trace);
+    const first=misclassified.stages.types.relations[0];
+    first.relation_kind=first.relation_kind==="Variable"?"Assignment":"Variable";
+    assert.throws(()=>validateStageDump(misclassified),/matching statement RHS/,
+      "A relation cannot claim the wrong checker decision site");
+    const wrongTarget=structuredClone(trace);
+    const relation=wrongTarget.stages.types.relations.find(r=>r.relation_kind==="Variable");
+    if(relation){
+      relation.target=relation.target==="Number"?"Text":"Number";
+      relation.result=relation.source===relation.target;
+      assert.throws(()=>validateStageDump(wrongTarget),/annotated declaration/,
+        "A type-correct-looking decision still needs the original annotated target");
+    }
+    if(trace.stages.types.relations.length>1){
+      const reversed=structuredClone(trace);
+      [reversed.stages.types.relations[0],reversed.stages.types.relations[1]]=
+        [reversed.stages.types.relations[1],reversed.stages.types.relations[0]];
+      assert.throws(()=>validateStageDump(reversed),/expression source order/,
+        "Shuffled or duplicated decisions must not masquerade as Odin source order");
+    }
+    const assignment=trace.stages.types.relations.find(r=>r.relation_kind==="Assignment");
+    if(assignment){
+      const mismatched=structuredClone(trace);
+      const live=mismatched.stages.types.relations.find(r=>r.relation_kind==="Assignment");
+      const event=mismatched.stages.ast.statements.find(
+        e=>e.kind==="Assignment"&&e.expression===live.node_index);
+      const ref=mismatched.stages.symbols.references.find(r=>r.node_index===event.target_node);
+      if(mismatched.stages.symbols.symbols.length>1){
+        ref.symbol_index=(ref.symbol_index+1)%mismatched.stages.symbols.symbols.length;
+        assert.throws(()=>validateStageDump(mismatched),/target disagrees with binder/,
+          "Assignment target must resolve to the actual declaration");
+      }
+    }
   }
   console.log("PASS: browser validates actual Odin positions and shape: "+example.id);
 }
