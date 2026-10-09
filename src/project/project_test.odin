@@ -12,7 +12,7 @@ config_accepts_only_ordered_explicit_scripts :: proc(t: ^testing.T) {
                    "explicit roots normalize but preserve selection order")
     // TypeScript accepts trailing commas in tsconfig; Odin's JSON parser
     // also accepts these even when the JSON specification is selected.
-    trailing, trailing_err := parse_config("{\\"files\\":[\\"a.ts\\",],\\"compilerOptions\\":{\\"noEmit\\":true,},}")
+    trailing, trailing_err := parse_config("{\"files\":[\"a.ts\",],\"compilerOptions\":{\"noEmit\":true,},}")
     defer config_destroy(&trailing)
     testing.expect(t, trailing_err == .None && len(trailing.roots) == 1 &&
                    trailing.roots[0] == "a.ts",
@@ -33,7 +33,6 @@ config_rejects_unsupported_semantics_and_aliases :: proc(t: ^testing.T) {
         {"{\"files\":[\"a.d.ts\"],\"compilerOptions\":{\"noEmit\":true}}", .Invalid_File},
         {"{\"files\":[\"a.tsx\"],\"compilerOptions\":{\"noEmit\":true}}", .Invalid_File},
         {"{\"files\":[9],\"compilerOptions\":{\"noEmit\":true}}", .Invalid_File},
-        {"{\"files\":[\"a.ts\"],\"compilerOptions\":{\"noEmit\":true},}", .Invalid_Json},
     }
     for entry in inputs {
         cfg, err := parse_config(entry.text)
