@@ -156,6 +156,37 @@ guard results disagree on direction, and runner variability remains
 a concern. The candidate improves mixed guards in both runs, but
 without controlled-host confirmation is still **exploratory**.
 
+### Third exploratory Q measurement and bounded decision
+
+[Third Actions run and raw samples](https://github.com/megaalive/tsodin/actions/runs/37906144224)
+
+| Fixture | Q / post-O, third run |
+|---|---:|
+| checker-primitives-valid | 1.0020× |
+| checker-boolean-identity-valid | 0.9679× |
+| checker-negated-identity-valid | 0.9812× |
+| checker-flow-mixed-rhs-valid | 0.9746× |
+| checker-flow-mixed-left-valid | 0.9691× |
+| checker-flow-mixed-nested-errors | 0.9796× |
+| checker-flow-three-nested-valid | 0.9889× |
+
+Across these three unpinned-host GitHub runner measurements,
+`checker-flow-mixed-rhs-valid` improved to 0.9700× / 0.9786× /
+0.9746× candidate/post-O; `checker-flow-mixed-left-valid` to
+0.9611× / 0.9713× / 0.9691×. All seven checksum witnesses
+matched exactly across each historical and candidate lane.
+
+**Bounded decision:** keep the two forced-inline call sites as a
+small, reversible code-generation candidate with supporting repeated
+exploratory evidence. They preserve every existing source-level guard
+and no extra allocation or analyzer path. Do not claim the project
+or TypeScript checker is categorically faster: the effect applies to
+this pinned optimized Odin build and selected fixtures, includes
+process startup, and is not yet corroborated on a controlled host.
+If a future Odin release or controlled benchmark reverses the
+result, remove the directives rather than weakening provenance
+validation.
+
 ### GitHub Pages performance-publication contract
 
 The Observatory should eventually receive a dedicated
