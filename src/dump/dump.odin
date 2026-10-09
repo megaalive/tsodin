@@ -80,12 +80,25 @@ Symbol_Stage :: struct {
     lookup_status: string,
 }
 
+Relation :: struct {
+    source: checker.Primitive,
+    target: checker.Primitive,
+    node_index: int,
+    declaration_index: int,
+    context: checker.Relation_Context,
+    result: bool,
+    bytes: Span, // source expression, never a guessed TS diagnostic anchor
+    utf16: Unit_Span,
+}
+
 Type_Stage :: struct {
     status: string,
     outcome: string,
     checked_declarations: int,
     checked_assignments: int,
     diagnostics: []Diagnostic,
+    relations: []Relation,
+    trace_mode: string,
     issue_namespace: string,
     node_types_status: string,
     relations_status: string,
@@ -131,7 +144,7 @@ diagnostic :: proc(v: ^source.Source_Version, id, start, end: int) -> (Diagnosti
 // No timestamps, no labels/colors and no fabricated TypeScript diagnostics.
 // Unsupported parsing/binding/checking is represented as an outcome, not a
 // successful check. Does not mutate any of the stage reports.
-write :: proc(filename: string) -> bool {
+write :: proc(filename: string, trace_all: bool) -> bool {
     bytes, file_error := os.read_entire_file(filename, context.allocator)
     if file_error != nil { fmt.eprintln("error: source file unavailable"); return false }
     defer delete(bytes)
@@ -140,7 +153,7 @@ write :: proc(filename: string) -> bool {
     defer source.source_version_destroy(&version)
 
     output := Document {
-        schema="tsodin.dump/1",
+        schema="tsodin.dump/2",
         profile="ts7",
         source=Source{
             name=filename, text=version.owned_text,
@@ -242,10 +255,35 @@ write :: proc(filename: string) -> bool {
         lookup_status="not_implemented",
     }
 
-    checked := checker.check_file(&version, &syntax, &binding)
+    mode := checker.Relation_Trace_Mode.Failures
+    if trace_all { mode = .All }
+    checked := checker.check_file_with_relations(&version, &syntax, &binding, mode)
     defer checker.report_destroy(&checked)
     check_issues := make([dynamic]Diagnostic)
     defer delete(check_issues)
+    relations := make([dynamic]Relation)
+    defer delete(relations)
+    for relation in checked.relations {
+        if relation.node_index < 0 || relation.node_index >= len(syntax.nodes) ||
+           relation.declaration_index < 0 ||
+           relation.declaration_index >= len(syntax.declarations) {
+            fmt.eprintln("error: invalid checker relation index")
+            return false
+        }
+        node := syntax.nodes[relation.node_index]
+        units, ok := unit_span(&version, node.byte_start, node.byte_end)
+        if !ok {
+            fmt.eprintln("error: invalid checker relation span")
+            return false
+        }
+        append(&relations, Relation{
+            source=relation.source, target=relation.target,
+            node_index=relation.node_index,
+            declaration_index=relation.declaration_index,
+            context=relation.context, result=relation.result,
+            bytes=Span{node.byte_start,node.byte_end}, utf16=units,
+        })
+    }
     for issue in checked.diagnostics {
         d, ok := diagnostic(&version, int(issue.issue), issue.byte_start, issue.byte_end)
         if !ok { fmt.eprintln("error: invalid checker diagnostic"); return false }
@@ -258,8 +296,10 @@ write :: proc(filename: string) -> bool {
         status="partial",outcome=check_outcome,
         checked_declarations=checked.checked_declarations,
         checked_assignments=checked.checked_assignments,
-        diagnostics=check_issues[:],issue_namespace="tsodin.checker.Check_Issue",
-        node_types_status="not_implemented",relations_status="not_implemented",
+        diagnostics=check_issues[:],relations=relations[:],
+        trace_mode=trace_all ? "all" : "failures",
+        issue_namespace="tsodin.checker.Check_Issue",
+        node_types_status="not_implemented",relations_status="partial",
     }
 
     data, encode_error := json.marshal(output, {use_enum_names=true})
