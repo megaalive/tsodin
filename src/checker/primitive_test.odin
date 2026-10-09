@@ -1444,3 +1444,138 @@ primitive_checker_mixed_left_fail_closed :: proc(t: ^testing.T) {
         source.source_version_destroy(&v)
     }
 }
+
+
+@(test)
+primitive_checker_mixed_nested_mutation_join :: proc(t: ^testing.T) {
+    prefix :: "let n: number = 1; n = 1 + 2;" +
+              "let a: boolean = false; a = n === 2;" +
+              "let b: boolean = false; b = n === 3;" +
+              "let c: boolean = false; c = n === 4;" +
+              "let d: boolean = false; d = n === 5;" +
+              "let out: boolean = false;"
+    cases := [?]string {
+        prefix +
+        "if ((a && b) || c) {" +
+        "if (d) { c = n === 7; } else { out = a === true; }" +
+        "out = c === false;" +
+        "} else {" +
+        "if (d) { out = c === false; c = n === 8; }" +
+        "else { out = c === false; }" +
+        "out = c === true;" +
+        "}" +
+        "if ((a || b) && c) {" +
+        "if (d) { out = c === true; c = n === 9; }" +
+        "else { out = c === true; }" +
+        "out = c === false;" +
+        "} else { out = c === false; }",
+        prefix +
+        "if (!(a && (b || c))) {" +
+        "if (d) { out = a === false; } else { out = b === true; }" +
+        "} else {" +
+        "if (d) { out = a === true; a = n === 10; }" +
+        "else { out = a === true; }" +
+        "out = a === false;" +
+        "}" +
+        "if (!((a || b) && c)) { out = a === false; }" +
+        "else {" +
+        "if (d) { out = c === true; c = n === 11; }" +
+        "else { out = c === true; }" +
+        "out = c === false;" +
+        "}",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(824), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.complete &&
+                       !checked.fatal && len(checked.diagnostics)==0,
+                       "mixed parent facts survive child splits and widen after mutation")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+primitive_checker_mixed_nested_source_order_diagnostics :: proc(t: ^testing.T) {
+    input := "let n: number = 1; n = 1 + 2;" +
+             "let a: boolean = false; a = n === 2;" +
+             "let b: boolean = false; b = n === 3;" +
+             "let c: boolean = false; c = n === 4;" +
+             "let d: boolean = false; d = n === 5;" +
+             "let out: boolean = false;" +
+             "if ((a && b) || c) { out = b === false; } else {" +
+             "if (d) { out = c === true; } else { out = c === true; }" +
+             "out = c === true;" +
+             "}" +
+             "if ((a || b) && c) {" +
+             "if (d) { out = c === false; }" +
+             "else { c = n === 7; out = c === false; }" +
+             "out = c === false;" +
+             "} else { out = 'bad'; }" +
+             "if (!(a && (b || c))) { out = a === true; }" +
+             "else { if (d) { out = a === false; } else { out = a === false; } }" +
+             "if (!((a && b) || c)) {" +
+             "if (d) { out = c === true; } else { out = c === true; }" +
+             "} else { out = a === true; }"
+    v, ok := source.source_version_create(source.File_Id(825), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file(&v, &ast, &bound)
+    testing.expect(t, ast.complete && bound.complete && !checked.complete &&
+                   !checked.fatal && len(checked.diagnostics)==9,
+                   "child-local, post-child and negated parent facts retain 9 errors")
+    if len(checked.diagnostics) == 9 {
+        for i in 0..<9 {
+            expected := Check_Issue.Disjoint_Literal_Comparison
+            if i == 4 { expected = .Assignment_Type_Mismatch }
+            testing.expect(t, checked.diagnostics[i].issue == expected,
+                           "mixed nested disjointness and mismatch retain lexical order")
+        }
+    }
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_mixed_nested_fail_closed :: proc(t: ^testing.T) {
+    prefix :: "let n: number = 1; n = 1 + 2;" +
+              "let a: boolean = false; a = n === 2;" +
+              "let b: boolean = false; b = n === 3;" +
+              "let c: boolean = false; c = n === 4;" +
+              "let d: boolean = false; d = n === 5;" +
+              "let out: boolean = false;"
+    cases := [?]string {
+        prefix + "if ((a && b) || c) { out = true; }" +
+        "else { if (c) { out = true; } else { out = false; } }",
+        prefix + "if ((a || b) && c) {" +
+        "if (c) { out = true; } else { out = false; }" +
+        "} else { out = true; }",
+        prefix + "if (a && (b || c)) {" +
+        "if (a) { out = true; } else { out = false; }" +
+        "} else { out = true; }",
+        prefix + "if (((a && b) || c) && d) { out = true; }" +
+        "else { out = false; }",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(826), 1, input)
+        testing.expect(t, ok, "source")
+        ast := parser.parse_expression_program(&v, compat.ts7_profile())
+        bound := binder.bind_program(&v, &ast)
+        checked := check_file(&v, &ast, &bound)
+        testing.expect(t, ast.complete && bound.complete && checked.fatal &&
+                       !checked.complete && len(checked.diagnostics)>0,
+                       "unproved nested and already narrowed guards fail closed")
+        report_destroy(&checked)
+        binder.binding_report_destroy(&bound)
+        parser.syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
