@@ -20,7 +20,7 @@ main :: proc() {
     }
 
     if os.args[1] == "dump" {
-        if os.args[2] == "--stage=all" {
+        if len(os.args) >= 3 && os.args[2] == "--stage=all" {
             if len(os.args) == 4 && dump.write(os.args[3], false) { return }
             if len(os.args) == 5 && os.args[3] == "--trace-relations" &&
                dump.write(os.args[4], true) { return }
