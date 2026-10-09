@@ -36,7 +36,7 @@ typeof_guard_invalidation_in_branch_and_after_join :: proc(t: ^testing.T) {
              "if (flag) { value = 8; } else { value = 'one'; }" +
              "let numeric: number = 0; let textual: string = '';" +
              "if (typeof value === 'number') { numeric = value; value = 'changed'; textual = value; }" +
-             "else { textual = value; }" +
+             "else { textual = value; value = 4; }" +
              "if (typeof value === 'string') { textual = value; } else { numeric = value; }"
     v, ok := source.source_version_create(source.File_Id(952), 1, input)
     testing.expect(t, ok, "source valid")
