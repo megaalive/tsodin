@@ -1579,3 +1579,72 @@ primitive_checker_mixed_nested_fail_closed :: proc(t: ^testing.T) {
         source.source_version_destroy(&v)
     }
 }
+
+
+@(test)
+primitive_checker_bounded_relation_trace_decisions :: proc(t: ^testing.T) {
+    input := "let x: number = 'bad';" +
+             "let y: number = 1;" +
+             "y = 'bad';" +
+             "y = 2;"
+    v, ok := source.source_version_create(source.File_Id(827), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    ordinary := check_file(&v, &ast, &bound)
+    testing.expect(t, len(ordinary.relations) == 0 && len(ordinary.diagnostics) == 2,
+                   "the ordinary checker path never allocates relation trace records")
+    report_destroy(&ordinary)
+
+    failed := check_file_with_relations(&v, &ast, &bound, .Failures)
+    testing.expect(t, len(failed.relations) == 2 && len(failed.diagnostics) == 2 &&
+                   !failed.fatal, "default evidence records only actual failed checks")
+    if len(failed.relations) == 2 {
+        a := failed.relations[0]
+        b := failed.relations[1]
+        testing.expect(t, a.source == .Text && a.target == .Number &&
+                       a.context == .Variable && a.declaration_index == 0 &&
+                       a.node_index >= 0 && !a.result,
+                       "variable initializer failure uses its true expression and declaration")
+        testing.expect(t, b.source == .Text && b.target == .Number &&
+                       b.context == .Assignment && b.declaration_index == 1 &&
+                       b.node_index > a.node_index && !b.result,
+                       "reassignment failure uses the actual RHS and target declaration")
+    }
+    report_destroy(&failed)
+
+    all := check_file_with_relations(&v, &ast, &bound, .All)
+    testing.expect(t, len(all.relations) == 4 && len(all.diagnostics) == 2 &&
+                   !all.fatal, "opt-in all mode records passed and failed checks")
+    if len(all.relations) == 4 {
+        testing.expect(t, !all.relations[0].result && all.relations[1].result &&
+                       !all.relations[2].result && all.relations[3].result,
+                       "relations preserve statement order and direct decision values")
+        testing.expect(t, all.relations[1].context == .Variable &&
+                       all.relations[3].context == .Assignment &&
+                       all.relations[3].source == .Number &&
+                       all.relations[3].target == .Number,
+                       "successful primitive checks must be actual recorded decisions")
+    }
+    report_destroy(&all)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
+
+@(test)
+primitive_checker_bounded_relation_trace_unsupported :: proc(t: ^testing.T) {
+    input := "let n: number = missing;"
+    v, ok := source.source_version_create(source.File_Id(828), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    checked := check_file_with_relations(&v, &ast, &bound, .All)
+    testing.expect(t, !bound.complete && checked.fatal && !checked.complete &&
+                   len(checked.relations) == 0,
+                   "unsupported binding must not invent type relation decisions")
+    report_destroy(&checked)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
