@@ -53,6 +53,35 @@ source containing secrets, PII or proprietary code**. The Pages gallery
 should consume a curated set of public examples only. Do not automatically
 publish arbitrary CI inputs or offer server-side compilation of user text.
 
+### M4-G5F8B — Pages gallery of actual generated traces
+
+The Lab tab in the existing Pages Observatory fetches **only** static,
+versioned traces under `docs/traces`. `tools/dump/build-gallery.mjs` finds
+all curated `examples/*.ts` (no parallel hard-coded example registry),
+runs the pinned Odin `tsodin dump --stage=all` executable and builds a
+matching `index.json`. After changing an example or the dump semantics,
+regenerate locally using:
+
+```sh
+odin build src/cli -out:tsodin
+TSODIN_BIN=./tsodin node tools/dump/build-gallery.mjs --write
+TSODIN_BIN=./tsodin node tools/dump/build-gallery.mjs --check
+node tools/dump/check-gallery.mjs
+```
+
+CI **fails** unless the committed trace bytes match a fresh Odin run. Browser
+validation independently recomputes byte and UTF-16 boundaries and rejects
+any mismatch instead of showing a false verification badge. Selecting a
+token, expression node or symbol highlights related source ranges; diagnostic
+IDs remain explicitly internal. Read-only source is intentional because
+GitHub Pages is static and cannot run the native Odin checker for edits.
+
+The dumps omit a self-referential Git SHA: embedding the final commit hash in
+files committed to the same hash cannot be deterministic. Publication
+provenance is therefore the **Git commit containing source, generated JSON
+and passing CI**, rather than a fabricated fixed commit field inside each
+JSON file. No timestamps or reference-code parity badges are emitted.
+
 ### Follow-on scope (not yet implemented)
 
 Generate a versioned gallery from curated `examples/*.ts` using a pinned
