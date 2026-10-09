@@ -258,6 +258,46 @@ unwrap_guard_wrappers :: proc(
     return Guard_Wrapper{index=index, flipped=flipped, valid=true}
 }
 
+// Validate the three independent widened Boolean let bindings required by
+// a mixed &&/|| guard. The input is a fixed tuple of actual Name AST nodes,
+// not a computed predicate or a list of guessed declarations.
+// Every source reference is range-checked before indexing; duplicate binder
+// declarations are rejected even when referenced through different nodes.
+// Pure and allocation-free; the caller still decides WHICH arm gets a fact.
+three_distinct_wide_boolean_lets :: proc(
+    nodes: []parser.Expr_Node,
+    node_indices: [3]int,
+    references: []int,
+    symbols: []binder.Symbol,
+    declared: []Primitive,
+    wide_decls: []bool,
+    checked_declarations: int,
+) -> bool {
+    guards: [3]int
+    for slot in 0..<3 {
+        index := node_indices[slot]
+        if index < 0 || index >= len(nodes) ||
+           index >= len(references) || nodes[index].kind != .Name {
+            return false
+        }
+        ref := references[index]
+        if ref <= 0 || ref > len(symbols) { return false }
+        symbol := symbols[ref-1]
+        guard := symbol.declaration_index
+        if symbol.kind != .Let || guard < 0 ||
+           guard >= checked_declarations ||
+           guard >= len(declared) || guard >= len(wide_decls) ||
+           declared[guard] != .Boolean || !wide_decls[guard] {
+            return false
+        }
+        for previous in 0..<slot {
+            if guards[previous] == guard { return false }
+        }
+        guards[slot] = guard
+    }
+    return true
+}
+
 check_file_with_relations :: proc(
     version: ^source.Source_Version,
     syntax: ^parser.Syntax_Report,
@@ -943,34 +983,11 @@ check_file_with_relations :: proc(
                                  event.byte_start, event.byte_end, true)
                             return result
                         }
-                        lhs_ref := references[root.left]
-                        first_ref := references[rhs_inner.left]
-                        second_ref := references[rhs_inner.right]
-                        if lhs_ref <= 0 || first_ref <= 0 || second_ref <= 0 ||
-                           lhs_ref > len(symbols.symbols) ||
-                           first_ref > len(symbols.symbols) ||
-                           second_ref > len(symbols.symbols) {
-                            fail(&result, .Unsupported_Condition,
-                                 event.byte_start, event.byte_end, true)
-                            return result
-                        }
-                        lhs := symbols.symbols[lhs_ref-1]
-                        first := symbols.symbols[first_ref-1]
-                        second := symbols.symbols[second_ref-1]
-                        a := lhs.declaration_index
-                        b := first.declaration_index
-                        d := second.declaration_index
-                        if lhs.kind != .Let || first.kind != .Let ||
-                           second.kind != .Let ||
-                           a < 0 || b < 0 || d < 0 ||
-                           a >= result.checked_declarations ||
-                           b >= result.checked_declarations ||
-                           d >= result.checked_declarations ||
-                           a == b || a == d || b == d ||
-                           declared[a] != .Boolean ||
-                           declared[b] != .Boolean ||
-                           declared[d] != .Boolean ||
-                           !wide_decls[a] || !wide_decls[b] || !wide_decls[d] {
+                        if !three_distinct_wide_boolean_lets(
+                            syntax.nodes[:],
+                            [3]int{root.left, rhs_inner.left, rhs_inner.right},
+                            references, symbols.symbols[:], declared, wide_decls,
+                            result.checked_declarations) {
                             fail(&result, .Unsupported_Condition,
                                  event.byte_start, event.byte_end, true)
                             return result
@@ -1003,34 +1020,11 @@ check_file_with_relations :: proc(
                                      event.byte_start, event.byte_end, true)
                                 return result
                             }
-                            first_ref := references[inner.left]
-                            second_ref := references[inner.right]
-                            right_ref := references[root.right]
-                            if first_ref <= 0 || second_ref <= 0 || right_ref <= 0 ||
-                               first_ref > len(symbols.symbols) ||
-                               second_ref > len(symbols.symbols) ||
-                               right_ref > len(symbols.symbols) {
-                                fail(&result, .Unsupported_Condition,
-                                     event.byte_start, event.byte_end, true)
-                                return result
-                            }
-                            first := symbols.symbols[first_ref-1]
-                            second := symbols.symbols[second_ref-1]
-                            right := symbols.symbols[right_ref-1]
-                            a := first.declaration_index
-                            b := second.declaration_index
-                            c := right.declaration_index
-                            if first.kind != .Let || second.kind != .Let ||
-                               right.kind != .Let ||
-                               a < 0 || b < 0 || c < 0 ||
-                               a >= result.checked_declarations ||
-                               b >= result.checked_declarations ||
-                               c >= result.checked_declarations ||
-                               a == b || a == c || b == c ||
-                               declared[a] != .Boolean ||
-                               declared[b] != .Boolean ||
-                               declared[c] != .Boolean ||
-                               !wide_decls[a] || !wide_decls[b] || !wide_decls[c] {
+                            if !three_distinct_wide_boolean_lets(
+                                syntax.nodes[:],
+                                [3]int{inner.left, inner.right, root.right},
+                                references, symbols.symbols[:], declared, wide_decls,
+                                result.checked_declarations) {
                                 fail(&result, .Unsupported_Condition,
                                      event.byte_start, event.byte_end, true)
                                 return result
