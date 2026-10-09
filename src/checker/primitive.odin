@@ -40,10 +40,24 @@ Diagnostic :: struct {
     byte_end: int,
 }
 
+// Opt-in, bounded evidence only; there is no general type-relation engine.
+// The hot-path check_file wrapper deliberately requests .None.
+Relation_Trace_Mode :: enum { None, Failures, All }
+Relation_Context :: enum { Variable, Assignment }
+Type_Relation :: struct {
+    source: Primitive,
+    target: Primitive,
+    node_index: int, // actual postorder RHS expression root
+    declaration_index: int, // actual parser declaration index
+    context: Relation_Context,
+    result: bool, // the same comparison used by the checker
+}
+
 Report :: struct {
     file_id: source.File_Id,
     generation: u32,
     diagnostics: [dynamic]Diagnostic,
+    relations: [dynamic]Type_Relation,
     checked_declarations: int,
     checked_assignments: int,
     complete: bool,
@@ -52,6 +66,7 @@ Report :: struct {
 
 report_destroy :: proc(r: ^Report) {
     delete(r.diagnostics)
+    delete(r.relations)
     r^ = Report{}
 }
 
@@ -62,6 +77,22 @@ fail :: proc(r: ^Report, kind: Check_Issue, start, end: int, fatal: bool) {
     if fatal {
         r.fatal = true
     }
+}
+
+// Record decisions at their actual checking site, not reconstructed by the UI.
+record_relation :: proc(
+    report: ^Report, mode: Relation_Trace_Mode,
+    source_type, target_type: Primitive,
+    node_index, declaration_index: int, kind: Relation_Context,
+) {
+    if mode == .None || source_type == .Unknown || target_type == .Unknown { return }
+    compatible := source_type == target_type
+    if compatible && mode != .All { return }
+    append(&report.relations, Type_Relation{
+        source=source_type, target=target_type,
+        node_index=node_index, declaration_index=declaration_index,
+        context=kind, result=compatible,
+    })
 }
 
 annotation_type :: proc(value: parser.Primitive_Type) -> Primitive {
@@ -157,10 +188,11 @@ operand_type :: proc(nodes: []parser.Expr_Node, inferred: []Primitive, child, cu
     return inferred[child], true
 }
 
-check_file :: proc(
+check_file_with_relations :: proc(
     version: ^source.Source_Version,
     syntax: ^parser.Syntax_Report,
     symbols: ^binder.Binding_Report,
+    trace_mode: Relation_Trace_Mode,
 ) -> Report {
     result: Report
     if version == nil || !version.initialized || syntax == nil || symbols == nil {
@@ -1130,6 +1162,8 @@ check_file :: proc(
         }
         if assignment {
             result.checked_assignments += 1
+            record_relation(&result, trace_mode, expression_type, declared_type,
+                            expression_root, target_index, .Assignment)
             if expression_type != declared_type {
                 // Native TS7 starts TS2322 at the assignment target;
                 // supplemental TS6 structured diagnostics cover precisely
@@ -1157,6 +1191,10 @@ check_file :: proc(
                 }
             }
         } else {
+            if declared_type != .Unknown {
+                record_relation(&result, trace_mode, expression_type, declared_type,
+                                expression_root, declaration_index, .Variable)
+            }
             if declared_type != .Unknown && expression_type != declared_type {
                 // TS7 anchors declaration type mismatches at the name.
                 fail(&result, .Assignment_Type_Mismatch,
@@ -1183,4 +1221,13 @@ check_file :: proc(
     }
     result.complete = !result.fatal && len(result.diagnostics)==0
     return result
+}
+
+// Production/default path retains the original no-trace allocation behavior.
+check_file :: proc(
+    version: ^source.Source_Version,
+    syntax: ^parser.Syntax_Report,
+    symbols: ^binder.Binding_Report,
+) -> Report {
+    return check_file_with_relations(version, syntax, symbols, .None)
 }
