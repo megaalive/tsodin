@@ -58,6 +58,8 @@ jobs:
           TSODIN_ORACLE_PROFILE: ${{ matrix.profile }}
           TSODIN_ORACLE_OUTPUT: ${{ runner.temp }}/oracle-results
         run: node tools/oracle/capture.mjs
+      - name: Capture unary literal-inference evidence
+        run: node tools/oracle/check-unary-inference.mjs
       - name: Upload scoped oracle evidence
         uses: actions/upload-artifact@v6
         with:
