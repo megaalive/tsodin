@@ -137,6 +137,25 @@ are *exploratory*, include process startup and cannot yet establish
 a stable overall speedup. Subsequent independent runs must support
 any keep/reject decision.
 
+### Second exploratory Q measurement (9 October 2026)
+
+[Independent Actions run and raw samples](https://github.com/megaalive/tsodin/actions/runs/37905967534)
+
+| Fixture | Q / post-O, first run | Q / post-O, second run |
+|---|---:|---:|
+| checker-primitives-valid | 0.9977× | 0.9987× |
+| checker-boolean-identity-valid | 0.9730× | 0.9608× |
+| checker-negated-identity-valid | 0.9788× | 0.9587× |
+| checker-flow-mixed-rhs-valid | 0.9700× | 0.9786× |
+| checker-flow-mixed-left-valid | 0.9611× | 0.9713× |
+| checker-flow-mixed-nested-errors | 0.9808× | 0.9768× |
+| checker-flow-three-nested-valid | 0.9686× | 1.0054× |
+
+Both runs passed full semantic checksums. Homogeneous three-way
+guard results disagree on direction, and runner variability remains
+a concern. The candidate improves mixed guards in both runs, but
+without controlled-host confirmation is still **exploratory**.
+
 ### GitHub Pages performance-publication contract
 
 The Observatory should eventually receive a dedicated
