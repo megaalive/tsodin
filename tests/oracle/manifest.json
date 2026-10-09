@@ -726,6 +726,18 @@
       "path": "tests/oracle/checker-union-annotations-errors",
       "files": ["index.ts", "tsconfig.json"],
       "expectDiagnostics": true
+    },
+    {
+      "id": "checker-typeof-flow-valid",
+      "path": "tests/oracle/checker-typeof-flow-valid",
+      "files": ["index.ts", "tsconfig.json"],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "checker-typeof-flow-errors",
+      "path": "tests/oracle/checker-typeof-flow-errors",
+      "files": ["index.ts", "tsconfig.json"],
+      "expectDiagnostics": true
     }
   ]
 }

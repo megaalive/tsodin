@@ -157,6 +157,17 @@ primitive_type_id :: proc(kind: Primitive) -> typecore.Type_Id {
     return typecore.Invalid
 }
 
+primitive_from_id :: proc(pool: ^typecore.Pool, id: typecore.Type_Id) -> Primitive {
+    switch typecore.kind_of(pool, id) {
+    case .Number: return .Number
+    case .Text: return .Text
+    case .Boolean: return .Boolean
+    case .Union: return .Union
+    case: return .Unknown
+    }
+    return .Unknown
+}
+
 union_annotation_mask :: proc(kind: parser.Primitive_Type) -> u8 {
     switch kind {
     case .Number_String: return 3
@@ -379,15 +390,18 @@ check_file_with_relations :: proc(
     pool: typecore.Pool
     expression_ids: []typecore.Type_Id
     declared_ids: []typecore.Type_Id
+    flow_ids: []typecore.Type_Id
     if union_file {
         pool = typecore.pool_init()
         expression_ids = make([]typecore.Type_Id, len(syntax.nodes))
         declared_ids = make([]typecore.Type_Id, len(syntax.declarations))
+        flow_ids = make([]typecore.Type_Id, len(syntax.declarations))
     }
     defer {
         if union_file {
             delete(expression_ids)
             delete(declared_ids)
+            delete(flow_ids)
             typecore.pool_destroy(&pool)
         }
     }
@@ -411,12 +425,21 @@ check_file_with_relations :: proc(
     then_literals: [parser.FLOW_NEST_LIMIT][]Literal_Fact
     entry_wide: [parser.FLOW_NEST_LIMIT][]bool
     then_wide: [parser.FLOW_NEST_LIMIT][]bool
+    // Flow TypeIds are allocated ONLY when a union annotation is present.
+    // Join snapshots are per-depth and preserve all other variable states.
+    entry_ids: [parser.FLOW_NEST_LIMIT][]typecore.Type_Id
+    then_ids: [parser.FLOW_NEST_LIMIT][]typecore.Type_Id
+    typeof_guard: [parser.FLOW_NEST_LIMIT]int
+    typeof_else_id: [parser.FLOW_NEST_LIMIT]typecore.Type_Id
+    for &index in typeof_guard { index = -1 }
     defer {
         for level in 0..<parser.FLOW_NEST_LIMIT {
             delete(entry_literals[level])
             delete(then_literals[level])
             delete(entry_wide[level])
             delete(then_wide[level])
+            delete(entry_ids[level])
+            delete(then_ids[level])
         }
     }
 
@@ -465,6 +488,13 @@ check_file_with_relations :: proc(
             }
             // Save the completed THEN arm, then restore this depth's entry
             // state. A nested join cannot overwrite an enclosing snapshot.
+            if union_file {
+                copy(then_ids[level], flow_ids)
+                copy(flow_ids, entry_ids[level])
+                if typeof_guard[level] >= 0 {
+                    flow_ids[typeof_guard[level]] = typeof_else_id[level]
+                }
+            }
             copy(then_literals[level], literal_decls)
             copy(then_wide[level], wide_decls)
             copy(literal_decls, entry_literals[level])
@@ -511,6 +541,25 @@ check_file_with_relations :: proc(
                         wide_decls[i] = false
                     }
                 }
+            }
+            if union_file {
+                if dead_else[level] {
+                    copy(flow_ids, then_ids[level])
+                } else if !dead_then[level] {
+                    for i in 0..<len(declared_ids) {
+                        if declared_ids[i] == typecore.Invalid { continue }
+                        pair := [2]typecore.Type_Id{then_ids[level][i], flow_ids[i]}
+                        joined, ok := typecore.intern_union(&pool, pair[:])
+                        if !ok {
+                            fail(&result, .Unsupported_Condition,
+                                 event.byte_start, event.byte_end, true)
+                            return result
+                        }
+                        flow_ids[i] = joined
+                    }
+                }
+                typeof_guard[level] = -1
+                typeof_else_id[level] = typecore.Invalid
             }
             // If THEN is impossible, live ELSE is already in the current arrays.
             dead_then[level] = false
@@ -658,7 +707,10 @@ check_file_with_relations :: proc(
                     return result
                 }
                 declared[declaration_index] = declared_type
-                if union_file { declared_ids[declaration_index] = declared_id }
+                if union_file {
+                    declared_ids[declaration_index] = declared_id
+                    flow_ids[declaration_index] = declared_id
+                }
                 result.checked_declarations += 1
                 continue
             }
@@ -805,13 +857,22 @@ check_file_with_relations :: proc(
                 }
                 kind = declared[symbol.declaration_index]
                 if union_file {
-                    expression_ids[i] = declared_ids[symbol.declaration_index]
+                    expression_ids[i] = flow_ids[symbol.declaration_index]
+                    if kind == .Union {
+                        kind = primitive_from_id(&pool, expression_ids[i])
+                        if kind != .Union {
+                            literal_nodes[i] = Literal_Fact{}
+                            wide_nodes[i] = true
+                        }
+                    }
                 }
                 // Declared primitive and current flow/literal facts are
                 // separate. Mutable bindings can narrow until reassigned;
                 // annotations to number/string stay wide at comparisons.
-                literal_nodes[i] = literal_decls[symbol.declaration_index]
-                wide_nodes[i] = wide_decls[symbol.declaration_index]
+                if declared[symbol.declaration_index] != .Union {
+                    literal_nodes[i] = literal_decls[symbol.declaration_index]
+                    wide_nodes[i] = wide_decls[symbol.declaration_index]
+                }
                 if kind == .Unknown {
                     fail(&result, .Unsupported_Expression, node.byte_start, node.byte_end, true)
                     return result
@@ -823,7 +884,12 @@ check_file_with_relations :: proc(
                     return result
                 }
                 if node.kind == .Unary {
-                    if node.operator == .Exclamation && child == .Boolean {
+                    if node.operator == .Typeof_Keyword {
+                        // Runtime typeof of a supported primitive or union
+                        // is a string. Only exact guard patterns narrow.
+                        kind = .Text
+                        wide_nodes[i] = true
+                    } else if node.operator == .Exclamation && child == .Boolean {
                         kind = .Boolean
                         // COMPAT: negating a proven-wide Boolean yields a
                         // Boolean domain, never a singleton truth value.
@@ -1027,6 +1093,75 @@ check_file_with_relations :: proc(
             guard_node := guard_unwrapped.index
             flipped := guard_unwrapped.flipped
             root := syntax.nodes[guard_node]
+            // M4-G5F8W2: exact typeof Name === "number"/"string"/"boolean"
+            // on a mutable union. General Boolean/compound guards retain the
+            // existing proof path; no speculative union facts escape.
+            if union_file && root.kind == .Binary &&
+               (root.operator == .Equals_Equals_Equals ||
+                root.operator == .Exclamation_Equals_Equals) &&
+               root.left >= expression_begin && root.left < guard_node &&
+               root.right > root.left && root.right < guard_node {
+                lhs := syntax.nodes[root.left]
+                rhs := syntax.nodes[root.right]
+                if lhs.kind == .Unary && lhs.operator == .Typeof_Keyword &&
+                   lhs.left >= expression_begin && lhs.left < root.left &&
+                   syntax.nodes[lhs.left].kind == .Name &&
+                   rhs.kind == .Text && rhs.byte_end-rhs.byte_start >= 2 {
+                    inner_name := lhs.left
+                    ref := references[inner_name]
+                    if ref > 0 && ref <= len(symbols.symbols) {
+                        symbol := symbols.symbols[ref-1]
+                        guard := symbol.declaration_index
+                        if symbol.kind == .Let && guard >= 0 &&
+                           guard < result.checked_declarations &&
+                           declared[guard] == .Union {
+                            spelling := text[rhs.byte_start+1:rhs.byte_end-1]
+                            primitive_id := typecore.Invalid
+                            if spelling == "number" { primitive_id = typecore.Number
+                            } else if spelling == "string" { primitive_id = typecore.Text
+                            } else if spelling == "boolean" { primitive_id = typecore.Boolean }
+                            if primitive_id != typecore.Invalid {
+                                yes, no, ok := typecore.split_typeof(
+                                    &pool, flow_ids[guard], primitive_id)
+                                // A never arm requires explicit reachability
+                                // modeling, which this small CFG does not have.
+                                if ok && yes != typecore.Never &&
+                                   no != typecore.Never {
+                                    true_id := yes
+                                    false_id := no
+                                    if (root.operator == .Exclamation_Equals_Equals) != flipped {
+                                        true_id, false_id = false_id, true_id
+                                    }
+                                    level := flow_depth
+                                    if len(entry_literals[level]) == 0 {
+                                        entry_literals[level] = make([]Literal_Fact, len(declared))
+                                        then_literals[level] = make([]Literal_Fact, len(declared))
+                                        entry_wide[level] = make([]bool, len(declared))
+                                        then_wide[level] = make([]bool, len(declared))
+                                    }
+                                    if len(entry_ids[level]) == 0 {
+                                        entry_ids[level] = make([]typecore.Type_Id, len(declared))
+                                        then_ids[level] = make([]typecore.Type_Id, len(declared))
+                                    }
+                                    copy(entry_literals[level], literal_decls)
+                                    copy(entry_wide[level], wide_decls)
+                                    copy(entry_ids[level], flow_ids)
+                                    flow_ids[guard] = true_id
+                                    typeof_guard[level] = guard
+                                    typeof_else_id[level] = false_id
+                                    guard_count[level] = 0
+                                    dead_then[level] = false
+                                    dead_else[level] = false
+                                    contradiction_guard[level] = -1
+                                    else_seen[level] = false
+                                    flow_depth += 1
+                                    continue
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             compound := root.kind == .Binary &&
                         (root.operator == .Ampersand_Ampersand ||
                          root.operator == .Bar_Bar)
@@ -1376,6 +1511,14 @@ check_file_with_relations :: proc(
             }
             copy(entry_literals[level], literal_decls)
             copy(entry_wide[level], wide_decls)
+            if union_file {
+                if len(entry_ids[level]) == 0 {
+                    entry_ids[level] = make([]typecore.Type_Id, len(declared))
+                    then_ids[level] = make([]typecore.Type_Id, len(declared))
+                }
+                copy(entry_ids[level], flow_ids)
+                typeof_guard[level] = -1
+            }
             for slot in 0..<guard_count[level] {
                 if guard_then_facts[level][slot].kind != .Name {
                     literal_decls[guard_indices[level][slot]] = guard_then_facts[level][slot]
@@ -1418,7 +1561,10 @@ check_file_with_relations :: proc(
                 // replaces the earlier narrowed fact; nothing persists
                 // across unsupported branches or mutation paths.
                 if declared_type == .Union {
-                    // No fabricated singleton flow narrowing for union writes.
+                    // Assignment invalidates any previous typeof narrowing.
+                    if union_file {
+                        flow_ids[target_index] = expression_ids[expression_root]
+                    }
                     literal_decls[target_index] = Literal_Fact{}
                     wide_decls[target_index] = true
                 } else if declared_type == .Number || declared_type == .Text {
@@ -1461,6 +1607,11 @@ check_file_with_relations :: proc(
                 if union_file {
                     declared_ids[declaration_index] = expression_ids[expression_root]
                 }
+            }
+            if union_file {
+                // A declared union starts with the initializer's proven type.
+                // An invalid initializer cannot be considered successful.
+                flow_ids[declaration_index] = expression_ids[expression_root]
             }
             if declared[declaration_index] == .Union {
                 // A general union has no single literal fact in this slice.

@@ -187,7 +187,8 @@ syntax_expression :: proc(p: ^Syntax_State, min_priority: int) -> (int, bool) {
             right = -1,
         })
         syntax_advance(p)
-    } else if start.kind == .Plus || start.kind == .Minus || start.kind == .Exclamation {
+    } else if start.kind == .Plus || start.kind == .Minus ||
+              start.kind == .Exclamation || start.kind == .Typeof_Keyword {
         syntax_advance(p)
         child, valid := syntax_expression(p, 30)
         if !valid {
