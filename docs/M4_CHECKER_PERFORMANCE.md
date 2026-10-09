@@ -64,22 +64,23 @@ span witnesses remain separate **correctness** gates.
 Median wall-time **post-O / pre-N** (below 1.0 means lower measured
 time, above 1.0 means higher measured time):
 
-| Fixture | Run 37902658343 | Run 37902837978 |
-|---|---:|---:|
-| checker-primitives-valid | 0.9957× | 0.9580× |
-| checker-boolean-identity-valid | 1.0134× | 1.0236× |
-| checker-negated-identity-valid | 1.0019× | 1.0474× |
-| checker-flow-mixed-rhs-valid | 1.0408× | 1.0531× |
-| checker-flow-mixed-left-valid | 1.0139× | 1.0300× |
-| checker-flow-mixed-nested-errors | 1.0257× | 1.0309× |
-| checker-flow-three-nested-valid | 0.9921× | 0.9914× |
+| Fixture | Run 37902658343 | Run 37902837978 | Run 37903234282 |
+|---|---:|---:|---:|
+| checker-primitives-valid | 0.9957× | 0.9580×  0.9728× |
+| checker-boolean-identity-valid | 1.0134× | 1.0236×  1.0306× |
+| checker-negated-identity-valid | 1.0019× | 1.0474×  1.0539× |
+| checker-flow-mixed-rhs-valid | 1.0408× | 1.0531×  1.0589× |
+| checker-flow-mixed-left-valid | 1.0139× | 1.0300×  1.0414× |
+| checker-flow-mixed-nested-errors | 1.0257× | 1.0309×  1.0203× |
+| checker-flow-three-nested-valid | 0.9921× | 0.9914×  1.0082× |
 
 - [First complete run](https://github.com/megaalive/tsodin/actions/runs/37902658343)
 - [Second complete run](https://github.com/megaalive/tsodin/actions/runs/37902837978)
+- [Third complete run](https://github.com/megaalive/tsodin/actions/runs/37903234282)
 
 All seven cases retained **exact checker checksum parity across all
-three versions**. In these two exploratory measurements, mixed-right
-guards cost around 4–5% more wall time post-O versus pre-N; other
+three versions**. In these three exploratory measurements, mixed-right
+guards cost around 4–6% more wall time post-O versus pre-N; other
 cases range from small reductions to increases. Run-to-run variance
 is visible even in the control and negated-identity cases, so this
 does **not** establish a portable or production regression and cannot
