@@ -62,7 +62,7 @@ checker_negated_identity_guards_narrow_both_arms :: proc(t: ^testing.T) {
 
 @(test)
 checker_negated_identity_guard_disjoint_evidence :: proc(t: ^testing.T) {
-    input := "// 😀 Non-BMP comment keeps UTF-16 coordinate provenance." +
+    input := "// 😀 Non-BMP comment keeps UTF-16 coordinate provenance.\n" +
              "let flag: boolean = false;" +
              "flag = 2 < 3;" +
              "let out: boolean = false;" +
@@ -123,7 +123,7 @@ checker_negated_identity_guard_disjoint_evidence :: proc(t: ^testing.T) {
 
 @(test)
 checker_negated_identity_guard_nested_mutation_and_join :: proc(t: ^testing.T) {
-    input := "// 😀 Nested mutation: no fact crosses a sibling path or the outer join." +
+    input := "// 😀 Nested mutation: no fact crosses a sibling path or the outer join.\n" +
              "let flag: boolean = false;" +
              "flag = 2 < 3;" +
              "let gate: boolean = false;" +
