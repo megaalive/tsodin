@@ -1,0 +1,52 @@
+name: Diagnostic dump UTF-16 scaling probe
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/dump-span-probe.yml"
+      - "tools/perf/measure-dump-spans.mjs"
+      - "src/dump/**"
+      - "src/source/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump-spans:
+    name: Independent dump/3 correctness and scaling evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install pinned Odin
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/odin.tar.gz"
+          root="$RUNNER_TEMP/odin"
+          curl --fail --location --retry 3 --output "$archive" \
+            https://github.com/odin-lang/Odin/releases/download/dev-2026-10/odin-linux-amd64-dev-2026-10.tar.gz
+          echo "c3c8b095621fd0c75f7f73e3a0829f1b4d45324225f20ba11ed8dc4da310a8ab  $archive" | sha256sum --check -
+          mkdir -p "$root"
+          tar -xzf "$archive" -C "$root" --strip-components=1
+          "$root/odin" version
+          echo "$root" >> "$GITHUB_PATH"
+      - name: Validate probe generator and independent UTF-16 oracle
+        run: node tools/perf/measure-dump-spans.mjs --self-test
+      - name: Build speed-optimized CLI with unchanged public behavior
+        run: odin build src/cli -o:speed -out:"$RUNNER_TEMP/tsodin-dump"
+      - name: Run correctness-gated dump scaling probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "RUNNER_ARCH=$RUNNER_ARCH RUNNER_OS=$RUNNER_OS"
+          lscpu | grep -E 'Model name|CPU\(s\)' | head -4
+          TSODIN_BIN="$RUNNER_TEMP/tsodin-dump" node tools/perf/measure-dump-spans.mjs | tee "$RUNNER_TEMP/dump-span-probe.log"
+      - name: Retain complete raw timing data
+        uses: actions/upload-artifact@v4
+        with:
+          name: dump-span-probe
+          path: ${{ runner.temp }}/dump-span-probe.log
+          if-no-files-found: error
+          retention-days: 21
