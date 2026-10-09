@@ -241,3 +241,15 @@ assert.equal(typeofBad.status,1,"incompatible writes in both typeof arms cannot 
 assert.equal(typeofBad.diags.length,2);
 assert.deepEqual(typeofBad.diags.map(x=>x[1]),["10","10"],
   "both narrowed assignment failures remain internal TS2322 candidates");
+
+const varValid=read("checker-var-redeclaration-valid");
+assert.equal(varValid.status,0,"same-type var redeclarations must be allowed");
+assert.equal(varValid.diags.length,0);
+const varBad=read("checker-var-redeclaration-errors");
+assert.equal(varBad.status,1,"conflicting var redeclarations must fail");
+assert.deepEqual(varBad.diags.map(row=>row[1]),["15"],
+  "conflicting declarations need a distinct TS2403 candidate");
+const varFlowBad=read("checker-var-redeclaration-flow-errors");
+assert.equal(varFlowBad.status,1,"later var initializer must replace the flow state");
+assert.deepEqual(varFlowBad.diags.map(row=>row[1]),["10"],
+  "downstream mismatch after redeclaration remains TS2322 candidate");

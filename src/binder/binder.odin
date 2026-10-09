@@ -34,11 +34,18 @@ Reference :: struct {
     byte_end: int,
 }
 
+// Records canonical first-owner identity only for legal var redeclarations.
+Var_Redeclaration :: struct {
+    first_index: int,
+    subsequent_index: int,
+}
+
 Binding_Report :: struct {
     file_id: source.File_Id,
     generation: u32,
     symbols: [dynamic]Symbol,
     references: [dynamic]Reference,
+    var_redeclarations: [dynamic]Var_Redeclaration,
     issues: [dynamic]Binding_Issue,
     complete: bool,
     fatal: bool,
@@ -47,6 +54,7 @@ Binding_Report :: struct {
 binding_report_destroy :: proc(r: ^Binding_Report) {
     delete(r.symbols)
     delete(r.references)
+    delete(r.var_redeclarations)
     delete(r.issues)
     r^ = Binding_Report{}
 }
@@ -123,6 +131,10 @@ bind_program :: proc(version: ^source.Source_Version, syntax: ^parser.Syntax_Rep
         if exists {
             symbol := &r.symbols[slots[slot]-1]
             if symbol.kind == .Var && decl.kind == .Var {
+                append(&r.var_redeclarations, Var_Redeclaration{
+                    first_index=symbol.declaration_index,
+                    subsequent_index=i,
+                })
                 symbol.declaration_count += 1
             } else {
                 append(&r.issues, Binding_Issue{
