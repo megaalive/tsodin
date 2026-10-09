@@ -617,3 +617,23 @@ pinned TS7.0.2 diagnostic codes and UTF-16 starts plus separate TS6.0.2
 structured-span witnesses. This is not official Microsoft conformance,
 complete TS7 parity, or a competitive benchmark. Public `tsodin check`
 remains disabled.
+
+## M4-G5F7C — nested mutation and join evidence for mixed guards
+
+The checker now exercises existing depth-two snapshots against **both**
+restricted mixed Boolean guard families, including outer negation. The
+new tests verify that a proven parent singleton is retained inside a
+child's unmodified path, a computed wide Boolean assignment invalidates
+that fact in its own child arm, and the child join **widens** a fact
+when the sibling retains a singleton. The parent snapshot is preserved,
+so parent `else` and the subsequent outer join cannot inherit the
+mutated sibling's condition or an invented fact for other operands.
+
+No new general CFG, widened formula grammar, extra snapshot allocation,
+or public checker endpoint is introduced. Nested re-guards of a narrowed
+singleton and deeper mixed expression trees remain fail-closed.
+`checker-flow-mixed-nested-{valid,errors}` are separate pinned
+TS7.0.2 code/UTF-16-start differential fixtures and supplemental TS6.0.2
+structured-span evidence. Failures retain their lexical order, including
+TS2367-like disjoint comparisons and a TS2322-like assignment mismatch.
+This is neither full TypeScript parity nor an official conformance score.
