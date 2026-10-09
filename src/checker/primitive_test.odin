@@ -1648,3 +1648,52 @@ primitive_checker_bounded_relation_trace_unsupported :: proc(t: ^testing.T) {
     parser.syntax_report_destroy(&ast)
     source.source_version_destroy(&v)
 }
+
+@(test)
+primitive_checker_relation_trace_nested_flow_source_order :: proc(t: ^testing.T) {
+    // Existing proven nested-flow fixture: tracing cannot perturb mutation,
+    // branch joins, statement order, or checker diagnostics.
+    input := "let code: number = 1; code = 1 + 2; let ready: boolean = false;" +
+             "ready = code === 2; let result: boolean = false;" +
+             "if (code === 2) {" +
+             "  if (ready) { result = code === 2; result = ready === true; }" +
+             "  else { result = code === 2; result = ready === false; }" +
+             "  result = code === 2;" +
+             "} else {" +
+             "  if (!ready) { result = ready === false; }" +
+             "  else { result = ready === true; }" +
+             "  result = code === 9;" +
+             "} const after: boolean = code === 4;"
+    v, ok := source.source_version_create(source.File_Id(829), 1, input)
+    testing.expect(t, ok, "source")
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    bound := binder.bind_program(&v, &ast)
+    ordinary := check_file(&v, &ast, &bound)
+    traced := check_file_with_relations(&v, &ast, &bound, .All)
+    failed := check_file_with_relations(&v, &ast, &bound, .Failures)
+    testing.expect(t, ast.complete && bound.complete && ordinary.complete &&
+                   traced.complete && failed.complete && !traced.fatal &&
+                   len(ordinary.relations)==0 && len(ordinary.diagnostics)==0 &&
+                   len(failed.relations)==0 && len(failed.diagnostics)==0 &&
+                   len(traced.diagnostics)==0,
+                   "opt-in relations leave proven nested-flow checking unchanged")
+    testing.expect(t, traced.checked_declarations==4 &&
+                   traced.checked_assignments==10 && len(traced.relations)==14,
+                   "each annotated declaration and assignment has one real decision")
+    prior := -1
+    for relation in traced.relations {
+        testing.expect(t, relation.node_index > prior &&
+                       relation.node_index < len(ast.nodes) &&
+                       relation.declaration_index >= 0 &&
+                       relation.declaration_index < len(ast.declarations) &&
+                       relation.source==relation.target && relation.result,
+                       "nested and post-join decisions retain true source order")
+        prior=relation.node_index
+    }
+    report_destroy(&failed)
+    report_destroy(&traced)
+    report_destroy(&ordinary)
+    binder.binding_report_destroy(&bound)
+    parser.syntax_report_destroy(&ast)
+    source.source_version_destroy(&v)
+}
