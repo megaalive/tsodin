@@ -167,4 +167,11 @@ const mixedLeftBad=read("checker-flow-mixed-left-errors");
 assert.equal(mixedLeftBad.status,1,"left-nested decisive-arm errors remain visible");
 assert.deepEqual(mixedLeftBad.diags.map(x=>x[1]),["11","11","10","11","11"],
   "mixed-left ordered TS2367 and TS2322 candidate codes");
-console.log("PASS: G5F7B left-nested mixed Boolean guards and TS7 witnesses");
+const mixedNestedValid=read("checker-flow-mixed-nested-valid");
+assert.equal(mixedNestedValid.status,0,"mixed nested parent facts survive split and mutation joins");
+const mixedNestedBad=read("checker-flow-mixed-nested-errors");
+assert.equal(mixedNestedBad.status,1,"mixed nested path-local errors remain visible");
+assert.deepEqual(mixedNestedBad.diags.map(x=>x[1]),
+  ["11","11","11","11","10","11","11","11","11"],
+  "mixed nested disjointness and assignment mismatch preserve source order");
+console.log("PASS: G5F7C nested mixed Boolean mutation and join witnesses");
