@@ -107,3 +107,12 @@ not interacting. Manual pause stops animation and cycling; the browser's
 `prefers-reduced-motion` setting automatically stops both. No new network
 request, timer faster than 4.8 seconds, framework or worker was introduced.
 The explanatory warning is always visible, including without JavaScript.
+
+### Consistent symbols on iOS and desktop
+
+The decorative spark beside **Product Truth**, the Overview note and the
+sticky footer is an inline SVG using `currentColor` and the Observatory's
+blue-glass theme token. Do not use the Unicode `✳` character: some mobile
+browsers select a full-color emoji font instead of the intended text glyph,
+producing an unrelated green badge. Inline SVG has no external font or asset
+request and stays monochrome on iOS, Android and desktop.

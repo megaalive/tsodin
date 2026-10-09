@@ -89,7 +89,7 @@ a:focus-visible, button:focus-visible, textarea:focus-visible, input:focus-visib
 .quiet-link span, .section-link, .inline-link { transition:color .15s ease; }
 .quiet-link:hover, .section-link:hover, .inline-link:hover { color:var(--green); }
 .honesty-line { color:var(--subtle); font-size:12px; max-width:440px; line-height:1.7; }
-.star-mark { color:var(--green); font-size:18px; padding-right:6px; vertical-align:-1px; }
+.star-mark { color:var(--green); display:inline-flex; align-items:center; padding-right:6px; vertical-align:-3px; }
 .hero-instrument {
   min-width:0; padding:24px;
   border:1px solid #2a3d4b; border-radius:17px;
@@ -165,7 +165,7 @@ a:focus-visible, button:focus-visible, textarea:focus-visible, input:focus-visib
 .source-note p { margin:0; color:#8193a8; font-size:11px; line-height:1.7; }
 .source-cube { display:inline-grid; place-items:center; flex-shrink:0; width:17px; height:17px; border:1px solid #475a69; border-radius:50%; font:12px Georgia,serif; color:#adbfc9; }
 .evidence-panel { padding:26px; }
-.tiny-cross { color:#5d897f; font-size:22px; }
+.tiny-cross { color:var(--green); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
 .evidence-stat { display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px solid var(--soft-line); gap:10px; padding:13px 0; }
 .evidence-stat:first-of-type { margin-top:20px; }
 .evidence-stat > span { font-size:12px; color:var(--muted); }
@@ -244,7 +244,7 @@ a:focus-visible, button:focus-visible, textarea:focus-visible, input:focus-visib
 .site-footer { margin-top:120px; padding:45px 0; border-top:1px solid var(--line); background:#090f19; }
 .footer-inner { display:flex; justify-content:space-between; gap:24px; align-items:start; }
 .footer-brand { font-size:23px; font-weight:800; letter-spacing:-.8px; }
-.footer-brand span { color:var(--green); padding-left:5px; }
+.footer-brand .footer-spark { color:var(--green); display:inline-flex; align-items:center; padding-left:5px; vertical-align:-2px; }
 .footer-inner p { color:#8095a6; font-size:12px; }
 .footer-links { display:flex; gap:14px; flex-wrap:wrap; padding-top:10px; }
 .footer-links a { font-size:12px; color:#b2c8d4; }
@@ -319,3 +319,10 @@ a:focus-visible, button:focus-visible, textarea:focus-visible, input:focus-visib
   html { scroll-behavior:auto; }
   *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
 }
+
+/* Use SVG instead of U+2733 text: iOS can render that code point as
+   an unrelated colorful emoji, ignoring the intended text color. */
+.spark-icon { display:block; width:20px; height:20px; flex-shrink:0; }
+.tiny-cross .spark-icon { width:23px; height:23px; }
+.star-mark .spark-icon { width:17px; height:17px; }
+.footer-spark .spark-icon { width:19px; height:19px; }
