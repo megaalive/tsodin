@@ -59,6 +59,49 @@ jobs:
       - name: Validate primitive semantic checker
         run: odin test src/checker
 
+      - name: Validate checker probe driver and sampler
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/perf/compare-checker.mjs --self-test
+          odin build src/checkbench -o:speed -out:"$RUNNER_TEMP/checkbench"
+          "$RUNNER_TEMP/checkbench" tests/oracle/checker-flow-mixed-nested-valid/index.ts | grep -E '^RESULT[[:space:]]+8192[[:space:]]+0[[:space:]]+[0-9]+
+        shell: bash
+        run: |
+          set -euo pipefail
+          odin build src/checktrace -out:"$RUNNER_TEMP/checktrace"
+          TSODIN_CHECKTRACE="$RUNNER_TEMP/checktrace" node tools/oracle/check-primitive-trace.mjs
+
+      - name: Verify structured stage dump and UTF-16 spans
+        shell: bash
+        run: |
+          set -euo pipefail
+          odin build src/cli -out:"$RUNNER_TEMP/tsodin-dump"
+          TSODIN_BIN="$RUNNER_TEMP/tsodin-dump" node tools/dump/check.mjs
+          TSODIN_BIN="$RUNNER_TEMP/tsodin-dump" node tools/dump/build-gallery.mjs --check
+          node --check lib/stage-lab.mjs
+          node tools/dump/check-gallery.mjs
+
+      - name: Validate developer syntax diagnostic trace
+        shell: bash
+        run: |
+          set -euo pipefail
+          odin build src/syntaxtrace -out:"$RUNNER_TEMP/syntaxtrace"
+          TSODIN_SYNTAXTRACE="$RUNNER_TEMP/syntaxtrace" node tools/oracle/check-syntaxtrace.mjs
+
+      - name: Build bootstrap CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          odin build src/cli -out:"$RUNNER_TEMP/tsodin"
+          test "$("$RUNNER_TEMP/tsodin" --version)" = "tsodin 0.0.0-dev"
+          set +e
+          "$RUNNER_TEMP/tsodin" check
+          status=$?
+          set -e
+          test "$status" -eq 2
+
+
       - name: Run source-to-type-diagnostics smoke
         shell: bash
         run: |
