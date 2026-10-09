@@ -102,3 +102,63 @@ with the full pinned semantic witness gate *and* before/after
 benchmarks. If it does not win consistently, reject it.
 
 **No headline performance claim is authorized by this record.**
+
+## M4-G5F8Q — compiler-directed mixed-guard inline experiment
+
+Only the **two call sites** of `three_distinct_wide_boolean_lets`
+are forced inline using Odin's `#force_inline`. The predicate still
+validates all indexes, three independent declarations, proven-wide
+Boolean types and mutable `let` provenance. No optimization is
+allowed to change branch entailment, diagnostic order or allocation
+ownership.
+
+Q compares the precise historical `pre-N` and `post-O` revisions
+with the experimental PR commit in the same Ubuntu runner, using the
+**same** `src/checkbench/main.odin`, pinned Odin and balanced
+three-way execution orders. `tools/perf/compare-checker-q.mjs` emits
+complete machine-readable samples and checksums for all seven fixtures.
+
+### First exploratory Q measurement (9 October 2026)
+
+[Full Actions log and downloadable raw samples](https://github.com/megaalive/tsodin/actions/runs/37905740716)
+
+| Source-backed fixture | Candidate / post-O |
+|---|---:|
+| checker-primitives-valid | 0.9977× |
+| checker-boolean-identity-valid | 0.9730× |
+| checker-negated-identity-valid | 0.9788× |
+| checker-flow-mixed-rhs-valid | 0.9700× |
+| checker-flow-mixed-left-valid | 0.9611× |
+| checker-flow-mixed-nested-errors | 0.9808× |
+| checker-flow-three-nested-valid | 0.9686× |
+
+Every result checksum matched across all revisions. These ratios
+are *exploratory*, include process startup and cannot yet establish
+a stable overall speedup. Subsequent independent runs must support
+any keep/reject decision.
+
+### GitHub Pages performance-publication contract
+
+The Observatory should eventually receive a dedicated
+**Benchmark** view, populated only by a versioned structured
+performance record, with *all* of the following gates:
+
+1. Exact commit SHA of **each** lane, pinned compiler/toolchains,
+   host CPU/OS, optimization flags, corpus ID and corpus digest.
+2. Explicit comparable semantic work, complete diagnostic or
+   checksum parity, independent oracle/conformance eligibility.
+3. Warmup, randomized or balanced order, complete raw sample links,
+   median, relative MAD, split-half drift and stated stability gate.
+4. Controlled physical host or comparable documented dedicated
+   environment for a **headline** benchmark; shared GitHub Actions
+   is exploratory, never eligible for global ranking.
+5. Clear distinction between checker-only microprobes and equivalent
+   end-to-end TypeScript checker comparisons. No mixing these ratios.
+6. A validator that defaults to `NOT MEASURED` and rejects incomplete,
+   stale, wrong-revision, or self-certified promotional results.
+
+The page should show **benchmarks only after eligible publication**,
+not turn pinned TS7 diagnostic witness counts into speed scores.
+The current status remains **no eligible headline benchmark**. A
+faster exploratory microprobe is evidence for engineering only.
+

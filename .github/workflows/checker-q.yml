@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - "src/checker/**"
+      - "docs/M4_CHECKER_PERFORMANCE.md"
       - "src/checkbench/**"
       - "tools/perf/**"
       - ".github/workflows/checker-q.yml"
