@@ -16,7 +16,6 @@ on:
       - "favicon.svg"
       - "lib/**"
       - "tools/observatory/**"
-      - "data/**"
       - ".github/workflows/observatory.yml"
   pull_request:
     paths:
