@@ -163,7 +163,8 @@ primitive_from_id :: proc(pool: ^typecore.Pool, id: typecore.Type_Id) -> Primiti
     case .Text: return .Text
     case .Boolean: return .Boolean
     case .Union: return .Union
-    case: return .Unknown
+    case .Invalid, .Never, .Any, .Unknown, .True, .False:
+        return .Unknown
     }
     return .Unknown
 }
