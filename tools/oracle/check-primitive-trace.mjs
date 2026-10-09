@@ -161,4 +161,10 @@ const mixedBad=read("checker-flow-mixed-rhs-errors");
 assert.equal(mixedBad.status,1,"mixed RHS decisive-arm diagnostics remain");
 assert.deepEqual(mixedBad.diags.map(x=>x[1]),["11","10","11","11"],
   "mixed RHS ordered disjoint and mismatch witness codes");
-console.log("PASS: G5F7A mixed RHS Boolean guards and TS7 witnesses");
+const mixedLeftValid=read("checker-flow-mixed-left-valid");
+assert.equal(mixedLeftValid.status,0,"left-nested mixed formulas prove c only");
+const mixedLeftBad=read("checker-flow-mixed-left-errors");
+assert.equal(mixedLeftBad.status,1,"left-nested decisive-arm errors remain visible");
+assert.deepEqual(mixedLeftBad.diags.map(x=>x[1]),["11","11","10","11","11"],
+  "mixed-left ordered TS2367 and TS2322 candidate codes");
+console.log("PASS: G5F7B left-nested mixed Boolean guards and TS7 witnesses");

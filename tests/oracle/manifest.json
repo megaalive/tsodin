@@ -471,6 +471,24 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": true
+    },
+    {
+      "id": "checker-flow-mixed-left-valid",
+      "path": "tests/oracle/checker-flow-mixed-left-valid",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "checker-flow-mixed-left-errors",
+      "path": "tests/oracle/checker-flow-mixed-left-errors",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
     }
   ]
 }

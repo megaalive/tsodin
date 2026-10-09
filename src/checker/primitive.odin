@@ -241,7 +241,8 @@ check_file :: proc(
     // parent guard facts. The live literal_decls/wide_decls arrays represent
     // the current path and are the only state consumed by expressions.
     // Up to three *bare Boolean* operands in a homogeneous chain;
-    // mixed/complex chains still fail closed without general CFG logic.
+    // restricted mixed formulas carry only one entailed Boolean fact.
+    // Other complex chains fail closed without a general CFG.
     // A short-circuit arm only receives facts logically implied by that arm.
     guard_count: [parser.FLOW_NEST_LIMIT]int
     guard_indices: [parser.FLOW_NEST_LIMIT][3]int
@@ -842,6 +843,69 @@ check_file :: proc(
                         }
                         // The outer left predicate is the ONLY branch fact.
                         part_count = 1
+                    }
+                }
+
+                // M4-G5F7B: explicitly grouped left-nested mixed formulas.
+                // (a && b) || c proves only c=false on the false arm;
+                // (a || b) && c proves only c=true on the true arm.
+                // Outer ! swaps arms, never the value of c.
+                if part_count == 2 && syntax.nodes[root.left].kind == .Group &&
+                   syntax.nodes[root.right].kind == .Name {
+                    left_group := syntax.nodes[root.left]
+                    if left_group.left >= 0 && left_group.left < root.left {
+                        inner_idx := left_group.left
+                        inner := syntax.nodes[inner_idx]
+                        if inner.kind == .Binary &&
+                           ((inner.operator == .Ampersand_Ampersand &&
+                             root.operator == .Bar_Bar) ||
+                            (inner.operator == .Bar_Bar &&
+                             root.operator == .Ampersand_Ampersand)) {
+                            if inner.left < 0 || inner.right <= inner.left ||
+                               inner.right >= inner_idx || root.right <= root.left ||
+                               syntax.nodes[inner.left].kind != .Name ||
+                               syntax.nodes[inner.right].kind != .Name {
+                                fail(&result, .Unsupported_Condition,
+                                     event.byte_start, event.byte_end, true)
+                                return result
+                            }
+                            first_ref := references[inner.left]
+                            second_ref := references[inner.right]
+                            right_ref := references[root.right]
+                            if first_ref <= 0 || second_ref <= 0 || right_ref <= 0 ||
+                               first_ref > len(symbols.symbols) ||
+                               second_ref > len(symbols.symbols) ||
+                               right_ref > len(symbols.symbols) {
+                                fail(&result, .Unsupported_Condition,
+                                     event.byte_start, event.byte_end, true)
+                                return result
+                            }
+                            first := symbols.symbols[first_ref-1]
+                            second := symbols.symbols[second_ref-1]
+                            right := symbols.symbols[right_ref-1]
+                            a := first.declaration_index
+                            b := second.declaration_index
+                            c := right.declaration_index
+                            if first.kind != .Let || second.kind != .Let ||
+                               right.kind != .Let ||
+                               a < 0 || b < 0 || c < 0 ||
+                               a >= result.checked_declarations ||
+                               b >= result.checked_declarations ||
+                               c >= result.checked_declarations ||
+                               a == b || a == c || b == c ||
+                               declared[a] != .Boolean ||
+                               declared[b] != .Boolean ||
+                               declared[c] != .Boolean ||
+                               !wide_decls[a] || !wide_decls[b] || !wide_decls[c] {
+                                fail(&result, .Unsupported_Condition,
+                                     event.byte_start, event.byte_end, true)
+                                return result
+                            }
+                            // One existing compound-guard slot holds the only
+                            // entailed predicate. Never invent facts for a/b.
+                            part_count = 1
+                            part_nodes[0] = root.right
+                        }
                     }
                 }
             }
