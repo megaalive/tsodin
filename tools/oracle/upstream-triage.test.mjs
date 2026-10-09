@@ -25,6 +25,8 @@ assert.deepEqual(map.pinnedSemanticOracle,{
 });
 assert.notEqual(map.discoverySnapshot,map.pinnedSemanticOracle.revision,
  "latest discovery source and pinned executable oracle must be separate");
+assert.equal(map.discoverySuiteRoot,"tsc/testdata/tests/cases/conformance");
+assert.equal(map.pinnedOracleSuiteRoot,"tests/cases/conformance");
 assert.equal(map.classification,"source_and_harness_inventory_only");
 assert.deepEqual(map.summary,{
   officialCasesExecutedByTsodin:0,officialConformancePassesClaimed:0
@@ -42,6 +44,11 @@ for(const c of map.cases){
   assert.match(c.subsystem,/^[a-z-]+$/);
   assert.match(c.upstreamPath,
     /^tsc\/testdata\/tests\/cases\/conformance\/[A-Za-z0-9_.\/\-]+\.ts$/);
+  assert.equal(c.pinnedOraclePath,
+    c.upstreamPath.replace("tsc/testdata/tests/cases/conformance/",
+      "tests/cases/conformance/"));
+  assert.match(c.pinnedOraclePath,
+    /^tests\/cases\/conformance\/[A-Za-z0-9_.\/\-]+\.ts$/);
   assert.ok(c.nextAction.length>=24);
   assert.equal(c.verification,"indexed_only_not_executed");
 }

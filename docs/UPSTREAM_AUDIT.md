@@ -42,6 +42,22 @@ does not mean a compiler/conformance test has passed.**
 Tests can have multiple configurations and distinct expected outputs.
 Do not copy the entire Microsoft test suite into Tsodin.
 
+### Two different corpus layouts — verified at both revisions
+
+**Important pinning hazard:** The TS7.0.2 oracle commit
+[`1e4744d68260a7cb91b62b12edc3f6a2187faaf1`](https://github.com/microsoft/TypeScript/tree/1e4744d68260a7cb91b62b12edc3f6a2187faaf1)
+contains the selected original conformance files under
+[`tests/cases/conformance/`](https://github.com/microsoft/TypeScript/tree/1e4744d68260a7cb91b62b12edc3f6a2187faaf1/tests/cases/conformance).
+The later audited native Go snapshot places the corresponding files under
+[`tsc/testdata/tests/cases/conformance/`](https://github.com/microsoft/TypeScript/tree/6ad8c56f9b5a9bb910046c56059296311adc24ba/tsc/testdata/tests/cases/conformance).
+
+All eight selected test paths were independently located at **both**
+revisions. The triage catalog stores the two concrete paths per case.
+This is **file presence only**; neither source contents across versions
+nor test expectations are assumed interchangeable. When deriving a
+TS7.0.2 goldens fixture, read its **pinned oracle** path, not only
+the newer Go snapshot's test file.
+
 ## Curated upstream tests to read before implementation
 
 The machine-readable [triage catalog](../tests/oracle/upstream-triage.json)
