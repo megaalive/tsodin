@@ -681,6 +681,11 @@ check_file_with_relations :: proc(
                 if node.kind == .Unary {
                     if node.operator == .Exclamation && child == .Boolean {
                         kind = .Boolean
+                        // COMPAT: negating a proven-wide Boolean yields a
+                        // Boolean domain, never a singleton truth value.
+                        // An unproved literal negation remains unsupported
+                        // for later equality comparisons (fail closed).
+                        wide_nodes[i] = wide_nodes[node.left]
                     } else if (node.operator == .Plus || node.operator == .Minus) &&
                               child == .Number {
                         kind = .Number

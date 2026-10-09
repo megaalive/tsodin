@@ -27,6 +27,8 @@ const fixtures=[
   {id:"checker-domain-errors",expectedCount:5},
   {id:"checker-wide-valid",expectedCount:0},
   {id:"checker-wide-errors",expectedCount:4},
+  {id:"checker-unary-wide-valid",expectedCount:0},
+  {id:"checker-unary-wide-errors",expectedCount:2},
   {id:"checker-flow-assign-valid",expectedCount:0},
   {id:"checker-flow-assign-errors",expectedCount:2},
   {id:"checker-flow-branch-valid",expectedCount:0},

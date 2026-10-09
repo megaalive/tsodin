@@ -19,6 +19,12 @@ const manifest=JSON.parse(readFileSync(resolve(root,pinned.manifest),'utf8'));
 assert.equal(manifest.oracleVersion,pinned.version);
 assert.equal(manifest.schemaVersion,1);
 assert.ok(manifest.projects.some(item=>item.id==='scanner-ascii' && !item.expectDiagnostics));
+for(const [id,expected] of [["checker-unary-wide-valid",false],["checker-unary-wide-errors",true]]){
+  const item=manifest.projects.find(p=>p.id===id);
+  assert.ok(item && item.expectDiagnostics===expected &&
+    item.path==="tests/oracle/"+id && item.files.includes("index.ts"),
+    "unary Boolean TS7 projects must be independently captured");
+}
 for(const spelling of ["01","00","08"]){
   const id="scanner-leading-zero-"+spelling;
   const witness=manifest.projects.find(item=>item.id===id);

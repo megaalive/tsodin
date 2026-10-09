@@ -685,3 +685,25 @@ a merely plausible proof label can no longer bypass this provenance
 rule. Other proof categories remain checker-originated and are not
 re-inferred in JavaScript.
 
+## M4-G5F8I — proven-wide Boolean logical negation
+
+A unary `!` now carries the **already proven-wide** Boolean domain
+of its operand to the resulting expression. The supported bounded forms
+include `!flag`, `!!flag`, and `!(flag)` when `flag` has a
+wide Boolean fact (e.g. produced by a numeric comparison). Inferred
+`const` aliases can therefore participate in strict Boolean equality
+without fabricating singleton values. This is an actual Odin checker
+semantic extension; no JavaScript inference or new serializer is involved.
+
+A unary `!` applied to a non-wide singleton is **not** constant-folded
+by this slice. Its later unproved comparison remains fatal/unsupported
+until independent TS7 evidence and literal semantics justify extending
+the model. The existing `.None` checker path does not allocate evidence.
+Focused unit tests exercise widening, repeated/grouped negation,
+trace-mode independence, source-ordered TS2322/TS2367 candidate
+diagnostics, and the conservative no-folding boundary.
+
+`checker-unary-wide-{valid,errors}` extend the pinned TS7.0.2
+diagnostic code/UTF-16-start witness and TS6.0.2 supplementary
+full-span witness; they do not imply complete TypeScript semantics.
+
