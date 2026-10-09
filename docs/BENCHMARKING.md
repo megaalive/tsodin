@@ -124,3 +124,11 @@ A benchmark result belongs to its workload, toolchain, machine, and protocol.
 Store compact decision records in git. Large raw artifacts may live in CI artifacts or separately archived evidence, but the repository must retain enough metadata to reconstruct the decision.
 
 Do not let the only copy of benchmark reasoning live in a chat.
+
+## Checker refactor microprobe (M4-G5F8P)
+
+[Reproducible three-revision checker-only comparison](M4_CHECKER_PERFORMANCE.md)
+records pinned Odin, exact revisions, identical semantic work/checksums,
+balanced observations, raw artifacts, and explicitly limited conclusions.
+It is diagnostic instrumentation, never a substitute for equivalently
+correct end-to-end TypeScript benchmarks.
