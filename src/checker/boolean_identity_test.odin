@@ -164,13 +164,18 @@ checker_boolean_identity_guards_mutation_and_join :: proc(t: ^testing.T) {
 
 @(test)
 checker_boolean_nonidentity_guards_still_fail_closed :: proc(t: ^testing.T) {
+    // Odin permits + only between compile-time string constants.
+    // Keep each witness literal self-contained; never build source at runtime.
     cases := [?]string{
+        "let flag: boolean = false; flag = 2 < 3;" +
+        "let out: boolean = false;" +
         "if (flag && false) { out = flag === true; } else { out = flag === false; }",
+        "let flag: boolean = false; flag = 2 < 3;" +
+        "let out: boolean = false;" +
         "if (true || flag) { out = flag === true; } else { out = flag === false; }",
     }
     for i in 0..<len(cases) {
-        input := "let flag: boolean = false; flag = 2 < 3;" +
-                 "let out: boolean = false;" + cases[i]
+        input := cases[i]
         v, ok := source.source_version_create(source.File_Id(847+i), 1, input)
         testing.expect(t, ok, "source")
         ast := parser.parse_expression_program(&v, compat.ts7_profile())
