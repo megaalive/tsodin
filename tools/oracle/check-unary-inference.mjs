@@ -10,7 +10,7 @@ const compiler=process.env.TSODIN_TSC;
 if(!compiler)throw new Error("TSODIN_TSC must identify the pinned TypeScript 7 executable");
 const v=spawnSync(compiler,["--version"],{encoding:"utf8"});
 assert.equal(v.status,0);
-assert.match(v.stdout,/7\\.0\\.2\\s*$/);
+assert.match(v.stdout,/7\.0\.2\s*$/);
 const root=mkdtempSync(join(tmpdir(),"tsodin-unary-ts7-"));
 const cases={
   not_true_assign_false:"const negated = !true; const literal: false = negated;\\n",
