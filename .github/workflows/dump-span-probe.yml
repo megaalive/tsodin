@@ -34,15 +34,24 @@ jobs:
           echo "$root" >> "$GITHUB_PATH"
       - name: Validate probe generator and independent UTF-16 oracle
         run: node tools/perf/measure-dump-spans.mjs --self-test
+      - name: Test sparse UTF-16 index against source reference
+        run: odin test src/dump
       - name: Build speed-optimized CLI with unchanged public behavior
         run: odin build src/cli -o:speed -out:"$RUNNER_TEMP/tsodin-dump"
+      - name: Build pre-optimization baseline on same runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin 7b82fdf7b0703f809e7d5c9093c3c9e6addc4b5c
+          git worktree add --detach "$RUNNER_TEMP/dump-span-baseline" 7b82fdf7b0703f809e7d5c9093c3c9e6addc4b5c
+          (cd "$RUNNER_TEMP/dump-span-baseline" && odin build src/cli -o:speed -out:"$RUNNER_TEMP/tsodin-baseline")
       - name: Run correctness-gated dump scaling probe
         shell: bash
         run: |
           set -euo pipefail
           echo "RUNNER_ARCH=$RUNNER_ARCH RUNNER_OS=$RUNNER_OS"
           lscpu | grep -E 'Model name|CPU\(s\)' | head -4
-          TSODIN_BIN="$RUNNER_TEMP/tsodin-dump" node tools/perf/measure-dump-spans.mjs | tee "$RUNNER_TEMP/dump-span-probe.log"
+          TSODIN_BASE_BIN="$RUNNER_TEMP/tsodin-baseline" TSODIN_BIN="$RUNNER_TEMP/tsodin-dump" node tools/perf/measure-dump-spans.mjs | tee "$RUNNER_TEMP/dump-span-probe.log"
       - name: Retain complete raw timing data
         uses: actions/upload-artifact@v4
         with:

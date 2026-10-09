@@ -140,17 +140,16 @@ Document :: struct {
 }
 
 // Exact snapshot conversion. Reject forged/non-scalar byte boundaries.
-unit_span :: proc(v: ^source.Source_Version, start, end: int) -> (Unit_Span, bool) {
-    a, ok_a := source.source_position(v, start)
-    b, ok_b := source.source_position(v, end)
-    if !ok_a || !ok_b || start > end {
-        return Unit_Span{}, false
-    }
-    return Unit_Span{a.absolute_utf16, b.absolute_utf16}, true
+unit_span :: proc(idx: ^Position_Index, start, end: int) -> (Unit_Span, bool) {
+    if start > end { return Unit_Span{}, false }
+    a, ok_a := position_utf16(idx, start)
+    b, ok_b := position_utf16(idx, end)
+    if !ok_a || !ok_b { return Unit_Span{}, false }
+    return Unit_Span{a, b}, true
 }
 
-diagnostic :: proc(v: ^source.Source_Version, id, start, end: int) -> (Diagnostic, bool) {
-    units, ok := unit_span(v, start, end)
+diagnostic :: proc(idx: ^Position_Index, id, start, end: int) -> (Diagnostic, bool) {
+    units, ok := unit_span(idx, start, end)
     if !ok { return Diagnostic{}, false }
     return Diagnostic{issue_id=id, bytes=Span{start,end}, utf16=units}, true
 }
@@ -165,6 +164,9 @@ write :: proc(filename: string, trace_all: bool) -> bool {
     version, valid := source.source_version_create(source.File_Id(1), 1, transmute(string)bytes)
     if !valid { fmt.eprintln("error: source file is not valid UTF-8"); return false }
     defer source.source_version_destroy(&version)
+    positions, position_valid := position_index_create(&version)
+    if !position_valid { fmt.eprintln("error: invalid source position index"); return false }
+    defer position_index_destroy(&positions)
 
     output := Document {
         schema="tsodin.dump/3",
@@ -183,14 +185,14 @@ write :: proc(filename: string, trace_all: bool) -> bool {
     lexer := scanner.scanner_init(&version)
     for {
         token := scanner.scanner_next(&lexer)
-        mapped, ok := unit_span(&version, token.byte_start, token.byte_end)
+        mapped, ok := unit_span(&positions, token.byte_start, token.byte_end)
         if !ok { fmt.eprintln("error: invalid token position"); return false }
         append(&tokens, Token{
             kind=token.kind,
             bytes=Span{token.byte_start,token.byte_end}, utf16=mapped,
         })
         if token.kind == .Invalid || token.error != .None {
-            issue, ok_issue := diagnostic(&version, int(token.error),
+            issue, ok_issue := diagnostic(&positions, int(token.error),
                                            token.byte_start, token.byte_end)
             if !ok_issue { return false }
             append(&lexical_issues, issue)
@@ -219,7 +221,7 @@ write :: proc(filename: string, trace_all: bool) -> bool {
         if tail == .End_Of_File || tail == .Invalid { span_token_count -= 1 }
     }
     for node in syntax.nodes {
-        units, ok := unit_span(&version, node.byte_start, node.byte_end)
+        units, ok := unit_span(&positions, node.byte_start, node.byte_end)
         if !ok { fmt.eprintln("error: invalid syntax node position"); return false }
         first, last := -1, -1
         // PERF: two monotone binary searches replace scanning every token
@@ -253,7 +255,7 @@ write :: proc(filename: string, trace_all: bool) -> bool {
         })
     }
     for issue in syntax.diagnostics {
-        d, ok := diagnostic(&version, int(issue.issue), issue.byte_start, issue.byte_end)
+        d, ok := diagnostic(&positions, int(issue.issue), issue.byte_start, issue.byte_end)
         if !ok { fmt.eprintln("error: invalid syntax diagnostic"); return false }
         append(&syntax_issues, d)
     }
@@ -282,7 +284,7 @@ write :: proc(filename: string, trace_all: bool) -> bool {
         })
     }
     for issue in binding.issues {
-        d, ok := diagnostic(&version, int(issue.kind), issue.byte_start, issue.byte_end)
+        d, ok := diagnostic(&positions, int(issue.kind), issue.byte_start, issue.byte_end)
         if !ok { fmt.eprintln("error: invalid binding diagnostic"); return false }
         append(&binding_issues, d)
     }
@@ -309,7 +311,7 @@ write :: proc(filename: string, trace_all: bool) -> bool {
             return false
         }
         node := syntax.nodes[relation.node_index]
-        units, ok := unit_span(&version, node.byte_start, node.byte_end)
+        units, ok := unit_span(&positions, node.byte_start, node.byte_end)
         if !ok {
             fmt.eprintln("error: invalid checker relation span")
             return false
@@ -336,7 +338,7 @@ write :: proc(filename: string, trace_all: bool) -> bool {
             fmt.eprintln("error: invalid checker comparison expression")
             return false
         }
-        units, ok := unit_span(&version, node.byte_start, node.byte_end)
+        units, ok := unit_span(&positions, node.byte_start, node.byte_end)
         if !ok {
             fmt.eprintln("error: invalid checker comparison span")
             return false
@@ -348,7 +350,7 @@ write :: proc(filename: string, trace_all: bool) -> bool {
         })
     }
     for issue in checked.diagnostics {
-        d, ok := diagnostic(&version, int(issue.issue), issue.byte_start, issue.byte_end)
+        d, ok := diagnostic(&positions, int(issue.issue), issue.byte_start, issue.byte_end)
         if !ok { fmt.eprintln("error: invalid checker diagnostic"); return false }
         append(&check_issues, d)
     }

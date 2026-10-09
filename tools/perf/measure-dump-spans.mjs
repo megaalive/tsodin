@@ -76,17 +76,22 @@ if(process.argv.includes("--self-test")){
 }
 const bin=process.env.TSODIN_BIN;
 if(!bin)throw new Error("TSODIN_BIN must name a pinned Odin-built CLI");
+const baseline=process.env.TSODIN_BASE_BIN||null;
+const lanes=baseline
+  ? [{name:"baseline",bin:baseline},{name:"candidate",bin}]
+  : [{name:"candidate",bin}];
 const dir=mkdtempSync(join(tmpdir(),"tsodin-dump-spans-"));
 try {
   const fixtures=counts.map(n=>{
     const source=sourceText(n);
     const file=join(dir,`case-${n}.ts`);
     writeFileSync(file,source);
-    return {n,source,file,readBack:readFileSync(file,"utf8"),times:[],digest:null};
+    return {n,source,file,readBack:readFileSync(file,"utf8"),
+      times:{baseline:[],candidate:[]},digest:null};
   });
-  const run=fixture=>{
+  const run=(fixture,lane)=>{
     const start=performance.now();
-    const stdout=execFileSync(bin,["dump","--stage=all",resolve(fixture.file)],{
+    const stdout=execFileSync(lane.bin,["dump","--stage=all",resolve(fixture.file)],{
       encoding:"utf8",maxBuffer:32*1024*1024,timeout:120000,
     });
     const elapsedMs=performance.now()-start;
@@ -100,26 +105,37 @@ try {
     }
     return elapsedMs;
   };
-  for(const fixture of fixtures)for(let i=0;i<2;i++)run(fixture);
-  // Rotating order, including reverse passes, limits systematic warm-cache
-  // and run-order bias. Complete samples retained, not cherry-picked.
+  for(const fixture of fixtures)for(const lane of lanes){
+    for(let i=0;i<2;i++)run(fixture,lane);
+  }
+  // AB/BA order on a single runner, rotating the file sizes. Each lane
+  // performs exactly the same work with checksum-identical stage dumps.
   for(let round=0;round<samples;round++){
     const offset=round%fixtures.length;
     const ordered=[...fixtures.slice(offset),...fixtures.slice(0,offset)];
     if(round%2===1)ordered.reverse();
-    for(const fixture of ordered)fixture.times.push(run(fixture));
+    const orderedLanes=round%2===0?lanes:[...lanes].reverse();
+    for(const fixture of ordered)for(const lane of orderedLanes){
+      fixture.times[lane.name].push(run(fixture,lane));
+    }
   }
   const records=fixtures.map(f=>({
     declarations:f.n,sourceBytes:Buffer.byteLength(f.source),
     utf16:f.source.length,...f.shape,
     sha256:f.digest,
-    medianMs:median(f.times),rawMs:f.times,
+    medianMs:median(f.times.candidate),rawMs:f.times.candidate,
+    baselineMedianMs:baseline?median(f.times.baseline):null,
+    baselineRawMs:baseline?f.times.baseline:null,
+    candidateToBaseline:baseline?
+      median(f.times.candidate)/median(f.times.baseline):null,
   }));
   console.log("DUMP_SPAN_PROBE "+JSON.stringify({
     schema:"tsodin.dump-span-probe/1",target:"complete-dump-process-including-startup",
     toolchain:"pinned Odin dev-2026-10 -o:speed",runner:process.platform+" "+process.arch,
     runSha:process.env.GITHUB_SHA||null,
-    samples,warmupsPerCase:2,counts,records,
+    samples,warmupsPerCase:2,counts,
+    baselineCommit:baseline?"7b82fdf7b0703f809e7d5c9093c3c9e6addc4b5c":null,
+    records,
   }));
 }finally{
   rmSync(dir,{recursive:true,force:true});
