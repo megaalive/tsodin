@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
-import {join, resolve, posix} from "node:path";
+import {join, resolve} from "node:path";
 import {spawnSync} from "node:child_process";
 import {fileURLToPath} from "node:url";
 
@@ -106,9 +106,9 @@ export function parseOfficialCase(source, implicitName) {
     if(!sawBoundary && !current)current={name:implicitName,content:""};
     if(!sawBoundary && !/^\s*(?:\/\/.*)?$/.test(line))sawCode=true;
     if(sawBoundary || !/^\s*$/.test(line) || current.content){
-      // Retain original newline boundaries and source text verbatim for
-      // real diagnostic line/column positions. Directives stay comments
-      // by replacing them with line terminators instead of disappearing.
+      // Preserve each unit's original content and newline spelling.
+      // Parsed directive lines are consumed, as in the upstream harness;
+      // its exact baseline line/column translation is NOT yet replicated.
       current.content+=line;
     }
   }
@@ -170,7 +170,7 @@ function capture(tsc,c) {
       const matches=[...(run.stdout+"\n"+run.stderr).matchAll(
         /^(.*?\.tsx?)\((\d+),(\d+)\): error TS(\d+):/gm)];
       reports.push({variant,options,exitCode:run.status,
-        diagnostics:matches.map(m=>({file:posix.basename(m[1].replaceAll("\\","/")),
+        diagnostics:matches.map(m=>({file:m[1].replaceAll("\\","/"),
           line:Number(m[2]),column:Number(m[3]),code:Number(m[4])})),
         diagnosticTextSha256:createHash("sha256").update(run.stdout+"\n"+run.stderr).digest("hex"),
       });
