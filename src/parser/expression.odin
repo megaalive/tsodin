@@ -33,6 +33,9 @@ Expr_Declaration :: struct {
     name_start: int,
     name_end: int,
     type_kind: Primitive_Type,
+    // Bits: number=1, string=2, boolean=4. Zero means no annotation.
+    // This is a source-local syntax encoding, not a pool-local Type_Id.
+    type_mask: u8,
     initializer: int, // -1 if no initializer
 }
 
@@ -307,17 +310,47 @@ syntax_declaration :: proc(p: ^Syntax_State) -> bool {
         }
         if p.current.kind == .Number_Keyword {
             decl.type_kind = .Number
+            decl.type_mask = 1
         } else if p.current.kind == .String_Keyword {
             decl.type_kind = .String
+            decl.type_mask = 2
         } else if p.current.kind == .Boolean_Keyword {
             decl.type_kind = .Boolean
+            decl.type_mask = 4
         } else {
             syntax_issue(p, .Missing_Type)
             return false
         }
         syntax_advance(p)
-        if p.fatal {
-            return false
+        if p.fatal { return false }
+        // COMPAT: duplicate and reordered primitive constituents reduce
+        // to the same canonical type. Type_Id ownership stays in checker.
+        for p.current.kind == .Bar {
+            syntax_advance(p)
+            if p.fatal { return false }
+            if p.current.kind == .Number_Keyword {
+                decl.type_mask |= 1
+            } else if p.current.kind == .String_Keyword {
+                decl.type_mask |= 2
+            } else if p.current.kind == .Boolean_Keyword {
+                decl.type_mask |= 4
+            } else {
+                syntax_issue(p, .Missing_Type)
+                return false
+            }
+            syntax_advance(p)
+            if p.fatal { return false }
+        }
+        // A degenerate union is still the original primitive annotation.
+        if decl.type_mask == 3 || decl.type_mask == 5 ||
+           decl.type_mask == 6 || decl.type_mask == 7 {
+            decl.type_kind = .Union
+        } else if decl.type_mask == 1 {
+            decl.type_kind = .Number
+        } else if decl.type_mask == 2 {
+            decl.type_kind = .String
+        } else {
+            decl.type_kind = .Boolean
         }
     }
     if p.current.kind == .Equals {

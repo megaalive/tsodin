@@ -17,6 +17,8 @@ Primitive_Type :: enum {
     Number,
     String,
     Boolean,
+    // Appended; declarations-only parser still rejects union grammar.
+    Union,
 }
 
 Literal_Kind :: enum {

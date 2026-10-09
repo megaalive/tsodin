@@ -57,6 +57,8 @@ Token_Kind :: enum {
     Else_Keyword,
     // Append-only M4-G5F8T: preserve existing token IDs.
     Percent,
+    // M4-G5F8W1: lone | is supported only in primitive type annotations.
+    Bar,
 }
 
 Scan_Error :: enum {
@@ -335,6 +337,8 @@ scanner_next :: proc(s: ^Scanner) -> Token {
         if start + 1 < len(text) && text[start+1] == '|' {
             kind = .Bar_Bar
             s.offset += 1
+        } else {
+            kind = .Bar
         }
     }
     s.offset += 1
