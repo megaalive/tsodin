@@ -1,11 +1,12 @@
 import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport} from "./lib/observatory-core.mjs";
 import {initArchitectureOrbit} from "./lib/architecture-orbit.mjs";
+import {initStageLab} from "./lib/stage-lab.mjs";
 const $ = id => document.getElementById(id);
 const REPO = "https://github.com/megaalive/tsodin";
 const API = "https://api.github.com/repos/megaalive/tsodin";
 let refreshing = false;
 
-const VIEWS = new Set(["overview","activity","pipeline","conformance","xray","principles"]);
+const VIEWS = new Set(["overview","activity","pipeline","conformance","xray","lab","principles"]);
 function selectView(id, updateHash = true) {
   const active=VIEWS.has(id)?id:"overview";
   document.querySelectorAll("[data-panel]").forEach(panel=>{
@@ -329,3 +330,6 @@ document.querySelectorAll("[data-preset]").forEach(button=>{
 $("refresh-button").addEventListener("click",refreshLive);
 renderSource(true);
 refreshLive();
+
+// Static gallery contains only pinned Odin-produced traces, never JS predictions.
+initStageLab();

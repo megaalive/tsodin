@@ -116,3 +116,18 @@ blue-glass theme token. Do not use the Unicode `✳` character: some mobile
 browsers select a full-color emoji font instead of the intended text glyph,
 producing an unrelated green badge. Inline SVG has no external font or asset
 request and stays monochrome on iOS, Android and desktop.
+
+## M4-G5F8B real stage lab
+
+The Lab nav item reads immutable checked-in `docs/traces` produced by the
+pinned Odin binary from public examples, with `index.json` discovery. Unlike
+the existing Unicode X-Ray (explicit JS reference), Lab **does not** parse,
+bind or typecheck browser input. Its UI only maps source-backed token spans,
+postorder expression nodes, one-file symbols and internal checker issue IDs.
+Byte/UTF-16 positions are cross-checked with the browser decoder; invalid
+records fail visibly. Type relation lists, hierarchical scope walks and
+TypeScript code equivalence are not implied by the presence of the Lab.
+
+`tools/dump/build-gallery.mjs --check` must pass before publishing changes;
+see `docs/STAGE_DUMP.md` for regeneration instructions. Keep mobile tap
+controls and current navigation/scroll behavior intact.

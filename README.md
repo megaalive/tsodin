@@ -38,7 +38,7 @@ There are **no full TypeScript compatibility or compiler performance claims**. T
 
 **https://megaalive.github.io/tsodin/**
 
-A static dashboard that fetches **current public GitHub repository commits, workflow runs and source paths on demand**, explicitly identifying unavailable data. It includes a separate browser-only Unicode position reference. It does not publish historical prototype benchmarks or claim an operational Odin TypeScript checker. See [Observatory maintenance](docs/OBSERVATORY.md).
+A static dashboard that fetches **current public GitHub repository commits, workflow runs and source paths on demand**, explicitly identifying unavailable data. It includes a separate browser-only Unicode position reference **and a read-only Lab tab populated from real pinned Odin stage dumps**. The Lab does not compile user input in JavaScript; its trace gallery is regenerated from curated public examples and CI-checked byte-for-byte. It does not publish historical prototype benchmarks or claim a complete TypeScript checker. See [Observatory maintenance](docs/OBSERVATORY.md).
 
 ## Local bootstrap
 

@@ -1,0 +1,47 @@
+/* Read-only Odin trace lab. Extend observatory tokens, never override page theme. */
+#lab { --lab-accent:var(--blue); }
+.lab-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:20px 0 16px; }
+.lab-toolbar label { color:var(--muted); font-size:13px; }
+.lab-toolbar select { max-width:100%; min-width:185px; border:1px solid var(--line); border-radius:8px; background:var(--surface-2); color:var(--text); padding:10px 12px; font:inherit; }
+.lab-toolbar select:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+.lab-trust { display:inline-flex; color:var(--muted); font-size:12px; line-height:1.5; }
+.lab-trust.ok { color:var(--blue); } .lab-trust.blocked { color:var(--orange); }
+.lab-steps { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 22px; }
+.lab-step { font:11px/1.5 ui-monospace,Consolas,monospace; padding:6px 9px; border:1px solid var(--line); border-radius:7px; color:var(--muted); }
+.lab-step.ok { border-color:var(--blue); color:var(--blue); } .lab-step.blocked { border-color:var(--orange); color:var(--orange); }
+.lab-grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); gap:16px; }
+.lab-card { min-width:0; padding:18px 20px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+.lab-card h3 { margin:0 0 10px; font-size:17px; font-weight:650; }
+.lab-card p { margin:8px 0; }
+.lab-wide { grid-column:1/-1; }
+.lab-meta { display:flex; flex-wrap:wrap; gap:8px 16px; color:var(--muted); font-size:12px; }
+.lab-pre { white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.85 ui-monospace,Consolas,monospace; background:var(--surface-2); padding:14px; border:1px solid var(--soft-line); border-radius:9px; max-height:380px; overflow:auto; }
+#lab-source { tab-size:2; }
+.lab-word,.lab-token,.lab-node-control,.lab-symbol { cursor:pointer; border:1px solid transparent; background:transparent; color:var(--text); border-radius:5px; }
+.lab-word { display:inline; white-space:pre-wrap; padding:0 1px; font:inherit; line-height:inherit; }
+.lab-word.keyword,.lab-token.keyword { color:#b2a0fa; }
+.lab-word.number,.lab-token.number { color:#ffbf8b; }
+.lab-word.string,.lab-token.string { color:#8dddaf; }
+.lab-word.operator,.lab-token.operator { color:#91c8f8; }
+.lab-word.unknown,.lab-token.unknown { color:var(--orange); }
+.lab-word:hover,.lab-token:hover,.lab-node-control:hover,.lab-symbol:hover { border-color:var(--lab-accent); }
+.lab-word.is-selected,.lab-token.is-selected { background:rgba(131,191,249,.18); outline:1px solid var(--lab-accent); }
+.lab-caps { display:flex; flex-wrap:wrap; gap:6px; max-height:240px; overflow:auto; align-content:start; }
+.lab-token { border-color:var(--line); background:var(--surface-2); padding:7px 9px; max-width:100%; text-align:left; font:13px ui-monospace,Consolas,monospace; }
+.lab-token small { display:block; color:var(--muted); font-size:10px; margin-top:3px; overflow-wrap:anywhere; }
+.lab-tree { max-height:425px; overflow:auto; }
+.lab-event { margin:10px 0; border-left:2px solid var(--line); padding:3px 0 3px 10px; }
+.lab-event-name { color:var(--lab-accent); font:12px ui-monospace,Consolas,monospace; }
+.lab-branch { list-style:none; margin:4px 0 6px; padding-left:12px; border-left:1px dotted var(--line); }
+.lab-node { padding:2px 0; min-width:0; }
+.lab-node-control { text-align:left; padding:4px 6px; font:12px ui-monospace,Consolas,monospace; }
+.lab-node-info { color:var(--muted); padding-left:6px; font-size:11px; }
+.lab-symbol { font:12px ui-monospace,Consolas,monospace; background:var(--surface-2); border-color:var(--line); padding:7px 10px; margin:4px 6px 4px 0; }
+.lab-muted { color:var(--muted); font-size:12px; line-height:1.7; }
+.lab-issue { border-left:3px solid var(--orange); padding:8px 11px; background:var(--surface-2); border-radius:4px; font:12px/1.6 ui-monospace,Consolas,monospace; overflow-wrap:anywhere; }
+.lab-detail { border-left:3px solid var(--lab-accent); padding:9px 14px; min-height:80px; color:var(--text); background:var(--surface-2); border-radius:5px; }
+.lab-detail strong { display:block; font-size:13px; margin-bottom:4px; }
+.lab-detail-line { display:block; color:var(--muted); font:12px/1.65 ui-monospace,Consolas,monospace; overflow-wrap:anywhere; }
+.lab-json { max-height:240px; overflow:auto; font:11px/1.5 ui-monospace,Consolas,monospace; white-space:pre; color:var(--muted); }
+.lab-honesty { color:var(--muted); font-size:13px; margin:18px 0 0; max-width:95ch; }
+@media(max-width:760px){.lab-grid{grid-template-columns:1fr}.lab-wide{grid-column:1}.lab-card{padding:16px}.lab-branch{padding-left:9px}.lab-toolbar select{flex:1;min-width:0}.lab-trust{width:100%}}
