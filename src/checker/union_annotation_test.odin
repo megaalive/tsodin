@@ -26,10 +26,8 @@ union_annotations_typecheck_and_reassign :: proc(t: ^testing.T) {
                    len(checked.diagnostics)==0 && checked.checked_declarations==4 &&
                    checked.checked_assignments==2, "union source-to-checker path accepted")
     if len(ast.declarations)==4 {
-        testing.expect(t, ast.declarations[0].type_kind==.Union &&
-                       ast.declarations[0].type_mask==3 &&
-                       ast.declarations[3].type_kind==.Number &&
-                       ast.declarations[3].type_mask==1,
+        testing.expect(t, ast.declarations[0].type_kind==.Number_String &&
+                       ast.declarations[3].type_kind==.Number,
                        "reordered union and duplicate annotation canonicalized")
     }
 }

@@ -9,8 +9,9 @@ introduced in PR #79. It is not general TypeScript union or typeof support.
   remains unsupported in expressions. Logical || retains its original token.
 - The expression parser accepts annotated combinations of number, string and
   boolean with |, including repeated or reordered primitive constituents.
-  Syntax stores an exact three-bit mask, not a pool-local handle.
-- The checker owns one TypeId pool per invocation and interns union annotations
+  Syntax stores a small canonical combination enum, not a pool-local handle;
+  the existing stage-dump schema and old gallery outputs stay unchanged.
+- The checker creates a pool only for files containing union annotations and interns union annotations
   into sorted canonical identities; TypeId handles are not stored in syntax,
   binder, global state or any returned report.
 - A separate dense TypeId lane accompanies the existing primitive/fact arrays.

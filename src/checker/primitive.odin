@@ -157,6 +157,17 @@ primitive_type_id :: proc(kind: Primitive) -> typecore.Type_Id {
     return typecore.Invalid
 }
 
+union_annotation_mask :: proc(kind: parser.Primitive_Type) -> u8 {
+    switch kind {
+    case .Number_String: return 3
+    case .Number_Boolean: return 5
+    case .String_Boolean: return 6
+    case .Number_String_Boolean: return 7
+    case .Inferred, .Number, .String, .Boolean: return 0
+    }
+    return 0
+}
+
 union_annotation_id :: proc(pool: ^typecore.Pool, mask: u8) -> (typecore.Type_Id, bool) {
     if mask == 0 || mask > 7 { return typecore.Invalid, false }
     members: [3]typecore.Type_Id
@@ -356,14 +367,30 @@ check_file_with_relations :: proc(
     defer delete(inferred)
     declared := make([]Primitive, len(syntax.declarations))
     defer delete(declared)
-    // TypeId is used only for union-aware declarations/assignments; all
-    // handles belong to this invocation's pool. No global type graph.
-    pool := typecore.pool_init()
-    defer typecore.pool_destroy(&pool)
-    expression_ids := make([]typecore.Type_Id, len(syntax.nodes))
-    defer delete(expression_ids)
-    declared_ids := make([]typecore.Type_Id, len(syntax.declarations))
-    defer delete(declared_ids)
+    // PERF: no TypeId pool or extra dense scratch arrays for the existing
+    // monomorphic checker. Union handles are local to this invocation.
+    union_file := false
+    for d in syntax.declarations {
+        if union_annotation_mask(d.type_kind) != 0 {
+            union_file = true
+            break
+        }
+    }
+    pool: typecore.Pool
+    expression_ids: []typecore.Type_Id
+    declared_ids: []typecore.Type_Id
+    if union_file {
+        pool = typecore.pool_init()
+        expression_ids = make([]typecore.Type_Id, len(syntax.nodes))
+        declared_ids = make([]typecore.Type_Id, len(syntax.declarations))
+    }
+    defer {
+        if union_file {
+            delete(expression_ids)
+            delete(declared_ids)
+            typecore.pool_destroy(&pool)
+        }
+    }
     references := make([]int, len(syntax.nodes))
     defer delete(references)
     literal_nodes := make([]Literal_Fact, len(syntax.nodes))
@@ -575,7 +602,7 @@ check_file_with_relations :: proc(
                 return result
             }
             declared_type = declared[target_index]
-            declared_id = declared_ids[target_index]
+            if union_file { declared_id = declared_ids[target_index] }
             if dead_assignment {
                 // Never allow writes to the contradictory guard binding, nor
                 // to any enclosing narrowing guard; its never-state meaning
@@ -614,10 +641,11 @@ check_file_with_relations :: proc(
             }
             declared_type = annotation_type(decl.type_kind)
             declared_id = primitive_type_id(declared_type)
-            if decl.type_kind == .Union {
+            mask := union_annotation_mask(decl.type_kind)
+            if mask != 0 {
                 declared_type = .Union
                 ok: bool
-                declared_id, ok = union_annotation_id(&pool, decl.type_mask)
+                declared_id, ok = union_annotation_id(&pool, mask)
                 if !ok || typecore.kind_of(&pool, declared_id) != .Union {
                     fail(&result, .Invalid_Input, decl.byte_start, decl.byte_end, true)
                     return result
@@ -630,7 +658,7 @@ check_file_with_relations :: proc(
                     return result
                 }
                 declared[declaration_index] = declared_type
-                declared_ids[declaration_index] = declared_id
+                if union_file { declared_ids[declaration_index] = declared_id }
                 result.checked_declarations += 1
                 continue
             }
@@ -776,7 +804,9 @@ check_file_with_relations :: proc(
                     return result
                 }
                 kind = declared[symbol.declaration_index]
-                expression_ids[i] = declared_ids[symbol.declaration_index]
+                if union_file {
+                    expression_ids[i] = declared_ids[symbol.declaration_index]
+                }
                 // Declared primitive and current flow/literal facts are
                 // separate. Mutable bindings can narrow until reassigned;
                 // annotations to number/string stay wide at comparisons.
@@ -957,7 +987,7 @@ check_file_with_relations :: proc(
                     fail(&result, .Invalid_Input, node.byte_start, node.byte_end, true)
                     return result
                 }
-            } else {
+            } else if union_file {
                 expression_ids[i] = primitive_type_id(kind)
             }
             // The contextual fact is scoped to the RHS subtree only.
@@ -1418,10 +1448,12 @@ check_file_with_relations :: proc(
                 }
             }
             declared[declaration_index] = declared_type
-            declared_ids[declaration_index] = declared_id
+            if union_file { declared_ids[declaration_index] = declared_id }
             if declared_type == .Unknown {
                 declared[declaration_index] = expression_type
-                declared_ids[declaration_index] = expression_ids[expression_root]
+                if union_file {
+                    declared_ids[declaration_index] = expression_ids[expression_root]
+                }
             }
             if declared[declaration_index] == .Union {
                 // A general union has no single literal fact in this slice.

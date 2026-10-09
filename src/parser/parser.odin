@@ -17,8 +17,12 @@ Primitive_Type :: enum {
     Number,
     String,
     Boolean,
-    // Appended; declarations-only parser still rejects union grammar.
-    Union,
+    // Appended canonical primitive combinations. Legacy declarations
+    // parser continues to reject union syntax; the expression parser owns it.
+    Number_String,
+    Number_Boolean,
+    String_Boolean,
+    Number_String_Boolean,
 }
 
 Literal_Kind :: enum {
