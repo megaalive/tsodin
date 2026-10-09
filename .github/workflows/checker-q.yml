@@ -1,0 +1,84 @@
+name: Checker Q inline candidate probe
+
+# An isolated optional measurement lane. This is not a merge-speed gate and
+# its results must never be presented as full TypeScript compatibility or
+# cross-language throughput.
+on:
+  pull_request:
+    paths:
+      - "src/checker/**"
+      - "src/checkbench/**"
+      - "tools/perf/**"
+      - ".github/workflows/checker-q.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  same-runner:
+    name: Pinned Odin checker-only before/after Q probe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TSODIN_SHA_PRE_N: e8faff8f61b17f9d6bc58ca7ba106b4fd8fe229a
+      TSODIN_SHA_POST_O: 6ce293434fde1ec72a0fc8a01814cb33414ed1c8
+      TSODIN_SHA_CANDIDATE: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out all comparison history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install the pinned Odin release
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/odin.tar.gz"
+          root="$RUNNER_TEMP/odin"
+          curl --fail --location --retry 3 --output "$archive" \
+            https://github.com/odin-lang/Odin/releases/download/dev-2026-10/odin-linux-amd64-dev-2026-10.tar.gz
+          echo "c3c8b095621fd0c75f7f73e3a0829f1b4d45324225f20ba11ed8dc4da310a8ab  $archive" | sha256sum --check -
+          mkdir -p "$root"
+          tar -xzf "$archive" -C "$root" --strip-components=1
+          "$root/odin" version
+          echo "$root" >> "$GITHUB_PATH"
+
+      - name: Validate deterministic sampler math
+        run: node tools/perf/compare-checker-q.mjs --self-test
+
+      - name: Build pre-N, post-O and Q candidate with identical driver
+        shell: bash
+        run: |
+          set -euo pipefail
+          for lane in PRE_N POST_O CANDIDATE; do
+            ref="TSODIN_SHA_$lane"
+            commit="$(printenv "$ref")"
+            path="$RUNNER_TEMP/tsodin-$lane"
+            git worktree add --detach "$path" "$commit"
+            mkdir -p "$path/src/checkbench"
+            cp src/checkbench/main.odin "$path/src/checkbench/main.odin"
+            (cd "$path" && odin build src/checkbench -o:speed -out:"$RUNNER_TEMP/checkbench-$lane")
+            test -x "$RUNNER_TEMP/checkbench-$lane"
+            printf '%s %s\n' "$lane" "$(git -C "$path" rev-parse HEAD)"
+          done
+
+      - name: Measure interleaved checker calls with semantic checksum gate
+        shell: bash
+        env:
+          TSODIN_BENCH_PRE_N: ${{ runner.temp }}/checkbench-PRE_N
+          TSODIN_BENCH_POST_O: ${{ runner.temp }}/checkbench-POST_O
+          TSODIN_BENCH_CANDIDATE: ${{ runner.temp }}/checkbench-CANDIDATE
+        run: |
+          set -euo pipefail
+          node tools/perf/compare-checker-q.mjs > checker-q-benchmark.json
+          node -e 'const r=require("./checker-q-benchmark.json");if(r.results.length!==7||r.results.some(x=>!x.expected.checksum))process.exit(1);console.log("PASS: 7 shared workloads, checksum parity across 3 revisions")'
+
+      - name: Retain complete raw timing and reproducibility record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checker-inline-q-${{ github.run_id }}
+          path: checker-q-benchmark.json
+          if-no-files-found: ignore
+          retention-days: 30
