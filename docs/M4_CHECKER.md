@@ -859,3 +859,32 @@ the previously supported Boolean flow cases. This is a source-level
 duplication/invariant improvement, **not** a measured performance win,
 general Boolean formula engine or public checker enablement.
 
+## M4-G5F8O — mixed Boolean guard binding proof consolidation
+
+The two supported mixed-formula families `a && (b || c)` / `a || (b && c)`
+and `(a && b) || c` / `(a || b) && c` independently repeated
+the same *binding provenance proof*: all three bare names must resolve to
+already-checked **mutable let** declarations of widened Boolean type,
+with three distinct declaration indices. Duplicate symbols/references,
+consts, unknown or narrow facts, forward references and malformed
+indexes cannot qualify.
+
+The shared `three_distinct_wide_boolean_lets` helper checks three
+fixed-size source-backed AST indices against bounded reference, symbol,
+declaration and widened-fact arrays. It performs no allocations, accepts
+no computed expressions, and fails closed before every dereference.
+The family-specific syntax rules remain separate: the outer-left
+predicate is decisive for the right-nested family, whereas the
+outer-right predicate is decisive for the left-nested family. Reusing
+binding validation does **not** conflate those entailments or change
+branch snapshots, nested joins, short-circuit semantics or trace records.
+
+Native unit tests cover eligible bindings and malformed/truncated AST,
+reference or declaration tables, repeated symbols and declaration
+identities, non-let bindings, non-Boolean types, missing wide evidence
+and future declarations. Existing independent pinned TS7.0.2 code/
+UTF-16-start and supplemental TS6.0.2 full-span fixtures for mixed-right,
+mixed-left and nested mutations protect the full semantic behavior.
+This quality-only change makes no performance claim: allocation count
+in the helper is zero but its runtime cost is not benchmarked.
+
