@@ -1,0 +1,29 @@
+{
+  "schema": "tsodin.gallery/1",
+  "examples": [
+    {
+      "id": "mixed-boolean",
+      "title": "Mixed Boolean",
+      "description": "Verified Odin stage dump for mixed-boolean.ts",
+      "href": "mixed-boolean.json"
+    },
+    {
+      "id": "typed-mismatch",
+      "title": "Typed Mismatch",
+      "description": "Verified Odin stage dump for typed-mismatch.ts",
+      "href": "typed-mismatch.json"
+    },
+    {
+      "id": "unicode-span",
+      "title": "Unicode Span",
+      "description": "Verified Odin stage dump for unicode-span.ts",
+      "href": "unicode-span.json"
+    },
+    {
+      "id": "unsupported-name",
+      "title": "Unsupported Name",
+      "description": "Verified Odin stage dump for unsupported-name.ts",
+      "href": "unsupported-name.json"
+    }
+  ]
+}
