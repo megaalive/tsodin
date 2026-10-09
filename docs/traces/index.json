@@ -8,6 +8,12 @@
       "href": "mixed-boolean.json"
     },
     {
+      "id": "relation-decisions",
+      "title": "Relation Decisions",
+      "description": "Verified Odin stage dump for relation-decisions.ts",
+      "href": "relation-decisions.json"
+    },
+    {
       "id": "typed-mismatch",
       "title": "Typed Mismatch",
       "description": "Verified Odin stage dump for typed-mismatch.ts",
