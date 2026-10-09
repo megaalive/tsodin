@@ -1,4 +1,4 @@
-import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport} from "./lib/observatory-core.mjs";
+import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport,validateBenchmarkReport} from "./lib/observatory-core.mjs";
 import {initArchitectureOrbit} from "./lib/architecture-orbit.mjs";
 import {initStageLab} from "./lib/stage-lab.mjs?v=20261009-comparisons";
 const $ = id => document.getElementById(id);
@@ -6,7 +6,7 @@ const REPO = "https://github.com/megaalive/tsodin";
 const API = "https://api.github.com/repos/megaalive/tsodin";
 let refreshing = false;
 
-const VIEWS = new Set(["overview","activity","pipeline","conformance","xray","lab","principles"]);
+const VIEWS = new Set(["overview","activity","pipeline","conformance","benchmark","xray","lab","principles"]);
 function selectView(id, updateHash = true) {
   const active=VIEWS.has(id)?id:"overview";
   document.querySelectorAll("[data-panel]").forEach(panel=>{
@@ -26,6 +26,59 @@ document.querySelectorAll("[data-view]").forEach(button=>{
 window.addEventListener("hashchange",()=>selectView(location.hash.slice(1),false));
 selectView(location.hash.slice(1),false);
 initArchitectureOrbit($("architecture-instrument"));
+
+async function publishedBenchmark() {
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),9000);
+  try {
+    const response=await fetch("./data/benchmark.json",{cache:"no-store",signal:controller.signal});
+    if(!response.ok) throw new Error("Benchmark evidence unavailable");
+    return validateBenchmarkReport(await response.json());
+  } finally {clearTimeout(timeout);}
+}
+function unavailableBenchmark() {
+  $("benchmark-state").textContent="Benchmark evidence unavailable";
+  $("benchmark-note").textContent="The published record could not be validated. No time, speedup or rank can be inferred.";
+  setStatus($("benchmark-pill"),"UNAVAILABLE","warning");
+  $("benchmark-revision").textContent="Unavailable";
+  $("benchmark-results").textContent="No verified end-to-end measurements can be displayed.";
+  $("benchmark-run-link").hidden=true;
+}
+function displayBenchmark(evidence,head) {
+  $("benchmark-run-link").hidden=true;
+  $("benchmark-results").replaceChildren();
+  if(evidence.status==="not_measured") {
+    $("benchmark-state").textContent="Eligible benchmark: not measured";
+    $("benchmark-note").textContent="Internal checker experiments are recorded in the repository, but no complete, comparable TypeScript checker benchmark qualifies for publication.";
+    setStatus($("benchmark-pill"),"NOT MEASURED","neutral");
+    $("benchmark-revision").textContent="Not measured";
+    $("benchmark-results").textContent="No eligible end-to-end checker benchmark has been published.";
+    return;
+  }
+  // A published record for an older or unknown HEAD is not a current
+  // result. Never display speed ratios without exact current revision.
+  if(!head || evidence.revision!==head) {
+    $("benchmark-state").textContent="Historical benchmark — not current";
+    $("benchmark-note").textContent="This result targets an earlier revision, so its scores are hidden until remeasured.";
+    setStatus($("benchmark-pill"),"HISTORICAL","warning");
+    $("benchmark-revision").textContent=shortSha(evidence.revision)+" · not HEAD";
+    $("benchmark-results").textContent="Historical performance data must not be presented as the current compiler.";
+    return;
+  }
+  $("benchmark-state").textContent="Published for current revision";
+  $("benchmark-note").textContent="Pinned corpus "+evidence.corpus+" · "+evidence.host+
+    " · comparison against "+evidence.baseline+" · "+evidence.testedAt;
+  setStatus($("benchmark-pill"),"PINNED RESULT","good");
+  $("benchmark-revision").textContent=shortSha(evidence.revision)+" · HEAD";
+  for(const item of evidence.rows) {
+    const row=element("div","proof-row");
+    row.append(element("span","",item.id));
+    row.append(element("strong","",item.ratio.toFixed(3)+"× baseline time"));
+    $("benchmark-results").append(row);
+  }
+  $("benchmark-run-link").href=evidence.workflowRunUrl;
+  $("benchmark-run-link").hidden=false;
+}
 
 async function publishedConformance() {
   const controller=new AbortController();
@@ -192,7 +245,8 @@ async function refreshLive(){
     githubJSON("/commits?sha=main&per_page=5"),
     githubJSON("/actions/runs?branch=main&per_page=30"),
     githubJSON("/git/trees/main?recursive=1"),
-    publishedConformance()
+    publishedConformance(),
+    publishedBenchmark()
   ]);
   const errors=[];
   let sha=null,success=0;
@@ -218,6 +272,10 @@ async function refreshLive(){
       success++;
     }catch(e){errors.push("conformance evidence");unavailableConformance();}
   }else{errors.push("conformance evidence");unavailableConformance();}
+  if(results[4].status==="fulfilled"){
+    try{displayBenchmark(results[4].value,sha);success++;}
+    catch(e){errors.push("benchmark evidence");unavailableBenchmark();}
+  }else{errors.push("benchmark evidence");unavailableBenchmark();}
   // Don't leave results from a previous refresh appearing fresh after a failed request.
   if(errors.includes("commits")){
     $("latest-sha").textContent="—";$("latest-sha").href=REPO+"/commits/main";$("latest-time").textContent="Not available";
@@ -235,7 +293,7 @@ async function refreshLive(){
   if(errors.includes("source tree")){
     $("odin-count").textContent="—";$("oracle-count").textContent="—";$("source-proof").textContent="Not verifiable";
   }
-  setStatus($("live-connection"),success===4?"SYNCED":success>0?"PARTIAL":"UNAVAILABLE",success===4?"good":success>0?"warning":"neutral");
+  setStatus($("live-connection"),success===5?"SYNCED":success>0?"PARTIAL":"UNAVAILABLE",success===5?"good":success>0?"warning":"neutral");
   $("last-checked").textContent=humanTime(new Date().toISOString());
   const notice=$("load-errors");
   notice.hidden=errors.length===0;
