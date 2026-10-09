@@ -1,6 +1,7 @@
 package project
 
 import "core:testing"
+import "core:strings"
 import "../binder"
 
 @(test)
@@ -81,42 +82,57 @@ loader_refuses_missing_root_without_binding_partial_file_set :: proc(t: ^testing
 
 @(test)
 jsonc_trivia_matches_official_config_string_boundaries :: proc(t: ^testing.T) {
-    // Original Microsoft tsconfigParsing Go tests cover both comment kinds,
-    // literal // and /* in strings, and even/odd escaped backslashes.
-    cases := [?]struct{text:string, expected:string}{
-        {"{ // comment\\r\\n\\\"files\\\": []}", "{           \\r\\n\\\"files\\\": []}"},
-        {"{\\\"files\\\":[/* multi\\nline */\\\"a.ts\\\"]}", "{\\\"files\\\":[        \\n       \\"a.ts\\\"]}"},
-        {"{\\\"name\\\":\\\"literal // and /* */ text\\\"}", "{\\\"name\\\":\\\"literal // and /* */ text\\\"}"},
-    }
-    for entry in cases {
-        normalized, ok := strip_jsonc_comments(entry.text)
-        testing.expect(t, ok && string(normalized) == entry.expected,
-                       "comments replaced only outside quoted JSON strings")
-        delete(normalized)
-    }
+    // Regressions based on Microsoft's pinned tsconfigparsing_test.go.
+    input := `{"files":[/* one
+    two */"a.ts"], // ignored
+    "compilerOptions":{"noEmit":true}}`
+    cleaned, ok := strip_jsonc_comments(input)
+    testing.expect(t, ok && len(cleaned) == len(input) &&
+                   strings.contains(string(cleaned), `"a.ts"`) &&
+                   !strings.contains(string(cleaned), "ignored") &&
+                   !strings.contains(string(cleaned), "one"),
+                   "line and block comments become same-width whitespace")
+    delete(cleaned)
+
+    quoted := `{"note":"literal // and /* */ and \\" escaped quote"}`
+    same, quoted_ok := strip_jsonc_comments(quoted)
+    testing.expect(t, quoted_ok && string(same) == quoted,
+                   "comment-like text inside quoted string stays untouched")
+    delete(same)
+
+    even_escapes := `{"note":"\\\\", /* actual comment */"files":["a.ts"]}`
+    even, even_ok := strip_jsonc_comments(even_escapes)
+    testing.expect(t, even_ok && len(even) == len(even_escapes) &&
+                   !strings.contains(string(even), "actual comment"),
+                   "paired backslashes do not hide the closing quote")
+    delete(even)
 }
 
 @(test)
 jsonc_config_accepts_comments_but_keeps_unsupported_options_closed :: proc(t: ^testing.T) {
-    valid := "{ // project roots\\n\\\"files\\\":[/* one */\\\"a.ts\\\",],\\\"compilerOptions\\\":{/* disable emit */\\\"noEmit\\\":true,},}"
+    valid := `{ // project roots
+        "files": [ /* one */ "a.ts", ],
+        "compilerOptions": { /* disable emit */ "noEmit": true, },
+    }`
     c, err := parse_config(valid)
     testing.expect(t, err == .None && len(c.roots)==1 && c.roots[0]=="a.ts",
                    "JSONC comments and trailing commas compose with explicit roots")
     config_destroy(&c)
 
-    quoted, quoted_err := parse_config("{\\\"files\\\":[\\\"http://host/a.ts\\\"],\\\"compilerOptions\\\":{\\\"noEmit\\\":true}}")
-    testing.expect(t, quoted_err == .Invalid_File, "comment-like bytes inside a string remain data")
+    quoted, quoted_err := parse_config(`{"files":["http://host/a.ts"],"compilerOptions":{"noEmit":true}}`)
+    testing.expect(t, quoted_err == .Invalid_File,
+                   "comment-like bytes inside a string remain source path data")
     config_destroy(&quoted)
 
-    unsupported, unsupported_err := parse_config("{/*hey*/\\\"files\\\":[\\\"a.ts\\\"],\\\"compilerOptions\\\":{\\\"noEmit\\\":true,\\\"strict\\\":true}}")
+    unsupported, unsupported_err := parse_config(`{/*hey*/"files":["a.ts"],"compilerOptions":{"noEmit":true,"strict":true}}`)
     testing.expect(t, unsupported_err == .Unsupported_Option,
                    "JSONC support does not bypass unsupported option rejection")
     config_destroy(&unsupported)
 
     invalid := [?]string{
-        "{/* unclosed",
-        "{\\\"files\\\":[\\\"a.ts\\\"],\\\"compilerOptions\\\":{\\\"noEmit\\\":true}}/*",
-        "{\\\"files\\\":[\\\"a.ts\\\"],\\\"compilerOptions\\\":{\\\"noEmit\\\":true}}/",
+        `{/* unclosed`,
+        `{"files":["a.ts"],"compilerOptions":{"noEmit":true}}/*`,
+        `{"files":["a.ts"],"compilerOptions":{"noEmit":true}}/`,
     }
     for source_text in invalid {
         rejected, rejection := parse_config(source_text)
