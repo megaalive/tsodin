@@ -49,6 +49,9 @@ jobs:
           node --check app.js
           node --check lib/observatory-core.mjs
           node --check lib/architecture-orbit.mjs
+          node --check lib/stage-lab.mjs
           node --check tools/observatory/check.mjs
       - name: Verify live-only dashboard, Unicode and fail-closed status
         run: node tools/observatory/check.mjs
+      - name: Verify published Lab JSON and browser boundary checks
+        run: node tools/dump/check-gallery.mjs
