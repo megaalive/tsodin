@@ -144,7 +144,8 @@ typecore_typeof_split_rejoins_each_primitive_partition :: proc(t: ^testing.T) {
     full, valid := intern_union(&p, []Type_Id{Number, Text, Boolean})
     testing.expect(t, valid && kind_of(&p, full)==.Union,
                    "full primitive domain interned")
-    for target in [?]Type_Id{Number, Text, Boolean} {
+    targets := [?]Type_Id{Number, Text, Boolean}
+    for target in targets {
         yes, no, ok := split_typeof(&p, full, target)
         testing.expect(t, ok && yes==target && no!=Never,
                        "each typeof discriminant has both live arms")
