@@ -32,6 +32,7 @@ internal; no public TypeScript conformance or checker benchmark is claimed.
 
 - `odin test src/checker`: true/false arms, inverted guards, reassignment,
   branch joins, negative mismatches and unsupported shapes.
-- TS7.0.2 independent CLI capture: `checker-typeof-flow-{valid,errors}`.
+- TS7.0.2 CLI capture plus direct code and UTF-16 start comparisons:
+  `checker-typeof-flow-{valid,errors}`; TS6 full-span checks are auxiliary.
 - Bootstrap CI, native trace/Pages smoke and pinned TS7 oracle workflow
   are mandatory merge gates. No public benchmark or conformance score.

@@ -85,6 +85,9 @@ const fixtures=[
   ["checker-remainder-errors",3],
   ["checker-annotation-widening-valid",0],
   ["checker-annotation-widening-errors",6],
+  // Auxiliary structured spans; TS7 CLI remains the semantic authority.
+  ["checker-typeof-flow-valid",0],
+  ["checker-typeof-flow-errors",2],
 ];
 
 function structuredReference(cwd) {

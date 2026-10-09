@@ -137,3 +137,15 @@ upstream compiler/conformance suite.
 
 This document is deliberately a small evidence-backed gap audit rather than
 an unjustified rewrite architecture or a claim of being faster than Go/Rust.
+
+## M4-G5F8V/W1/W2 implementation addendum (9 October 2026)
+
+The original source inventory above predates the three TypeId slices and is
+preserved as an audit snapshot. Current `src/typecore` has primitive canonical
+unions and restricted relations; the checker uses those handles for annotated
+primitive union assignments and standalone `typeof` branch narrowing.
+The pinned TypeScript 7.0.2 source case for `typeof` was read at the exact
+pinned revision, but the **official Microsoft harness has not been run**.
+Independent valid/error witnesses `checker-typeof-flow-*` are compared for
+diagnostic code and UTF-16 start only, with TS6 full spans supplemental.
+Unreachable/never and compound conditions remain future work.

@@ -1,7 +1,8 @@
 # M4-G5F8W1 — primitive union annotations
 
-This is the first production vertical slice using the canonical TypeId kernel
-introduced in PR #79. It is not general TypeScript union or typeof support.
+This historical W1 slice was the first production integration of TypeId,
+introduced in PR #79. W2 later added bounded `typeof` support, documented
+separately in [M4_TYPEOF_FLOW.md](M4_TYPEOF_FLOW.md).
 
 ## Scope
 
@@ -18,17 +19,16 @@ introduced in PR #79. It is not general TypeScript union or typeof support.
   Direct references, grouped aliases, declarations, and assignments can carry
   canonical unions. The existing monomorphic hot path retains its equality
   check without invoking typecore relations.
-- Unsupported union operators, truthiness, typeof guards, literal-union
+- Unsupported union operators, truthiness, compound typeof guards, literal-union
   annotations, undefined/null/object constituents, forward references,
   structural relations, and implicit-any remain fail closed.
 
 ## Semantic boundary
 
-TypeScript performs control-flow-dependent narrowing of initialized union
-variables. This slice preserves the *declared* union and does not claim to
-derive the flow-narrowed type of a union reference. Some otherwise-valid
-TypeScript sources may therefore still be unsupported/rejected. No TS7
-conformance rate, diagnostic parity, or performance claim follows from it.
+W1 used the *declared* union rather than branch-local narrowed types.
+W2 adds exact primitive `typeof` narrowing and mutation/branch joins, but
+general TypeScript control flow remains unsupported. No conformance rate,
+full diagnostic parity or performance win is claimed.
 
 ## Evidence
 
@@ -40,5 +40,5 @@ conformance rate, diagnostic parity, or performance claim follows from it.
 - Existing native primitive/flow suites, Bootstrap CI and oracle gates must
   remain green before merge; no public tsodin check or benchmark is enabled.
 
-Next: M4-G5F8W2, isolated typeof unary expression and exact branch split,
-followed by assignment invalidation and join semantics.
+Follow-up implemented: M4-G5F8W2 (see linked flow documentation).
+Future work: general CFG reachability and compound/typeguard operators.
