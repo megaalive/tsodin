@@ -66,6 +66,11 @@ strip_jsonc_comments :: proc(text: string) -> ([]u8, bool) {
             }
             continue
         }
+        if b == '/' {
+            // A standalone slash is not a JSON value or comment.
+            delete(out)
+            return nil, false
+        }
         i += 1
     }
     return out, true

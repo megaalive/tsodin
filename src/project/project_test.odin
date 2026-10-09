@@ -133,6 +133,7 @@ jsonc_config_accepts_comments_but_keeps_unsupported_options_closed :: proc(t: ^t
         `{/* unclosed`,
         `{"files":["a.ts"],"compilerOptions":{"noEmit":true}}/*`,
         `{"files":["a.ts"],"compilerOptions":{"noEmit":true}}/`,
+        `{"files":["a.ts"],"compilerOptions":{"noEmit":true}} garbage`,
     }
     for source_text in invalid {
         rejected, rejection := parse_config(source_text)

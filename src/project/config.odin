@@ -59,11 +59,17 @@ parse_config :: proc(text: string) -> (Config, Config_Error) {
         return c, .Invalid_Json
     }
     defer delete(sanitized)
-    value, err := json.parse_string(string(sanitized), .JSON)
+    // core:encoding/json parse_string returns after one value even if
+    // trailing tokens remain. Require EOF to avoid a false valid config.
+    reader := json.make_parser_from_string(string(sanitized), .JSON)
+    value, err := json.parse_value(&reader)
     if err != .None {
         return c, .Invalid_Json
     }
     defer json.destroy_value(value)
+    if reader.curr_token.kind != .EOF {
+        return c, .Invalid_Json
+    }
     root, is_object := value.(json.Object)
     if !is_object {
         return c, .Unsupported_Config
