@@ -320,6 +320,34 @@ scanner_comparison_and_logical_longest_tokens :: proc(t: ^testing.T) {
 }
 
 @(test)
+scanner_rejects_legacy_leading_zero_literals :: proc(t: ^testing.T) {
+    invalid := [?]string{"01", "00", "08", "09", "0123"}
+    for input in invalid {
+        v, ok := source.source_version_create(source.File_Id(721), 1, input)
+        testing.expect(t, ok, "legacy literal input is valid UTF-8")
+        s := scanner_init(&v)
+        token := scanner_next(&s)
+        testing.expect(t, token.kind == .Invalid && token.error == .Unsupported_Syntax &&
+                       token.byte_start == 0 && token.byte_end == len(input),
+                       "unsupported leading-zero spelling must fail closed")
+        testing.expect(t, scanner_next(&s).error == .Previous_Failure,
+                       "legacy spelling failure remains sticky")
+        source.source_version_destroy(&v)
+    }
+    valid := [?]string{"0", "1", "10", "101"}
+    for input in valid {
+        v, ok := source.source_version_create(source.File_Id(722), 1, input)
+        testing.expect(t, ok, "plain decimal input is valid UTF-8")
+        s := scanner_init(&v)
+        token := scanner_next(&s)
+        testing.expect(t, token.kind == .Integer_Literal && token.error == .None &&
+                       token.byte_end == len(input),
+                       "supported decimal spelling remains accepted")
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
 scanner_rejects_unimplemented_loose_equality :: proc(t: ^testing.T) {
     cases := [?]string{"a == b;", "a != b;", "a & b;", "a | b;"}
     for input in cases {

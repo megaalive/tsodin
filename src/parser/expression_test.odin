@@ -297,6 +297,32 @@ expression_conditional_unsupported_syntax_fails_closed :: proc(t: ^testing.T) {
 }
 
 @(test)
+expression_failed_if_rolls_back_all_statement_events :: proc(t: ^testing.T) {
+    cases := [?]string {
+        "let x = 1; if (x === 1) { x = 2; } const y = 3;",
+        "let x = 1; if (x === 1) { if (x === 2) { x = 3; } else { x = 4; } } const y = 3;",
+    }
+    for input in cases {
+        v, ok := source.source_version_create(source.File_Id(742), 1, input)
+        testing.expect(t, ok, "broken conditional source is valid UTF-8")
+        ast := parse_expression_program(&v, compat.ts7_profile())
+        testing.expect(t, !ast.complete && !ast.fatal && len(ast.diagnostics) == 1 &&
+                       ast.diagnostics[0].issue == .Expected_Else,
+                       "missing else reports one recoverable syntax issue")
+        testing.expect(t, len(ast.declarations) == 2 && len(ast.statements) == 2 &&
+                       len(ast.nodes) == 2,
+                       "rollback leaves only the two valid declarations")
+        if len(ast.statements) == 2 {
+            testing.expect(t, ast.statements[0].kind == .Declaration &&
+                           ast.statements[1].kind == .Declaration,
+                           "failed if and nested branch events do not leak into partial AST")
+        }
+        syntax_report_destroy(&ast)
+        source.source_version_destroy(&v)
+    }
+}
+
+@(test)
 expression_nested_if_events_keep_parent_order :: proc(t: ^testing.T) {
     input := "let x: number = 1; let ready: boolean = false;" +
              "if (x === 2) { if (ready) { x = 3; } else { x = 4; } x = 5; }" +
