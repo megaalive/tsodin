@@ -596,3 +596,24 @@ stores one fact, not a fabricated fact for every nested operand.
 `checker-flow-mixed-rhs-{valid,errors}` provide pinned TS7.0.2
 diagnostic-code/UTF-16-start witnesses and supplemental TS6.0.2
 structured spans. Public `tsodin check` remains disabled.
+
+## M4-G5F7B — restricted left-nested mixed Boolean flow
+
+Two pure, explicitly grouped mixed formulas are admitted:
+`(a && b) || c` and `(a || b) && c`, optionally with an outer `!`.
+The three bindings must be distinct, initialized, proven-wide Boolean `let`
+names. **Only the outer-right name is entailed:** the false arm of the
+former proves `c=false`; the true arm of the latter proves `c=true`.
+Negation exchanges arms without changing the proven value. Neither
+`a` nor `b` is individually implied, and the opposite arm does not
+imply the complement of `c`.
+
+Only one existing guard slot and the per-depth bounded snapshots are
+used; no generalized CFG is introduced. Repetition, nested/computed
+or negated inner operands, ungrouped shapes, and non-wide or impure
+operands fail closed. The new
+`checker-flow-mixed-left-{valid,errors}` fixture projects exercise
+pinned TS7.0.2 diagnostic codes and UTF-16 starts plus separate TS6.0.2
+structured-span witnesses. This is not official Microsoft conformance,
+complete TS7 parity, or a competitive benchmark. Public `tsodin check`
+remains disabled.
