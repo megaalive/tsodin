@@ -12,6 +12,7 @@ for(const example of manifest.examples){
   assert.equal(example.href,example.id+".json");
   const trace=JSON.parse(readFileSync(folder+example.href,"utf8"));
   const verified=validateStageDump(trace);
+  assert.equal(trace.schema,"tsodin.dump/3");
   assert.equal(trace.stages.types.trace_mode,"all");
   assert.equal(trace.source.name,"examples/"+example.id+".ts");
   assert.ok(verified.tokens>0);
@@ -62,6 +63,33 @@ for(const example of manifest.examples){
         assert.throws(()=>validateStageDump(mismatched),/target disagrees with binder/,
           "Assignment target must resolve to the actual declaration");
       }
+    }
+  }
+  if(trace.stages.types.comparisons.length){
+    const id=structuredClone(trace);
+    id.stages.types.comparisons[0].node_index=99999;
+    assert.throws(()=>validateStageDump(id),/comparison provenance/,
+      "Invented comparison node must fail");
+    const swapped=structuredClone(trace);
+    swapped.stages.types.comparisons[0].overlaps=
+      !swapped.stages.types.comparisons[0].overlaps;
+    assert.throws(()=>validateStageDump(swapped),/Inconsistent comparison proof/,
+      "Invented equality overlap must fail");
+    const fakeOp=structuredClone(trace);
+    fakeOp.stages.types.comparisons[0].operator="Less_Than";
+    assert.throws(()=>validateStageDump(fakeOp),/comparison provenance/,
+      "Comparison operator must match the original syntax token");
+    const moved=structuredClone(trace);
+    moved.stages.types.comparisons[0].bytes[0]++;
+    moved.stages.types.comparisons[0].utf16[0]++;
+    assert.throws(()=>validateStageDump(moved),/Comparison span/,
+      "Moved binary comparison source span must fail");
+    if(trace.stages.types.comparisons.length>1){
+      const reversed=structuredClone(trace);
+      [reversed.stages.types.comparisons[0],reversed.stages.types.comparisons[1]]=
+        [reversed.stages.types.comparisons[1],reversed.stages.types.comparisons[0]];
+      assert.throws(()=>validateStageDump(reversed),/source order/,
+        "Out-of-order comparison records must fail");
     }
   }
   console.log("PASS: browser validates actual Odin positions and shape: "+example.id);

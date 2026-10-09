@@ -11,6 +11,7 @@ const cases=[
   ["typed-mismatch", "diagnostics"],
   ["unicode-span", "diagnostics"],
   ["mixed-boolean", "complete"],
+  ["comparison-evidence", "diagnostics"],
   ["unsupported-name", "unsupported"],
 ];
 const prefixUtf16=(s,byte)=>{
@@ -30,7 +31,7 @@ for(const [name,expected] of cases){
   assert.equal(result.stderr,"",name+": unexpected stderr");
   assert.equal(result.stdout,run().stdout,name+": dump must be deterministic");
   const data=JSON.parse(result.stdout);
-  assert.equal(data.schema,"tsodin.dump/2");
+  assert.equal(data.schema,"tsodin.dump/3");
   assert.equal(data.profile,"ts7");
   assert.equal(data.source.name,path);
   assert.equal(data.source.text,s);
@@ -44,8 +45,10 @@ for(const [name,expected] of cases){
   assert.equal(data.stages.symbols.lookup_status,"not_implemented");
   assert.equal(data.stages.types.node_types_status,"not_implemented");
   assert.equal(data.stages.types.relations_status,"partial");
+  assert.equal(data.stages.types.comparisons_status,"partial");
   assert.equal(data.stages.types.trace_mode,"failures");
   assert.ok(Array.isArray(data.stages.types.relations));
+  assert.ok(Array.isArray(data.stages.types.comparisons));
   assert.ok(!("code" in (data.stages.types.diagnostics[0]||{})),"internal issue is not a TS code");
   const checkSpan=(o,where)=>{
     assert.ok(Array.isArray(o.bytes)&&o.bytes.length===2,where+": bytes");
@@ -88,6 +91,14 @@ for(const [name,expected] of cases){
     ]);
     assert.equal(rel.result,false,"default trace must only contain failed relations");
   }
+  for(const [i,c] of data.stages.types.comparisons.entries()){
+    checkSpan(c,"comparison "+i);
+    const node=data.stages.ast.nodes[c.node_index];
+    assert.ok(node&&node.kind==="Binary"&&node.operator===c.operator);
+    assert.deepEqual(c.bytes,node.bytes,"comparison must span the original binary node");
+    assert.equal(c.overlaps,false,"default trace records only disjoint proofs");
+    assert.ok(["Disjoint_Domains","Disjoint_Literals"].includes(c.proof));
+  }
   for(const stage of Object.values(data.stages)){
     for(const diagnostic of stage.diagnostics||[])checkSpan(diagnostic,"diagnostic");
     assert.ok(["implemented","partial","not_implemented"].includes(stage.status));
@@ -106,6 +117,12 @@ for(const [name,expected] of cases){
        data.stages.types.relations[0].relation_kind,data.stages.types.relations[0].result]
     );
   }
+  if(name==="comparison-evidence"){
+    assert.equal(data.stages.types.comparisons.length,2,
+      "default trace records two proven disjoint comparison sites");
+    assert.deepEqual(data.stages.types.comparisons.map(c=>c.proof),
+      ["Disjoint_Literals","Disjoint_Domains"]);
+  }
   if(name==="unsupported-name"){
     assert.equal(data.stages.types.outcome,"unsupported");
     assert.ok(data.stages.symbols.diagnostics.length>0,"binding failure must remain visible");
@@ -119,8 +136,15 @@ const fullDoc=JSON.parse(full.stdout);
 assert.equal(fullDoc.stages.types.trace_mode,"all");
 assert.ok(fullDoc.stages.types.relations.length>0,"all mode must capture successful checks");
 assert.ok(fullDoc.stages.types.relations.some(r=>r.result),"all mode must contain true decisions");
+const comparisonRun=spawnSync(compiler,["dump","--stage=all","--trace-relations",
+  resolve("examples/comparison-evidence.ts")],{encoding:"utf8",timeout:12000});
+assert.equal(comparisonRun.status,0,comparisonRun.stderr);
+const comparisons=JSON.parse(comparisonRun.stdout).stages.types.comparisons;
+assert.deepEqual(comparisons.map(c=>c.proof),
+  ["Disjoint_Literals","Same_Literal","Same_Symbol","Widened_Domain","Disjoint_Domains"]);
+assert.deepEqual(comparisons.map(c=>c.overlaps),[false,true,true,true,false]);
 for(const args of [["check"],["dump"],["dump","--trace-relations","examples/typed-mismatch.ts"]]){
   const run=spawnSync(compiler,args,{encoding:"utf8",timeout:12000});
   assert.equal(run.status,2,"unsupported checker and trace-relations remain closed");
 }
-console.log("PASS: deterministic tsodin.dump/2 relation contract; public check disabled");
+console.log("PASS: deterministic tsodin.dump/3 relation and comparison contract; public check disabled");

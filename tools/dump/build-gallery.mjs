@@ -28,8 +28,9 @@ for(const filename of names){
   assert.equal(run.status,0,path+": "+run.stderr);
   assert.equal(run.stderr,"",path+": unexpected stderr");
   const dump=JSON.parse(run.stdout);
-  assert.equal(dump.schema,"tsodin.dump/2");
+  assert.equal(dump.schema,"tsodin.dump/3");
   assert.equal(dump.stages.types.trace_mode,"all");
+  assert.equal(dump.stages.types.comparisons_status,"partial");
   assert.equal(dump.source.name,path);
   assert.equal(dump.source.text,readFileSync(path,"utf8"));
   emit(slug+".json",run.stdout);

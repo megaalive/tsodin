@@ -91,6 +91,18 @@ Relation :: struct {
     utf16: Unit_Span,
 }
 
+// Equality operand overlap, not the result of === or !==.
+Comparison :: struct {
+    left: checker.Primitive,
+    right: checker.Primitive,
+    node_index: int,
+    operator: scanner.Token_Kind,
+    proof: checker.Comparison_Proof,
+    overlaps: bool,
+    bytes: Span,
+    utf16: Unit_Span,
+}
+
 Type_Stage :: struct {
     status: string,
     outcome: string,
@@ -98,10 +110,12 @@ Type_Stage :: struct {
     checked_assignments: int,
     diagnostics: []Diagnostic,
     relations: []Relation,
+    comparisons: []Comparison,
     trace_mode: string,
     issue_namespace: string,
     node_types_status: string,
     relations_status: string,
+    comparisons_status: string,
 }
 
 Source :: struct {
@@ -153,7 +167,7 @@ write :: proc(filename: string, trace_all: bool) -> bool {
     defer source.source_version_destroy(&version)
 
     output := Document {
-        schema="tsodin.dump/2",
+        schema="tsodin.dump/3",
         profile="ts7",
         source=Source{
             name=filename, text=version.owned_text,
@@ -308,6 +322,31 @@ write :: proc(filename: string, trace_all: bool) -> bool {
             bytes=Span{node.byte_start,node.byte_end}, utf16=units,
         })
     }
+    comparisons := make([dynamic]Comparison)
+    defer delete(comparisons)
+    for c in checked.comparisons {
+        if c.node_index < 0 || c.node_index >= len(syntax.nodes) {
+            fmt.eprintln("error: invalid checker comparison index")
+            return false
+        }
+        node := syntax.nodes[c.node_index]
+        if node.kind != .Binary || node.operator != c.operator ||
+           node.left < 0 || node.right < 0 ||
+           node.left >= c.node_index || node.right >= c.node_index {
+            fmt.eprintln("error: invalid checker comparison expression")
+            return false
+        }
+        units, ok := unit_span(&version, node.byte_start, node.byte_end)
+        if !ok {
+            fmt.eprintln("error: invalid checker comparison span")
+            return false
+        }
+        append(&comparisons, Comparison{
+            left=c.left, right=c.right, node_index=c.node_index,
+            operator=c.operator, proof=c.proof, overlaps=c.overlaps,
+            bytes=Span{node.byte_start,node.byte_end}, utf16=units,
+        })
+    }
     for issue in checked.diagnostics {
         d, ok := diagnostic(&version, int(issue.issue), issue.byte_start, issue.byte_end)
         if !ok { fmt.eprintln("error: invalid checker diagnostic"); return false }
@@ -321,9 +360,11 @@ write :: proc(filename: string, trace_all: bool) -> bool {
         checked_declarations=checked.checked_declarations,
         checked_assignments=checked.checked_assignments,
         diagnostics=check_issues[:],relations=relations[:],
+        comparisons=comparisons[:],
         trace_mode=trace_all ? "all" : "failures",
         issue_namespace="tsodin.checker.Check_Issue",
         node_types_status="not_implemented",relations_status="partial",
+        comparisons_status="partial",
     }
 
     data, encode_error := json.marshal(output, {use_enum_names=true})

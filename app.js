@@ -1,6 +1,6 @@
 import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport} from "./lib/observatory-core.mjs";
 import {initArchitectureOrbit} from "./lib/architecture-orbit.mjs";
-import {initStageLab} from "./lib/stage-lab.mjs";
+import {initStageLab} from "./lib/stage-lab.mjs?v=20261009-comparisons";
 const $ = id => document.getElementById(id);
 const REPO = "https://github.com/megaalive/tsodin";
 const API = "https://api.github.com/repos/megaalive/tsodin";

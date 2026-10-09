@@ -2,6 +2,12 @@
   "schema": "tsodin.gallery/1",
   "examples": [
     {
+      "id": "comparison-evidence",
+      "title": "Comparison Evidence",
+      "description": "Verified Odin stage dump for comparison-evidence.ts",
+      "href": "comparison-evidence.json"
+    },
+    {
       "id": "mixed-boolean",
       "title": "Mixed Boolean",
       "description": "Verified Odin stage dump for mixed-boolean.ts",

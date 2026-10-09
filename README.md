@@ -21,7 +21,7 @@ M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, con
 
 There are **no full TypeScript compatibility or compiler performance claims**. The CLI `check` command remains disabled; the primitive semantic checker is available only through developer tooling.
 
-**Developer evidence:** `tsodin dump --stage=all examples/typed-mismatch.ts` emits a versioned JSON snapshot of the actual supported scanner/parser/binder/checker slice. Stage statuses and internal error IDs are explicit; M4-G5F8C additionally captures bounded primitive assignment relations at their real checker decision sites. Use `--trace-relations` to include successful decisions; missing general relations are never invented. See [Stage dump contract](docs/STAGE_DUMP.md).
+**Developer evidence:** `tsodin dump --stage=all examples/typed-mismatch.ts` emits a versioned JSON snapshot of the actual supported scanner/parser/binder/checker slice. Stage statuses and internal error IDs are explicit; M4-G5F8C additionally captures bounded primitive assignment relations at their real checker decision sites. Use `--trace-relations` to include successful decisions; missing general relations are never invented. M4-G5F8F publishes source-backed strict-equality proof categories separately in `tsodin.dump/3`, never claiming that possible overlap means an expression evaluates to true. See [Stage dump contract](docs/STAGE_DUMP.md).
 
 - [Execution plan and gates](docs/EXECUTION.md)
 - [Architectural decision](docs/RESEARCH_TRANSFER.md)
