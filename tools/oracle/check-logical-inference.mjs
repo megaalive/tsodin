@@ -46,6 +46,8 @@ try {
   });
   if(run.error||run.signal||run.status===null)throw Error(id+": compiler did not finish");
   const errors=[...(run.stdout+"\n"+run.stderr).matchAll(/error TS(\d+):/g)].map(m=>Number(m[1]));
-  console.log("TSODIN_LOGICAL_PROBE|"+JSON.stringify({id,exit:run.status,codes:errors,output:run.stdout.trim()}));
+  assert.deepEqual(errors,[],id+": native pinned TS7 Boolean logical acceptance drift");
+  assert.equal(run.status,0,id+": native TS7 must typecheck the exact singleton/domain witness");
+  console.log("PASS native TS7 Boolean logical inference "+id);
  }
 }finally{rmSync(root,{recursive:true,force:true});}

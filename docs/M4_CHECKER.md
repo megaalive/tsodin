@@ -738,3 +738,35 @@ actual inferred literal type. Unsupported and broader TypeScript
 semantics remain fail closed; no public `tsodin check` unlock or
 conformance/performance claim is introduced.
 
+## M4-G5F8K — Boolean-only logical result facts
+
+The Odin checker now propagates a **provable Boolean result** through
+pure `&&` and `||` operands, reflecting TypeScript's operand-returning
+operators without evaluating either branch at runtime. This is not a
+general truthiness implementation.
+
+For `a && b`, a proven `false` operand entails a `false` result;
+two proven `true` operands entail `true`. For `a || b`, a proven
+`true` operand entails `true`; two proven `false` operands entail
+`false`. Every fact reuses the existing compact synthetic Boolean
+`Literal_Fact`, with no new source span or per-node allocation.
+When the result is not forced to a singleton, an independently proven
+wide operand establishes a wide Boolean domain. Without either kind
+of proof, the existing fail-closed comparison boundary remains.
+
+The bounded scope includes singleton truth tables, grouped and
+doubly-negated Boolean literals, already-wide computed predicates,
+and decisive short-circuit operands. The negative witnesses require
+five real disjoint comparisons (TS2367 candidates) and a distinct
+TS2322 assignment mismatch in source order. One-arm mutation and
+the subsequent `if/else` join must not preserve a stale singleton;
+the ordinary `.None` path remains free of optional evidence arrays.
+
+Seventeen **separate** native TS7.0.2 strict/noEmit logical-inference
+projects lock supported acceptance and operand-returning facts.
+`checker-logical-facts-{valid,errors,flow-valid}` extend the
+pinned native TS7 diagnostic-code/UTF-16-start differential gate
+and supplementary TS6.0.2 full-span witness. They do not unlock
+the public `tsodin check` endpoint, prove official conformance,
+or establish a performance win.
+
