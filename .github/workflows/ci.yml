@@ -42,7 +42,9 @@ jobs:
         run: odin test src/compat
 
       - name: Validate pinned oracle configuration
-        run: node tools/oracle/profile.test.mjs
+        run: |
+          node tools/oracle/profile.test.mjs
+          node tools/oracle/upstream-triage.test.mjs
 
       - name: Run scanner subset tests
         run: odin test src/scanner

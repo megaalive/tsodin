@@ -18,6 +18,7 @@ M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, con
 - [M4-A–G5A: primitive checker, computed-wide types, and straight-line assignments](docs/M4_CHECKER.md)
 - [M4-B–E: expanded TS7 code/start and separate TS6 full-span witnesses](docs/M4_CODE_WITNESS.md)
 - [Official TypeScript conformance strategy](docs/OFFICIAL_CONFORMANCE.md)
+- [Audited Microsoft source/test inventory and next implementation priorities](docs/UPSTREAM_AUDIT.md)
 
 There are **no full TypeScript compatibility or compiler performance claims**. The CLI `check` command remains disabled; the primitive semantic checker is available only through developer tooling.
 

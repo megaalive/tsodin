@@ -41,7 +41,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Validate profile registry
-        run: node tools/oracle/profile.test.mjs
+        run: |
+          node tools/oracle/profile.test.mjs
+          node tools/oracle/upstream-triage.test.mjs
       - name: Install exact reference compiler for profile
         shell: bash
         env:
