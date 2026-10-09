@@ -82,6 +82,14 @@ assert.equal(wideErrors.status,1,"bad widened comparisons must still fail");
 assert.deepEqual(wideErrors.summary,["SUMMARY","9","4","1"]);
 assert.deepEqual(wideErrors.diags.map(row=>row[1]),["12","12","11","10"],
   "computed widened operands must not suppress unrelated errors");
+const unaryValid=read("checker-unary-wide-valid");
+assert.equal(unaryValid.status,0,"proven-wide logical negation must typecheck");
+assert.deepEqual(unaryValid.summary,["SUMMARY","7","0","0"]);
+const unaryBad=read("checker-unary-wide-errors");
+assert.equal(unaryBad.status,1,"unary Boolean results must preserve disjoint and mismatch errors");
+assert.deepEqual(unaryBad.summary,["SUMMARY","5","2","1"]);
+assert.deepEqual(unaryBad.diags.map(row=>row[1]),["10","12"],
+  "unary-wide errors retain ordered TS2322 and TS2367 candidates");
 const flowValid=read("checker-flow-assign-valid");
 assert.equal(flowValid.status,0,"valid straight-line let assignment sequence");
 assert.deepEqual(flowValid.summary,["SUMMARY","7","0","0"]);

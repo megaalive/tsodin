@@ -39,6 +39,8 @@ const fixtures=[
   ["checker-domain-errors",5],
   ["checker-wide-valid",0],
   ["checker-wide-errors",4],
+  ["checker-unary-wide-valid",0],
+  ["checker-unary-wide-errors",2],
   ["checker-flow-assign-valid",0],
   ["checker-flow-assign-errors",2],
   ["checker-flow-branch-valid",0],
