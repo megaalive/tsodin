@@ -792,7 +792,7 @@ check_file_with_relations :: proc(
                         kind = .Number
                     }
                 } else if (node.operator == .Minus || node.operator == .Asterisk ||
-                           node.operator == .Slash) &&
+                           node.operator == .Slash || node.operator == .Percent) &&
                           left == .Number && right == .Number {
                     kind = .Number
                 }
@@ -801,7 +801,7 @@ check_file_with_relations :: proc(
                 // independent of the operands' known literal identities.
                 if kind != .Unknown && (node.operator == .Plus ||
                    node.operator == .Minus || node.operator == .Asterisk ||
-                   node.operator == .Slash) {
+                   node.operator == .Slash || node.operator == .Percent) {
                     wide_nodes[i] = true
                 }
                 if (node.operator == .Less_Than || node.operator == .Greater_Than ||
