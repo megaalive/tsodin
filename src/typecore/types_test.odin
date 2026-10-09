@@ -136,3 +136,21 @@ typecore_typeof_unknown_and_invalid_fail_closed :: proc(t: ^testing.T) {
     testing.expect(t, !unknown_ok && !any_ok && !invalid_ok && !target_ok,
                    "no fabricated narrowing of unknown or unsupported inputs")
 }
+
+@(test)
+typecore_typeof_split_rejoins_each_primitive_partition :: proc(t: ^testing.T) {
+    p := pool_init()
+    defer pool_destroy(&p)
+    full, valid := intern_union(&p, []Type_Id{Number, Text, Boolean})
+    testing.expect(t, valid && kind_of(&p, full)==.Union,
+                   "full primitive domain interned")
+    for target in [?]Type_Id{Number, Text, Boolean} {
+        yes, no, ok := split_typeof(&p, full, target)
+        testing.expect(t, ok && yes==target && no!=Never,
+                       "each typeof discriminant has both live arms")
+        arms := [2]Type_Id{yes, no}
+        merged, restored := intern_union(&p, arms[:])
+        testing.expect(t, restored && merged==full,
+                       "union of both typeof arms restores canonical input")
+    }
+}
