@@ -122,6 +122,16 @@ assert.deepEqual(identityErrors.diags.map(row=>row[1]),
 const identityNested=read("checker-boolean-identity-nested-valid");
 assert.equal(identityNested.status,0,"nested Boolean identity guards must preserve mutation joins");
 assert.equal(identityNested.diags.length,0);
+const negatedValid=read("checker-negated-identity-valid");
+assert.equal(negatedValid.status,0,"pure negated Boolean identity guards narrow both arms");
+assert.equal(negatedValid.diags.length,0);
+const negatedErrors=read("checker-negated-identity-errors");
+assert.equal(negatedErrors.status,1,"disjoint inverse Boolean guards must be diagnosed");
+assert.deepEqual(negatedErrors.diags.map(row=>row[1]),[...Array(16).fill("11"),"10"],
+  "sixteen ordered TS2367-like cases plus one TS2322-like mismatch");
+const negatedNested=read("checker-negated-identity-nested-valid");
+assert.equal(negatedNested.status,0,"nested negated Boolean identities must not leak after joins");
+assert.equal(negatedNested.diags.length,0);
 const flowValid=read("checker-flow-assign-valid");
 assert.equal(flowValid.status,0,"valid straight-line let assignment sequence");
 assert.deepEqual(flowValid.summary,["SUMMARY","7","0","0"]);
