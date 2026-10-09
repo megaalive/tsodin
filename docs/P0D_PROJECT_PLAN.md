@@ -1,6 +1,6 @@
 # P0D → P1A — upstream-first vertical project plan
 
-Status updated 10 October 2026. P0A/P0B/P0C merged. This file is the actionable
+Status updated 10 October 2026. P0A/P0B/P0C merged. P0D-1 has native and pinned-oracle PR CI PASS. This is the actionable
 next-step ledger, not a claim of semantic or conformance parity.
 
 Microsoft references (read-only, pinned for investigation):
@@ -16,7 +16,7 @@ Microsoft references (read-only, pinned for investigation):
 
 | Slice | Deliverable | Closure evidence | Status |
 |---|---|---|---|
-| P0D-1 | JSONC comments/trailing comma for existing explicit-files tsconfig; comments in quoted strings preserved; reject unterminated comment and unknown compiler options | Native lexer/config tests + disk fixture + pinned oracle regression CI | Implemented candidate; merge gate pending |
+| P0D-1 | JSONC comments/trailing comma for existing explicit-files tsconfig; comments in quoted strings preserved; reject unterminated comment and unknown compiler options | Native lexer/config tests + disk fixture + pinned oracle regression CI | Implemented; native and pinned-oracle CI PASS |
 | P0D-2 | Stable logical file identity from normalized file paths; explicitly audit Windows case rules, aliases, symlinks, path traversal and root order; script vs external-module classification from proven syntax/package context | Canonical-path and alias collision tests, import/export and package mode negative tests; no unsupported module reaches script-global binder | NOT STARTED |
 | P0D-3 | Deterministic syntax/binding/project diagnostic reporting and source ownership; file/UTF-16 spans and status taxonomy; distinguish `UNSUPPORTED` vs language diagnostics | Multiple files and line ending/Unicode witnesses vs pinned TS7 plus stable exit codes | NOT STARTED |
 | P1A-1 | Single-file bounded `check -p` with real checker diagnostics only for a frozen supported grammar and options | TS7 independent positive/negative witnesses: identical code, byte→UTF16 start, correct file; reject unsupported constructs | BLOCKED by P0D |
@@ -28,8 +28,8 @@ Microsoft references (read-only, pinned for investigation):
 
 Only lexically strips `//` and `/* ... */` comments outside JSON
 double-quoted strings, maintaining length and line endings. The existing Odin
-JSON parser handles trailing commas; no general JSON/JSONC TypeScript parser
-parity is claimed. Unknown properties/options, implicit include, extends,
+JSON parser handles trailing commas; an explicit EOF check rejects trailing junk. General JSON/JSONC TypeScript parser
+parity is not claimed. Unknown properties/options, implicit include, extends,
 glob, JS, JSX, .d.ts, module resolution, declaration checking, and emit still
 fail closed. Symlink and case-alias semantics remain unresolved.
 
