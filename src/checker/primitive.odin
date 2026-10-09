@@ -152,8 +152,8 @@ primitive_type_id :: proc(kind: Primitive) -> typecore.Type_Id {
     case .Number: return typecore.Number
     case .Text: return typecore.Text
     case .Boolean: return typecore.Boolean
+    case .Unknown, .Union: return typecore.Invalid
     }
-    return typecore.Invalid
 }
 
 union_annotation_id :: proc(pool: ^typecore.Pool, mask: u8) -> (typecore.Type_Id, bool) {

@@ -349,7 +349,7 @@ scanner_rejects_legacy_leading_zero_literals :: proc(t: ^testing.T) {
 
 @(test)
 scanner_rejects_unimplemented_loose_equality :: proc(t: ^testing.T) {
-    cases := [?]string{"a == b;", "a != b;", "a & b;", "a | b;"}
+    cases := [?]string{"a == b;", "a != b;", "a & b;"}
     for input in cases {
         v, ok := source.source_version_create(source.File_Id(711), 1, input)
         testing.expect(t, ok, "valid UTF-8 source")
@@ -361,5 +361,23 @@ scanner_rejects_unimplemented_loose_equality :: proc(t: ^testing.T) {
         testing.expect(t, scanner_next(&s).error == .Previous_Failure,
                        "failure must remain sticky")
         source.source_version_destroy(&v)
+    }
+}
+
+@(test)
+scanner_lone_union_separator_is_distinct_from_logical_or :: proc(t: ^testing.T) {
+    input := "number | string || boolean"
+    v, ok := source.source_version_create(source.File_Id(948), 1, input)
+    testing.expect(t, ok, "valid source")
+    defer source.source_version_destroy(&v)
+    s := scanner_init(&v)
+    kinds := [?]Token_Kind{
+        .Number_Keyword, .Bar, .String_Keyword, .Bar_Bar,
+        .Boolean_Keyword, .End_Of_File,
+    }
+    for want in kinds {
+        token := scanner_next(&s)
+        testing.expect(t, token.kind == want && token.error == .None,
+                       "distinct type separator and logical operator")
     }
 }
