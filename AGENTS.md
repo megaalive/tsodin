@@ -104,6 +104,22 @@ Before changing code marked PERF or HACK:
 
 A simpler implementation is welcome if it preserves correctness and wins or matches the relevant measurement.
 
+## Merge quality cadence
+
+- Every commit: build and run the relevant deterministic tests; fix failures before proceeding.
+- Before every PR merge: review correctness, error/fail-closed boundaries, security,
+  memory ownership, semantic regressions, and avoidable complexity. Require
+  focused regression evidence for a discovered bug.
+- TypeScript-compatibility claims require an independent pinned upstream oracle;
+  tests authored alongside the implementation are not sufficient by themselves.
+- Every 3–5 feature PRs: review recently changed code for duplicated branches,
+  growing state machines, unclear invariants, and unnecessary allocations.
+  Refactor only when a concrete maintenance/correctness/performance benefit is clear.
+- At a milestone boundary: review architecture and measure representative
+  workloads before claiming any performance improvement.
+- Keep quality fixes isolated and do not merge until the appropriate checks pass.
+  An unavailable required check is a blocker, not a presumed success.
+
 ## Agent rule
 
 AI can implement, review, benchmark, and document work. AI-generated reasoning that exists only in a chat is not sufficient project documentation.
