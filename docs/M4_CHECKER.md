@@ -800,3 +800,34 @@ TS6.0.2 category/start/end positions. These are bounded correctness
 witnesses, not public `tsodin check` enablement, full TS7 parity or
 a measured performance claim.
 
+## M4-G5F8M — unary-negated Boolean identity guards
+
+The bounded `if/else` checker extends the G5F8L Boolean identity
+matcher from direct `Name` leaves to **pure, grouped or unary-negated
+Boolean name** leaves. Exact direct Boolean constants still limit the
+logical expression to `name && true`, `true && name`,
+`name || false`, or `false || name`, except that `name`
+may now be `!flag`, `!!flag`, or a parenthesized equivalent.
+
+Only a postorder-validated chain of `Group`/`Unary !` nodes
+ending at an actual `Name` passes this matcher. The existing
+single-leaf guard walker already handles negation parity and outer
+`!`, so both arms narrow the **original** Boolean `let` symbol.
+The original syntax tree, expression evaluation, per-depth branch
+snapshots and join logic are unchanged. Non-identity constants,
+computed constant operands and arbitrary expression subtrees remain
+fail closed. No extra flow buffers, new diagnostics, CFG or dynamic
+allocation are added by this feature.
+
+Native Odin unit tests check eight source-backed guard variants,
+16 positive arm facts plus their post-join widening, 16 lexically
+ordered TS2367-like disjoint comparisons, a separate TS2322-like
+assignment mismatch, nested mutation/joins, and lack of effect from
+optional comparison tracing. The **three independent pinned TS7.0.2
+projects** `checker-negated-identity-{valid,errors,nested-valid}`
+exercise diagnostic code and UTF-16 start compatibility; pinned TS6
+6.0.2 supplies a separate structured category/start/end witness.
+This is not general truthiness, official TS conformance, or a
+competitive performance measurement. Public `tsodin check` stays
+fail closed for unsupported semantics.
+

@@ -51,6 +51,17 @@ for(const [id,expected] of [
     item.files.includes("index.ts") && item.files.includes("tsconfig.json"),
     "Boolean identity guard witness must remain independently pinned");
 }
+for(const [id,expected] of [
+  ["checker-negated-identity-valid",false],
+  ["checker-negated-identity-errors",true],
+  ["checker-negated-identity-nested-valid",false],
+]){
+  const item=manifest.projects.find(p=>p.id===id);
+  assert.ok(item && item.expectDiagnostics===expected &&
+    item.path==="tests/oracle/"+id &&
+    item.files.includes("index.ts") && item.files.includes("tsconfig.json"),
+    "negated identity guard witness must be independently captured");
+}
 for(const spelling of ["01","00","08"]){
   const id="scanner-leading-zero-"+spelling;
   const witness=manifest.projects.find(item=>item.id===id);

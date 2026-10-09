@@ -1023,33 +1023,48 @@ check_file_with_relations :: proc(
                     }
                 }
 
-                // M4-G5F8L: these four pure Boolean identities are exactly
-                // equivalent to the one name for BOTH paths, unlike generic
-                // &&/|| which only narrow a decisive path. No truthiness,
-                // computed literal, repeated name or side effect is admitted.
-                // Keep the original root/operator for expression checking;
-                // only the bounded guard metadata is reduced to one name.
+                // M4-G5F8M: a pure (possibly negated/grouped) Boolean
+                // name AND true, or OR false, is the SAME guard on both
+                // arms. Match only direct literal identities and a chain
+                // of ! / parentheses around one Name, never computed
+                // expressions, other operands or arbitrary truthiness.
+                // The existing one-leaf walker owns negation parity.
                 if part_count == 2 {
-                    name_idx := -1
+                    name_expr := -1
                     literal_idx := -1
-                    if syntax.nodes[root.left].kind == .Name &&
-                       syntax.nodes[root.right].kind == .Boolean {
-                        name_idx = root.left
+                    if syntax.nodes[root.right].kind == .Boolean {
+                        name_expr = root.left
                         literal_idx = root.right
-                    } else if syntax.nodes[root.left].kind == .Boolean &&
-                              syntax.nodes[root.right].kind == .Name {
-                        name_idx = root.right
+                    } else if syntax.nodes[root.left].kind == .Boolean {
+                        name_expr = root.right
                         literal_idx = root.left
                     }
-                    if name_idx >= 0 {
+                    if name_expr >= 0 {
                         fact := literal_fact_from_node(syntax.nodes[literal_idx])
                         value, known := boolean_fact_value(fact, text)
                         if known &&
                            ((root.operator == .Ampersand_Ampersand && value) ||
                             (root.operator == .Bar_Bar && !value)) {
-                            part_count = 1
-                            part_nodes[0] = name_idx
-                            compound = false
+                            leaf_idx := name_expr
+                            for {
+                                leaf := syntax.nodes[leaf_idx]
+                                if leaf.kind != .Group &&
+                                   !(leaf.kind == .Unary &&
+                                     leaf.operator == .Exclamation) {
+                                    break
+                                }
+                                if leaf.left < 0 || leaf.left >= leaf_idx {
+                                    leaf_idx = -1
+                                    break
+                                }
+                                leaf_idx = leaf.left
+                            }
+                            if leaf_idx >= 0 &&
+                               syntax.nodes[leaf_idx].kind == .Name {
+                                part_count = 1
+                                part_nodes[0] = name_expr
+                                compound = false
+                            }
                         }
                     }
                 }
