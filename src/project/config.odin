@@ -5,7 +5,7 @@ import "core:path/filepath"
 import "core:strings"
 
 // P0C: explicit, relative .ts roots only. This is NOT a general tsconfig
-// parser. The accepted JSON subset allows trailing commas, but not JSONC comments.
+// parser. The accepted JSONC subset allows comments and trailing commas.
 Config_Error :: enum {
     None,
     Invalid_Json,
@@ -51,10 +51,15 @@ config_root_path :: proc(path: string) -> (string, bool) {
 }
 
 // Reject unknown properties and options instead of silently changing the
-// meaning of a real TypeScript project. JSONC comments are a later slice.
+// meaning of a real TypeScript project. Comments are lexically stripped.
 parse_config :: proc(text: string) -> (Config, Config_Error) {
     c: Config
-    value, err := json.parse_string(text, .JSON)
+    sanitized, comments_ok := strip_jsonc_comments(text)
+    if !comments_ok {
+        return c, .Invalid_Json
+    }
+    defer delete(sanitized)
+    value, err := json.parse_string(string(sanitized), .JSON)
     if err != .None {
         return c, .Invalid_Json
     }

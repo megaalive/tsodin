@@ -43,7 +43,16 @@ Milestones are gates, not a promise that a compiler can be completed in a fixed 
 
 Compatibility profile architecture: [versioned and fail-closed](COMPATIBILITY.md). M1-A source lifetime and line indexing: [implemented](M1_SOURCE.md). M1-B–E bounded scanning, contextual tokens and supplemental lexical witnesses: [implemented](M1_SCANNER.md). M2-A narrow declaration parser: [implemented](M2_PARSER.md). M2-B/C expression parsing, recovery and a developer-only UTF-16 syntax diagnostic tracer: [implemented](M2_EXPRESSION.md). M3-A–C single-file and script-global name binding, with explicit unsupported module boundary: [implemented](M3_BINDER.md). M4-A source-to-primitive semantic diagnostics: [implemented](M4_CHECKER.md). M4-B–E pinned TS7 diagnostic code/start checks plus supplemental TS6 structured full spans on primitive and boolean fixtures: [implemented](M4_CODE_WITNESS.md). The official upstream TypeScript suite adoption strategy is [documented](OFFICIAL_CONFORMANCE.md). These are **not** TS7 C0/C1 claims; scanner parity, syntax diagnostics, binder and checker exit gates remain open.
 
-## Immediate sequence
+## Current delivery sequence (10 October 2026)
+
+P0A official-case adapter, P0B deterministic File_Id preflight and P0C
+explicit `files`/`noEmit` loader have merged. The operative short-term plan is
+[P0D → P1A](P0D_PROJECT_PLAN.md): first bounded JSONC support, then root-file
+identity and module classification, deterministic project diagnostics, and
+finally an oracle-proven bounded project type checker. `check -p` remains
+nonzero until P1A establishes actual TypeScript checks.
+
+## Historical bootstrap sequence (superseded by current delivery sequence)
 
 1. Finish M0 Linux CI and lock the exact Odin artifact; establish Windows CI only when its artifact identity is independently verified.
 2. Add a tiny committed oracle corpus covering clean syntax, diagnostics, line endings, non-BMP characters, and unsupported syntax; pin TS7 CLI 7.0.2 outputs.

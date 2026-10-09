@@ -21,13 +21,13 @@
 | `scanner/scanner.go` | Scanner and contextual rescans feed parser | `src/scanner`: bounded ASCII+rescan grammar | P2: expand with parser-backed witnesses |
 | `parser/parser.go` | Source files and recovery feed binder | `src/parser`: expressions, declarations, bounded if/else | P1: support file/import/function syntax based on project needs |
 | `binder/binder.go` | Symbols, scopes and control-flow graph | `src/binder`: single-file and bounded script-global project, no general scopes | P1: reusable scope and symbol identity, not checker special cases |
-| `compiler/program.go`, `fileloader.go`, `filesparser.go` | Root files, project references, source inclusion and provenance | No public project-checking entry point; project binding only | **P0: project roots / source identity / loader** |
+| `compiler/program.go`, `fileloader.go`, `filesparser.go` | Root files, project references, source inclusion and provenance | P0C explicit tsconfig loader and project binding, check -p still exit 2 | **P0D: JSONC, source paths, diagnostics** |
 | `module/resolver.go` | Resolve source imports and packages | No module resolver | P1 after project/file classification |
 | `checker/types.go`, `relater.go` | Canonical types, structural relations | `src/typecore`: restricted primitive/union TypeIds; `checker/primitive.odin` bounded relations | P1: reusable semantic relation engine |
 | `checker/flow.go` | Flow-node reachability and join | `src/checker`: restricted Boolean, typeof, never arms | P2: full CFG only after scopes/project support |
 | `checker/inference.go` | Generic inference based on signatures/relations | Unsupported | P3 after signatures and type params |
 | `testrunner/test_case_parser.go`, `compiler_runner.go` | Directives, file units, options matrix and official diagnostics baselines | Custom TS7 witnesses plus first selective source adapter | **P0: conformance foundation** |
-| `execute/tsc` | CLI project compilation and diagnostic/status contracts | Public `tsodin check` intentionally unsupported | **P0: truthful project CLI milestone** |
+| `execute/tsc` | CLI project compilation and diagnostic/status contracts | `check -p` preflight only, exit 2 even on valid project | **P1A: bounded project checker** |
 
 ## Prioritized delivery and acceptance gates
 
@@ -46,13 +46,15 @@
    Initial bounded slice: reject empty root sets and use a deterministic,
    collision-tested File_Id preflight table for selected script files.
    This is *not* tsconfig loading or project type checking.
-3. **P1A: bounded operational `check -p`.** End-to-end semantic correctness
+3. **P0C: merged.** Explicit `files` list and `noEmit: true`, path validation,
+   source snapshots, parser and script-global binder. It always exits 2.\n4. **P0D: project contract.** JSONC, stable path identity and script/module
+   provenance, and UTF-16 diagnostics. See [P0D → P1A plan](P0D_PROJECT_PLAN.md).\n5. **P1A: bounded operational `check -p`.** End-to-end semantic correctness
    on a declared subset, with non-zero status for unsupported imports,
    functions, generics, and unresolved symbols. Keep type diagnostics grounded.
-4. **P1B: semantic foundations.** Expand scope/symbol and TypeId relations
+6. **P1B: semantic foundations.** Expand scope/symbol and TypeId relations
    independently from the giant primitive checker; keep union aliasing,
    assignment, and flow guarantees tested.
-5. **P2+: new syntax, modules, signatures, generics, true CFG, incrementality,
+7. **P2+: new syntax, modules, signatures, generics, true CFG, incrementality,
    and eventually emit after each dependent layer is sound.
 
 ## Official-test evidence ledger
