@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "project": "tsodin",
+  "scope": "equivalent-end-to-end-typescript-checking",
+  "status": "not_measured",
+  "testedTsodinRevision": null,
+  "testedAt": null,
+  "workflowRunUrl": null,
+  "corpus": null,
+  "host": null,
+  "protocol": null,
+  "candidate": null,
+  "baseline": null,
+  "correctness": null,
+  "results": null
+}
