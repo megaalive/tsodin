@@ -85,7 +85,7 @@ Relation :: struct {
     target: checker.Primitive,
     node_index: int,
     declaration_index: int,
-    context: checker.Relation_Context,
+    relation_kind: checker.Relation_Context,
     result: bool,
     bytes: Span, // source expression, never a guessed TS diagnostic anchor
     utf16: Unit_Span,
@@ -280,7 +280,7 @@ write :: proc(filename: string, trace_all: bool) -> bool {
             source=relation.source, target=relation.target,
             node_index=relation.node_index,
             declaration_index=relation.declaration_index,
-            context=relation.context, result=relation.result,
+            relation_kind=relation.relation_kind, result=relation.result,
             bytes=Span{node.byte_start,node.byte_end}, utf16=units,
         })
     }
