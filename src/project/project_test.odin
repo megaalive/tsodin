@@ -1,7 +1,6 @@
 package project
 
 import "core:testing"
-import "core:fmt"
 import "../binder"
 
 @(test)
@@ -11,6 +10,13 @@ config_accepts_only_ordered_explicit_scripts :: proc(t: ^testing.T) {
     testing.expect(t, err == .None && len(cfg.roots) == 2 &&
                    cfg.roots[0] == "a.ts" && cfg.roots[1] == "b.ts" && cfg.no_emit,
                    "explicit roots normalize but preserve selection order")
+    // TypeScript accepts trailing commas in tsconfig; Odin's JSON parser
+    // also accepts these even when the JSON specification is selected.
+    trailing, trailing_err := parse_config("{\\"files\\":[\\"a.ts\\",],\\"compilerOptions\\":{\\"noEmit\\":true,},}")
+    defer config_destroy(&trailing)
+    testing.expect(t, trailing_err == .None && len(trailing.roots) == 1 &&
+                   trailing.roots[0] == "a.ts",
+                   "trailing commas are accepted rather than labeled invalid JSON")
 }
 
 @(test)
@@ -31,9 +37,6 @@ config_rejects_unsupported_semantics_and_aliases :: proc(t: ^testing.T) {
     }
     for entry in inputs {
         cfg, err := parse_config(entry.text)
-        if err != entry.reason || len(cfg.roots) != 0 {
-            fmt.printf("P0C invalid case %q: got %v expected %v roots=%d\\n", entry.text, err, entry.reason, len(cfg.roots))
-        }
         testing.expect(t, err == entry.reason && len(cfg.roots) == 0,
                        "fail closed and release any previously allocated roots")
         config_destroy(&cfg)
