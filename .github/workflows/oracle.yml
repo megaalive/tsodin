@@ -60,6 +60,8 @@ jobs:
         run: node tools/oracle/capture.mjs
       - name: Capture unary literal-inference evidence
         run: node tools/oracle/check-unary-inference.mjs
+      - name: Probe logical Boolean inference against TS7
+        run: node tools/oracle/check-logical-inference.mjs
       - name: Upload scoped oracle evidence
         uses: actions/upload-artifact@v6
         with:
