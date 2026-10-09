@@ -24,11 +24,12 @@ function emit(name,body){
 }
 for(const filename of names){
   const slug=filename.slice(0,-3),path="examples/"+filename;
-  const run=spawnSync(bin,["dump","--stage=all",path],{encoding:"utf8",timeout:12000,maxBuffer:8*1024*1024});
+  const run=spawnSync(bin,["dump","--stage=all","--trace-relations",path],{encoding:"utf8",timeout:12000,maxBuffer:8*1024*1024});
   assert.equal(run.status,0,path+": "+run.stderr);
   assert.equal(run.stderr,"",path+": unexpected stderr");
   const dump=JSON.parse(run.stdout);
-  assert.equal(dump.schema,"tsodin.dump/1");
+  assert.equal(dump.schema,"tsodin.dump/2");
+  assert.equal(dump.stages.types.trace_mode,"all");
   assert.equal(dump.source.name,path);
   assert.equal(dump.source.text,readFileSync(path,"utf8"));
   emit(slug+".json",run.stdout);
