@@ -1603,11 +1603,11 @@ primitive_checker_bounded_relation_trace_decisions :: proc(t: ^testing.T) {
         a := failed.relations[0]
         b := failed.relations[1]
         testing.expect(t, a.source == .Text && a.target == .Number &&
-                       a.context == .Variable && a.declaration_index == 0 &&
+                       a.relation_kind == .Variable && a.declaration_index == 0 &&
                        a.node_index >= 0 && !a.result,
                        "variable initializer failure uses its true expression and declaration")
         testing.expect(t, b.source == .Text && b.target == .Number &&
-                       b.context == .Assignment && b.declaration_index == 1 &&
+                       b.relation_kind == .Assignment && b.declaration_index == 1 &&
                        b.node_index > a.node_index && !b.result,
                        "reassignment failure uses the actual RHS and target declaration")
     }
@@ -1620,8 +1620,8 @@ primitive_checker_bounded_relation_trace_decisions :: proc(t: ^testing.T) {
         testing.expect(t, !all.relations[0].result && all.relations[1].result &&
                        !all.relations[2].result && all.relations[3].result,
                        "relations preserve statement order and direct decision values")
-        testing.expect(t, all.relations[1].context == .Variable &&
-                       all.relations[3].context == .Assignment &&
+        testing.expect(t, all.relations[1].relation_kind == .Variable &&
+                       all.relations[3].relation_kind == .Assignment &&
                        all.relations[3].source == .Number &&
                        all.relations[3].target == .Number,
                        "successful primitive checks must be actual recorded decisions")
