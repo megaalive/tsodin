@@ -19,7 +19,7 @@ checker_boolean_logical_facts_and_wide_domains :: proc(t: ^testing.T) {
              "const j = gate && true; const k = gate || false;" +
              "const l = false && gate; const m = true || gate;" +
              "const testA = a === false; const testB = b === true;" +
-             "const testC = c === true; const testD = d !== true;" +
+             "const testC = c === true; const testD = d !== false;" +
              "const testE = e === true; const testF = f === true;" +
              "const testG = g !== false; const testH = h === true;" +
              "const testI = i === false; const testJ = j !== false;" +
@@ -122,6 +122,53 @@ checker_boolean_logical_facts_diagnose_disjointness :: proc(t: ^testing.T) {
                            c.node_index>previous &&
                            failed.comparisons[i].node_index==c.node_index,
                            "no fake overlap is emitted for logically impossible comparisons")
+            previous=c.node_index
+        }
+    }
+}
+
+@(test)
+checker_boolean_logical_join_and_mutation_keep_true_facts :: proc(t: ^testing.T) {
+    input := "let gate: boolean = false; gate = 2 < 3;" +
+             "let output: boolean = false;" +
+             "if (gate) {" +
+             "  output = gate && false;" +
+             "  output = output === false;" +
+             "  gate = 4 > 2;" +
+             "  output = gate || true;" +
+             "  output = output === true;" +
+             "} else {" +
+             "  output = gate || true;" +
+             "  output = output === true;" +
+             "}" +
+             "output = gate && gate;" +
+             "output = output === false;"
+    v, ok := source.source_version_create(source.File_Id(843), 1, input)
+    testing.expect(t, ok, "source")
+    defer source.source_version_destroy(&v)
+    ast := parser.parse_expression_program(&v, compat.ts7_profile())
+    defer parser.syntax_report_destroy(&ast)
+    bound := binder.bind_program(&v, &ast)
+    defer binder.binding_report_destroy(&bound)
+    normal := check_file(&v, &ast, &bound)
+    defer report_destroy(&normal)
+    traced := check_file_with_relations(&v, &ast, &bound, .All)
+    defer report_destroy(&traced)
+    testing.expect(t, ast.complete && bound.complete &&
+                   normal.complete && traced.complete &&
+                   len(normal.diagnostics)==0 && len(traced.diagnostics)==0 &&
+                   len(normal.comparisons)==0 && len(traced.comparisons)==4 &&
+                   normal.checked_assignments==traced.checked_assignments,
+                   "mutation in one branch cannot leak singleton facts across join")
+    if len(traced.comparisons)==4 {
+        previous := -1
+        for i in 0..<4 {
+            c := traced.comparisons[i]
+            want := Comparison_Proof.Same_Literal
+            if i == 3 { want = .Widened_Domain }
+            testing.expect(t, c.proof==want && c.overlaps &&
+                           c.node_index>previous,
+                           "logical singleton and post-join widened proofs are source ordered")
             previous=c.node_index
         }
     }
