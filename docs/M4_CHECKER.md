@@ -656,11 +656,11 @@ proof. The report owns the optional records and frees them in
 `report_destroy`. Existing TS7/TS6 differential gates and nested flow
 regressions remain required.
 
-This is an **internal checker-report milestone**, not yet a published dump
-feature: `tsodin.dump/2`, generated gallery traces and the Lab remain
-unchanged. An explicitly versioned future dump schema will expose these
-facts only after the compact contract is validated; no parallel JavaScript
-checker or general CFG is introduced.
+At M4-G5F8E this was deliberately **internal checker-report evidence**:
+`tsodin.dump/2` and the Lab did not yet expose it. M4-G5F8F subsequently
+published the proven comparisons with an explicitly versioned
+`tsodin.dump/3` contract and deterministic Odin-generated gallery.
+The browser still never runs a parallel JavaScript checker or a general CFG.
 
 ## M4-G5F8H — nested-flow comparison evidence fidelity
 
