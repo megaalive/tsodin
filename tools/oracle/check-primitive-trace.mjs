@@ -242,6 +242,14 @@ assert.equal(typeofBad.diags.length,2);
 assert.deepEqual(typeofBad.diags.map(x=>x[1]),["10","10"],
   "both narrowed assignment failures remain internal TS2322 candidates");
 
+const neverValid=read("checker-typeof-never-valid");
+assert.equal(neverValid.status,0,"unreachable typeof arm with literal writes stays valid");
+assert.equal(neverValid.diags.length,0);
+const neverErrors=read("checker-typeof-never-errors");
+assert.equal(neverErrors.status,1,"live and never-arm invalid literal writes are checked");
+assert.deepEqual(neverErrors.diags.map(x=>x[1]),["10","10","10","10"],
+  "all assignments in dead and live arms remain TS2322 candidates");
+
 const varValid=read("checker-var-redeclaration-valid");
 assert.equal(varValid.status,0,"same-type var redeclarations must be allowed");
 assert.equal(varValid.diags.length,0);

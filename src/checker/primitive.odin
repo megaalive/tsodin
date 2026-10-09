@@ -667,7 +667,10 @@ check_file_with_relations :: proc(
                             return result
                         }
                     }
-                    if contradiction_guard[depth] == target_index {
+                    if contradiction_guard[depth] == target_index ||
+                       typeof_guard[depth] == target_index {
+                        // The guard's unreachable state is not a writable
+                        // predecessor; never invent a flow transfer for it.
                         fail(&result, .Unsupported_Condition,
                              target.byte_start, target.byte_end, true)
                         return result
@@ -1126,10 +1129,13 @@ check_file_with_relations :: proc(
                             if primitive_id != typecore.Invalid {
                                 yes, no, ok := typecore.split_typeof(
                                     &pool, flow_ids[guard], primitive_id)
-                                // A never arm requires explicit reachability
-                                // modeling, which this small CFG does not have.
-                                if ok && yes != typecore.Never &&
-                                   no != typecore.Never {
+                                // Only an arm known impossible may be
+                                // excluded from the join. Its direct literal
+                                // assignments still undergo normal typechecking,
+                                // without runtime flow transfer. Other dead-arm
+                                // statements fail closed above.
+                                if ok && (yes != typecore.Never ||
+                                          no != typecore.Never) {
                                     true_id := yes
                                     false_id := no
                                     if (root.operator == .Exclamation_Equals_Equals) != flipped {
@@ -1153,8 +1159,8 @@ check_file_with_relations :: proc(
                                     typeof_guard[level] = guard
                                     typeof_else_id[level] = false_id
                                     guard_count[level] = 0
-                                    dead_then[level] = false
-                                    dead_else[level] = false
+                                    dead_then[level] = true_id == typecore.Never
+                                    dead_else[level] = false_id == typecore.Never
                                     contradiction_guard[level] = -1
                                     else_seen[level] = false
                                     flow_depth += 1
