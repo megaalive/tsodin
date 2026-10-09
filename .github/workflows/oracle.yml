@@ -45,6 +45,7 @@ jobs:
         run: |
           node tools/oracle/profile.test.mjs
           node tools/oracle/upstream-triage.test.mjs
+          node tools/oracle/official-case.test.mjs
       - name: Install exact reference compiler for profile
         shell: bash
         env:
@@ -62,6 +63,11 @@ jobs:
           TSODIN_ORACLE_PROFILE: ${{ matrix.profile }}
           TSODIN_ORACLE_OUTPUT: ${{ runner.temp }}/oracle-results
         run: node tools/oracle/capture.mjs
+      - name: Capture curated original Microsoft cases with honest Tsodin status
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/oracle/official-case.mjs | tee "$RUNNER_TEMP/oracle-results/official-selection.log"
       - name: Capture unary literal-inference evidence
         run: node tools/oracle/check-unary-inference.mjs
       - name: Probe logical Boolean inference against TS7
