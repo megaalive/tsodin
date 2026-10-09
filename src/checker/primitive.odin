@@ -686,6 +686,16 @@ check_file_with_relations :: proc(
                         // An unproved literal negation remains unsupported
                         // for later equality comparisons (fail closed).
                         wide_nodes[i] = wide_nodes[node.left]
+                        if !wide_nodes[i] {
+                            // Only a proven Boolean singleton can be negated
+                            // into another singleton. Reuse the branch fact
+                            // sentinel, never an invented source byte span.
+                            value, known := boolean_fact_value(
+                                literal_nodes[node.left], text)
+                            if known {
+                                literal_nodes[i] = branch_boolean_fact(!value)
+                            }
+                        }
                     } else if (node.operator == .Plus || node.operator == .Minus) &&
                               child == .Number {
                         kind = .Number
