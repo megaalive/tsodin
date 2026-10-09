@@ -99,7 +99,7 @@ and positive/negative differential tests.
 
 The `tsodin.dump/2` schema extends dump/1 with
 `stages.types.relations` and `trace_mode`. Relation objects contain
-`source`, `target` (internal `Primitive` enum names), `context`
+`source`, `target` (internal `Primitive` enum names), `relation_kind`
 (`Variable` or `Assignment`), `node_index` (postorder RHS root),
 `declaration_index` (original declaration table), `result` (exact
 decision), and source-backed `bytes`/`utf16` spans. Failed checks are
