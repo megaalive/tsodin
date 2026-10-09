@@ -714,6 +714,18 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": true
+    },
+    {
+      "id": "checker-union-annotations-valid",
+      "path": "tests/oracle/checker-union-annotations-valid",
+      "files": ["index.ts", "tsconfig.json"],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "checker-union-annotations-errors",
+      "path": "tests/oracle/checker-union-annotations-errors",
+      "files": ["index.ts", "tsconfig.json"],
+      "expectDiagnostics": true
     }
   ]
 }

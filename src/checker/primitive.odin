@@ -4,6 +4,7 @@ import "../binder"
 import "../parser"
 import "../scanner"
 import "../source"
+import "../typecore"
 
 // M4-A: a deliberately restricted, one-file semantic slice.
 // All issue kinds are INTERNAL; none are TypeScript diagnostic codes.
@@ -12,6 +13,7 @@ Primitive :: enum {
     Number,
     Text,
     Boolean,
+    Union, // Canonical union IDs are stored in separate dense arrays.
 }
 
 Check_Issue :: enum {
@@ -141,6 +143,39 @@ annotation_type :: proc(value: parser.Primitive_Type) -> Primitive {
         return .Boolean
     }
     return .Unknown
+}
+
+// The existing primitive fast path stays in place for monomorphic code.
+// Only union-bearing assignments pay for the TypeId relation.
+primitive_type_id :: proc(kind: Primitive) -> typecore.Type_Id {
+    switch kind {
+    case .Number: return typecore.Number
+    case .Text: return typecore.Text
+    case .Boolean: return typecore.Boolean
+    case .Unknown, .Union: return typecore.Invalid
+    }
+    return typecore.Invalid
+}
+
+union_annotation_mask :: proc(kind: parser.Primitive_Type) -> u8 {
+    switch kind {
+    case .Number_String: return 3
+    case .Number_Boolean: return 5
+    case .String_Boolean: return 6
+    case .Number_String_Boolean: return 7
+    case .Inferred, .Number, .String, .Boolean: return 0
+    }
+    return 0
+}
+
+union_annotation_id :: proc(pool: ^typecore.Pool, mask: u8) -> (typecore.Type_Id, bool) {
+    if mask == 0 || mask > 7 { return typecore.Invalid, false }
+    members: [3]typecore.Type_Id
+    count := 0
+    if (mask & 1) != 0 { members[count] = typecore.Number; count += 1 }
+    if (mask & 2) != 0 { members[count] = typecore.Text; count += 1 }
+    if (mask & 4) != 0 { members[count] = typecore.Boolean; count += 1 }
+    return typecore.intern_union(pool, members[:count])
 }
 
 // A value can carry a proven literal identity without allocating a string.
@@ -332,6 +367,30 @@ check_file_with_relations :: proc(
     defer delete(inferred)
     declared := make([]Primitive, len(syntax.declarations))
     defer delete(declared)
+    // PERF: no TypeId pool or extra dense scratch arrays for the existing
+    // monomorphic checker. Union handles are local to this invocation.
+    union_file := false
+    for d in syntax.declarations {
+        if union_annotation_mask(d.type_kind) != 0 {
+            union_file = true
+            break
+        }
+    }
+    pool: typecore.Pool
+    expression_ids: []typecore.Type_Id
+    declared_ids: []typecore.Type_Id
+    if union_file {
+        pool = typecore.pool_init()
+        expression_ids = make([]typecore.Type_Id, len(syntax.nodes))
+        declared_ids = make([]typecore.Type_Id, len(syntax.declarations))
+    }
+    defer {
+        if union_file {
+            delete(expression_ids)
+            delete(declared_ids)
+            typecore.pool_destroy(&pool)
+        }
+    }
     references := make([]int, len(syntax.nodes))
     defer delete(references)
     literal_nodes := make([]Literal_Fact, len(syntax.nodes))
@@ -510,6 +569,7 @@ check_file_with_relations :: proc(
         target_index := -1
         decl: parser.Expr_Declaration
         declared_type := Primitive.Unknown
+        declared_id := typecore.Invalid
         if assignment {
             if event.target_node != node_cursor ||
                event.target_node < 0 || event.target_node >= len(syntax.nodes) {
@@ -542,6 +602,7 @@ check_file_with_relations :: proc(
                 return result
             }
             declared_type = declared[target_index]
+            if union_file { declared_id = declared_ids[target_index] }
             if dead_assignment {
                 // Never allow writes to the contradictory guard binding, nor
                 // to any enclosing narrowing guard; its never-state meaning
@@ -579,6 +640,17 @@ check_file_with_relations :: proc(
                 return result
             }
             declared_type = annotation_type(decl.type_kind)
+            declared_id = primitive_type_id(declared_type)
+            mask := union_annotation_mask(decl.type_kind)
+            if mask != 0 {
+                declared_type = .Union
+                ok: bool
+                declared_id, ok = union_annotation_id(&pool, mask)
+                if !ok || typecore.kind_of(&pool, declared_id) != .Union {
+                    fail(&result, .Invalid_Input, decl.byte_start, decl.byte_end, true)
+                    return result
+                }
+            }
             if decl.initializer < 0 {
                 if declared_type == .Unknown {
                     fail(&result, .Unsupported_Implicit_Any,
@@ -586,6 +658,7 @@ check_file_with_relations :: proc(
                     return result
                 }
                 declared[declaration_index] = declared_type
+                if union_file { declared_ids[declaration_index] = declared_id }
                 result.checked_declarations += 1
                 continue
             }
@@ -731,6 +804,9 @@ check_file_with_relations :: proc(
                     return result
                 }
                 kind = declared[symbol.declaration_index]
+                if union_file {
+                    expression_ids[i] = declared_ids[symbol.declaration_index]
+                }
                 // Declared primitive and current flow/literal facts are
                 // separate. Mutable bindings can narrow until reassigned;
                 // annotations to number/string stay wide at comparisons.
@@ -781,6 +857,13 @@ check_file_with_relations :: proc(
                 right, right_ok := operand_type(syntax.nodes[:], inferred, node.right, i)
                 if !left_ok || !right_ok {
                     fail(&result, .Invalid_Expression_Node, node.byte_start, node.byte_end, true)
+                    return result
+                }
+                if left == .Union || right == .Union {
+                    // We do not yet reason about overlap or operations on
+                    // union constituents. Never report false disjointness.
+                    fail(&result, .Unsupported_Expression,
+                         node.byte_start, node.byte_end, true)
                     return result
                 }
                 if node.operator == .Plus {
@@ -896,6 +979,24 @@ check_file_with_relations :: proc(
                 return result
             }
             inferred[i]=kind
+            if kind == .Union {
+                // Only a bound Name or parentheses can carry a union through
+                // this deliberately bounded expression grammar. Other
+                // operations remain unsupported, never guessed.
+                if node.kind == .Group {
+                    expression_ids[i] = expression_ids[node.left]
+                } else if node.kind != .Name {
+                    fail(&result, .Unsupported_Expression,
+                         node.byte_start, node.byte_end, true)
+                    return result
+                }
+                if typecore.kind_of(&pool, expression_ids[i]) != .Union {
+                    fail(&result, .Invalid_Input, node.byte_start, node.byte_end, true)
+                    return result
+                }
+            } else if union_file {
+                expression_ids[i] = primitive_type_id(kind)
+            }
             // The contextual fact is scoped to the RHS subtree only.
             // Branch entry snapshots must see the original pre-condition state.
             if i == rhs_context_end {
@@ -1288,8 +1389,19 @@ check_file_with_relations :: proc(
         if assignment {
             result.checked_assignments += 1
             compatible := expression_type == declared_type
-            record_relation(&result, trace_mode, expression_type, declared_type,
-                            expression_root, target_index, .Assignment, compatible)
+            if expression_type == .Union || declared_type == .Union {
+                supported: bool
+                compatible, supported = typecore.assignable(
+                    &pool, expression_ids[expression_root], declared_id)
+                if !supported {
+                    fail(&result, .Unsupported_Expression,
+                         event.byte_start, event.byte_end, true)
+                    return result
+                }
+            } else {
+                record_relation(&result, trace_mode, expression_type, declared_type,
+                                expression_root, target_index, .Assignment, compatible)
+            }
             if !compatible {
                 // Native TS7 starts TS2322 at the assignment target;
                 // supplemental TS6 structured diagnostics cover precisely
@@ -1305,7 +1417,11 @@ check_file_with_relations :: proc(
                 // This is the first linear flow transfer. Reassignment
                 // replaces the earlier narrowed fact; nothing persists
                 // across unsupported branches or mutation paths.
-                if declared_type == .Number || declared_type == .Text {
+                if declared_type == .Union {
+                    // No fabricated singleton flow narrowing for union writes.
+                    literal_decls[target_index] = Literal_Fact{}
+                    wide_decls[target_index] = true
+                } else if declared_type == .Number || declared_type == .Text {
                     // A mutable number/string retains its widened base domain:
                     // assigning a literal does not make it a singleton type.
                     literal_decls[target_index] = Literal_Fact{}
@@ -1319,8 +1435,19 @@ check_file_with_relations :: proc(
         } else {
             if declared_type != .Unknown {
                 compatible := expression_type == declared_type
-                record_relation(&result, trace_mode, expression_type, declared_type,
-                                expression_root, declaration_index, .Variable, compatible)
+                if expression_type == .Union || declared_type == .Union {
+                    supported: bool
+                    compatible, supported = typecore.assignable(
+                        &pool, expression_ids[expression_root], declared_id)
+                    if !supported {
+                        fail(&result, .Unsupported_Expression,
+                             event.byte_start, event.byte_end, true)
+                        return result
+                    }
+                } else {
+                    record_relation(&result, trace_mode, expression_type, declared_type,
+                                    expression_root, declaration_index, .Variable, compatible)
+                }
                 if !compatible {
                     // TS7 anchors declaration type mismatches at the name.
                     fail(&result, .Assignment_Type_Mismatch,
@@ -1328,10 +1455,18 @@ check_file_with_relations :: proc(
                 }
             }
             declared[declaration_index] = declared_type
+            if union_file { declared_ids[declaration_index] = declared_id }
             if declared_type == .Unknown {
                 declared[declaration_index] = expression_type
+                if union_file {
+                    declared_ids[declaration_index] = expression_ids[expression_root]
+                }
             }
-            if expression_type == declared[declaration_index] {
+            if declared[declaration_index] == .Union {
+                // A general union has no single literal fact in this slice.
+                literal_decls[declaration_index] = Literal_Fact{}
+                wide_decls[declaration_index] = true
+            } else if expression_type == declared[declaration_index] {
                 if decl.kind == .Const && declared_type == .Unknown {
                     // An unannotated const keeps its inferred literal type,
                     // including immutable aliases and computed-wide results.

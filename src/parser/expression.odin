@@ -302,22 +302,53 @@ syntax_declaration :: proc(p: ^Syntax_State) -> bool {
     }
     if p.current.kind == .Colon {
         syntax_advance(p)
-        if p.fatal {
-            return false
-        }
+        if p.fatal { return false }
+        // Three primitive atoms admit exactly seven canonical combinations.
+        // Keep syntax source-local and dump-compatible without TypeId handles.
+        mask: u8 = 0
         if p.current.kind == .Number_Keyword {
-            decl.type_kind = .Number
+            mask = 1
         } else if p.current.kind == .String_Keyword {
-            decl.type_kind = .String
+            mask = 2
         } else if p.current.kind == .Boolean_Keyword {
-            decl.type_kind = .Boolean
+            mask = 4
         } else {
             syntax_issue(p, .Missing_Type)
             return false
         }
         syntax_advance(p)
-        if p.fatal {
-            return false
+        if p.fatal { return false }
+        // COMPAT: duplicate and reordered constituents collapse canonically.
+        for p.current.kind == .Bar {
+            syntax_advance(p)
+            if p.fatal { return false }
+            if p.current.kind == .Number_Keyword {
+                mask |= 1
+            } else if p.current.kind == .String_Keyword {
+                mask |= 2
+            } else if p.current.kind == .Boolean_Keyword {
+                mask |= 4
+            } else {
+                syntax_issue(p, .Missing_Type)
+                return false
+            }
+            syntax_advance(p)
+            if p.fatal { return false }
+        }
+        if mask == 1 {
+            decl.type_kind = .Number
+        } else if mask == 2 {
+            decl.type_kind = .String
+        } else if mask == 4 {
+            decl.type_kind = .Boolean
+        } else if mask == 3 {
+            decl.type_kind = .Number_String
+        } else if mask == 5 {
+            decl.type_kind = .Number_Boolean
+        } else if mask == 6 {
+            decl.type_kind = .String_Boolean
+        } else {
+            decl.type_kind = .Number_String_Boolean
         }
     }
     if p.current.kind == .Equals {
