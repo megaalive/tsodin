@@ -38,13 +38,13 @@ project_file_id_collisions_and_duplicate_owner_are_deterministic :: proc(t: ^tes
         Project_File{source_version=&b,syntax=&p2},
         Project_File{source_version=&c,syntax=&p3},
     }
-    distinct := bind_script_project(files[:2])
-    testing.expect(t, distinct.complete && !distinct.fatal &&
-                   len(distinct.symbols)==2 && len(distinct.issues)==0 &&
-                   distinct.symbols[0].file_index==0 &&
-                   distinct.symbols[1].file_index==1,
+    collision_report := bind_script_project(files[:2])
+    testing.expect(t, collision_report.complete && !collision_report.fatal &&
+                   len(collision_report.symbols)==2 && len(collision_report.issues)==0 &&
+                   collision_report.symbols[0].file_index==0 &&
+                   collision_report.symbols[1].file_index==1,
                    "colliding hash buckets do not alias logical file identities")
-    project_report_destroy(&distinct)
+    project_report_destroy(&collision_report)
 
     for _ in 0..<2 {
         duplicate := bind_script_project(files[:])
