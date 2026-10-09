@@ -30,7 +30,7 @@ for(const [name,expected] of cases){
   assert.equal(result.stderr,"",name+": unexpected stderr");
   assert.equal(result.stdout,run().stdout,name+": dump must be deterministic");
   const data=JSON.parse(result.stdout);
-  assert.equal(data.schema,"tsodin.dump/1");
+  assert.equal(data.schema,"tsodin.dump/2");
   assert.equal(data.profile,"ts7");
   assert.equal(data.source.name,path);
   assert.equal(data.source.text,s);
@@ -43,7 +43,9 @@ for(const [name,expected] of cases){
   assert.equal(data.stages.types.issue_namespace,"tsodin.checker.Check_Issue");
   assert.equal(data.stages.symbols.lookup_status,"not_implemented");
   assert.equal(data.stages.types.node_types_status,"not_implemented");
-  assert.equal(data.stages.types.relations_status,"not_implemented");
+  assert.equal(data.stages.types.relations_status,"partial");
+  assert.equal(data.stages.types.trace_mode,"failures");
+  assert.ok(Array.isArray(data.stages.types.relations));
   assert.ok(!("code" in (data.stages.types.diagnostics[0]||{})),"internal issue is not a TS code");
   const checkSpan=(o,where)=>{
     assert.ok(Array.isArray(o.bytes)&&o.bytes.length===2,where+": bytes");
@@ -65,6 +67,21 @@ for(const [name,expected] of cases){
     assert.ok(r.node_index>=0 && r.node_index<data.stages.ast.nodes.length);
     assert.ok(r.symbol_index>=0 && r.symbol_index<data.stages.symbols.symbols.length);
   }
+  for(const [i,rel] of data.stages.types.relations.entries()){
+    checkSpan(rel,"relation "+i);
+    assert.ok(["Number","Text","Boolean"].includes(rel.source));
+    assert.ok(["Number","Text","Boolean"].includes(rel.target));
+    assert.ok(["Variable","Assignment"].includes(rel.context));
+    assert.ok(Number.isInteger(rel.node_index)&&rel.node_index>=0&&
+              rel.node_index<data.stages.ast.nodes.length);
+    assert.ok(Number.isInteger(rel.declaration_index)&&rel.declaration_index>=0&&
+              rel.declaration_index<data.stages.ast.declarations.length);
+    assert.deepEqual(rel.bytes,[
+      data.stages.ast.nodes[rel.node_index].bytes[0],
+      data.stages.ast.nodes[rel.node_index].bytes[1],
+    ]);
+    assert.equal(rel.result,false,"default trace must only contain failed relations");
+  }
   for(const stage of Object.values(data.stages)){
     for(const diagnostic of stage.diagnostics||[])checkSpan(diagnostic,"diagnostic");
     assert.ok(["implemented","partial","not_implemented"].includes(stage.status));
@@ -76,6 +93,12 @@ for(const [name,expected] of cases){
   if(name==="typed-mismatch"){
     assert.equal(data.stages.types.diagnostics.length,1,"single internal mismatch");
     assert.equal(data.stages.types.diagnostics[0].issue_id,10,"stable internal checker issue");
+    assert.equal(data.stages.types.relations.length,1,"same failed decision is traced");
+    assert.deepEqual(
+      ["Text","Number","Variable",false],
+      [data.stages.types.relations[0].source,data.stages.types.relations[0].target,
+       data.stages.types.relations[0].context,data.stages.types.relations[0].result]
+    );
   }
   if(name==="unsupported-name"){
     assert.equal(data.stages.types.outcome,"unsupported");
@@ -83,8 +106,15 @@ for(const [name,expected] of cases){
   }
   console.log("PASS: "+name+" Odin stages, UTF-16 boundaries and honest status");
 }
-for(const args of [["check"],["dump","--trace-relations","examples/typed-mismatch.ts"]]){
+const full=spawnSync(compiler,["dump","--stage=all","--trace-relations",
+  resolve("examples/mixed-boolean.ts")],{encoding:"utf8",timeout:12000});
+assert.equal(full.status,0,"all-relations mode must succeed: "+full.stderr);
+const fullDoc=JSON.parse(full.stdout);
+assert.equal(fullDoc.stages.types.trace_mode,"all");
+assert.ok(fullDoc.stages.types.relations.length>0,"all mode must capture successful checks");
+assert.ok(fullDoc.stages.types.relations.some(r=>r.result),"all mode must contain true decisions");
+for(const args of [["check"],["dump"],["dump","--trace-relations","examples/typed-mismatch.ts"]]){
   const run=spawnSync(compiler,args,{encoding:"utf8",timeout:12000});
   assert.equal(run.status,2,"unsupported checker and trace-relations remain closed");
 }
-console.log("PASS: deterministic tsodin.dump/1 contract; public check disabled");
+console.log("PASS: deterministic tsodin.dump/2 relation contract; public check disabled");
