@@ -21,6 +21,8 @@ M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, con
 
 There are **no full TypeScript compatibility or compiler performance claims**. The CLI `check` command remains disabled; the primitive semantic checker is available only through developer tooling.
 
+**Developer evidence:** `tsodin dump --stage=all examples/typed-mismatch.ts` emits a versioned JSON snapshot of the actual supported scanner/parser/binder/checker slice. Stage statuses and internal error IDs are explicit; missing relation traces are never invented. See [Stage dump contract](docs/STAGE_DUMP.md).
+
 - [Execution plan and gates](docs/EXECUTION.md)
 - [Architectural decision](docs/RESEARCH_TRANSFER.md)
 - [Compatibility/oracle contract](docs/ORACLE.md)
@@ -51,6 +53,7 @@ odin test src/parser
 odin test src/binder
 odin build src/cli -out:tsodin
 ./tsodin --version
+./tsodin dump --stage=all examples/typed-mismatch.ts
 ./tsodin check    # intentionally exits 2 (not implemented)
 ```
 
