@@ -49,7 +49,7 @@ Type_Relation :: struct {
     target: Primitive,
     node_index: int, // actual postorder RHS expression root
     declaration_index: int, // actual parser declaration index
-    context: Relation_Context,
+    relation_kind: Relation_Context,
     result: bool, // the same comparison used by the checker
 }
 
@@ -91,7 +91,7 @@ record_relation :: proc(
     append(&report.relations, Type_Relation{
         source=source_type, target=target_type,
         node_index=node_index, declaration_index=declaration_index,
-        context=kind, result=compatible,
+        relation_kind=kind, result=compatible,
     })
 }
 
