@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {readFileSync,existsSync} from "node:fs";
 import {resolve} from "node:path";
 import {fileURLToPath} from "node:url";
-import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport} from "../../lib/observatory-core.mjs";
+import {inspectSource,utf16AtByteOffset,summarizeSourceTree,latestMainWorkflow,workflowOutcome,validateConformanceReport,validateBenchmarkReport} from "../../lib/observatory-core.mjs";
 import {ORBIT_STAGES,nextOrbitStage,orbitStage} from "../../lib/architecture-orbit.mjs";
 const root=resolve(fileURLToPath(new URL("../..",import.meta.url)));
 const get=path=>readFileSync(resolve(root,path),"utf8");
@@ -83,9 +83,13 @@ assert.match(get("styles.css"),/\.tiny-cross \{ color:var\(--green\)/,
 assert.match(get("styles.css"),/\.spark-icon \{[^}]*width:20px;[^}]*height:20px;/,
   "Symbols must have explicit stable dimensions on mobile");
 assert.match(html, /data-panel="conformance" hidden/);
+assert.match(html, /data-panel="benchmark" hidden/);
+assert.match(html, /aria-controls="benchmark"/);
+for(const id of ["benchmark-state","benchmark-pill","benchmark-results","benchmark-revision","benchmark-run-link"])
+ assert.match(html,new RegExp('id="'+id+'"'));
 assert.match(html, /data-view="overview"/);
 assert.match(html, /aria-controls="conformance"/);
-for(const panel of ["activity","pipeline","conformance","xray","principles"]) {
+for(const panel of ["activity","pipeline","conformance","benchmark","xray","principles"]) {
   assert.match(html,new RegExp('id="'+panel+'"[^>]*data-panel="'+panel+'" hidden'));
 }
 assert.match(html, /Not measured/);
@@ -93,14 +97,14 @@ assert.match(html, /REFERENCE TOOL · NOT ODIN EXECUTION/);
 for(const id of ["main","activity","pipeline","xray","source-input","byte-offset","last-checked","latest-sha","main-ci","capability-list","refresh-button"]) {
  assert.match(html,new RegExp('id="'+id+'"'));
 }
-for(const file of ["index.html","styles.css","soft-glass.css","live.css","favicon.svg","app.js","lib/observatory-core.mjs","lib/architecture-orbit.mjs","data/conformance.json"]) assert.ok(existsSync(resolve(root,file)),file+" missing");
+for(const file of ["index.html","styles.css","soft-glass.css","live.css","favicon.svg","app.js","lib/observatory-core.mjs","lib/architecture-orbit.mjs","data/conformance.json","data/benchmark.json"]) assert.ok(existsSync(resolve(root,file)),file+" missing");
 const js=get("app.js");
 assert.match(js,/api\.github\.com\/repos\/megaalive\/tsodin/);
 assert.match(js,/Promise\.allSettled/);
 assert.match(js,/source tree/);
 assert.match(js,/Cannot confirm CI for current HEAD/);
 assert.match(js,/selectView/);
-assert.match(html, /src="\.\/app\.js\?v=20261009-comparisons"/);
+assert.match(html, /src="\.\/app\.js\?v=20261009-benchmark"/);
 const theme=get("soft-glass.css");
 assert.match(theme,/\.state-pill\.neutral,\s*\.state-pill\.pending\s*\{[^}]*background:\s*rgba\(54,121,180/s,
   "Neutral and pending badges must use muted blue glass rather than inherited gray");
@@ -202,5 +206,44 @@ const evidence={
 assert.equal(validateConformanceReport(evidence).rate,.8);
 assert.throws(()=>validateConformanceReport({...evidence,counts:{...evidence.counts,passed:0,failed:0}}),/No executed/);
 assert.throws(()=>validateConformanceReport({...evidence,workflowRunUrl:"https://other.example/1"}),/Measured/);
+
+const benchmark=JSON.parse(get("data/benchmark.json"));
+assert.deepEqual(validateBenchmarkReport(benchmark),
+  {status:"not_measured",revision:null,rows:[]});
+assert.throws(()=>validateBenchmarkReport({...benchmark,results:[]}),/Unmeasured/);
+assert.throws(()=>validateBenchmarkReport({...benchmark,status:"measured"}),/Measured/);
+assert.throws(()=>validateBenchmarkReport({...benchmark,scope:"checker-only"}),/identity or scope/);
+const published={
+  ...benchmark,status:"measured",testedTsodinRevision:"a".repeat(40),
+  testedAt:"2026-10-09T09:00:00Z",
+  workflowRunUrl:"https://github.com/megaalive/tsodin/actions/runs/123",
+  corpus:{id:"strict-typescript-projects",digest:"b".repeat(64)},
+  host:{class:"dedicated-physical",cpu:"Xeon pinned",os:"Ubuntu LTS"},
+  protocol:{samplesPerLane:12,warmupsPerLane:2,balancedOrder:true,affinityVerified:true},
+  candidate:{name:"tsodin",revision:"a".repeat(40)},
+  baseline:{name:"TypeScript",revision:"c".repeat(40)},
+  correctness:{parityPassed:true,corpusDigest:"b".repeat(64),
+    workflowRunUrl:"https://github.com/megaalive/tsodin/actions/runs/123"},
+  results:[{id:"project-sample",sourceDigest:"d".repeat(64),
+    candidateMedianMs:90,baselineMedianMs:100,
+    candidateMadPercent:2,baselineMadPercent:2,
+    candidateSplitHalfDriftPercent:2,baselineSplitHalfDriftPercent:2}],
+};
+const accepted=validateBenchmarkReport(published);
+assert.equal(accepted.status,"measured");
+assert.equal(accepted.rows[0].ratio,.9);
+assert.throws(()=>validateBenchmarkReport({...published,
+  host:{...published.host,class:"shared-virtual"}}),/host, corpus/);
+assert.throws(()=>validateBenchmarkReport({...published,
+  correctness:{...published.correctness,parityPassed:false}}),/host, corpus/);
+assert.throws(()=>validateBenchmarkReport({...published,
+  candidate:{...published.candidate,revision:"f".repeat(40)}}),/host, corpus/);
+assert.throws(()=>validateBenchmarkReport({...published,
+  results:[{...published.results[0],candidateMadPercent:11}]}),/Unstable/);
+assert.throws(()=>validateBenchmarkReport({...published,
+  results:[published.results[0],published.results[0]]}),/duplicated/);
+assert.match(get("app.js"),/evidence\.revision!==head/,
+  "stale benchmark revision cannot show numeric results");
+assert.match(get("app.js"),/publishedBenchmark\(\)/);
 
 console.log("PASS: live-only dashboard, fail-closed CI status, source inventory, Unicode, assets and no legacy benchmark data");

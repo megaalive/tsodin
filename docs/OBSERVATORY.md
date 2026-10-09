@@ -131,3 +131,26 @@ TypeScript code equivalence are not implied by the presence of the Lab.
 `tools/dump/build-gallery.mjs --check` must pass before publishing changes;
 see `docs/STAGE_DUMP.md` for regeneration instructions. Keep mobile tap
 controls and current navigation/scroll behavior intact.
+
+## Benchmark tab — eligible evidence only
+
+The **Benchmark** tab reads `data/benchmark.json`, which currently
+has `status: not_measured`. The validator in
+`lib/observatory-core.mjs` rejects malformed, stale and unqualified
+benchmark data. It accepts a measured record only for equivalent
+end-to-end TypeScript checking with an exact pinned source corpus,
+dedicated physical host, measured per-workload medians and stability
+statistics, and explicit correctness provenance.
+
+The validator protects schema integrity, **not** the underlying
+truthfulness of arbitrary external claims. Publication of a measured
+report must additionally require independent CI verification of raw
+results, source digests, compiler revisions and oracle parity.
+Shared-runner checker-only microprobes remain engineering evidence,
+not headline language comparisons.
+
+A published historical SHA cannot show numeric ratios on current
+HEAD. Malformed/unavailable records display UNAVAILABLE, never
+invented zeroes or wins. This remains a static vanilla-JavaScript
+site with no background polling or extra framework.
+
