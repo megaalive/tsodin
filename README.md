@@ -20,7 +20,7 @@ M0 is **closed**. **M1 remains active**: source versions, a bounded scanner, con
 - [Official TypeScript conformance strategy](docs/OFFICIAL_CONFORMANCE.md)
 - [Audited Microsoft source/test inventory and next implementation priorities](docs/UPSTREAM_AUDIT.md)
 
-There are **no full TypeScript compatibility or compiler performance claims**. The CLI `check` command remains disabled; the primitive semantic checker is available only through developer tooling.
+There are **no full TypeScript compatibility or compiler performance claims**. The CLI `check` command never reports success. The P0C `check -p <tsconfig.json>` entry point now loads and binds a narrowly supported explicit-root project, but exits 2 even after successful preflight: there is no operational project type checker. See [P0C project preflight](docs/P0C_PROJECT.md).
 
 **Developer evidence:** `tsodin dump --stage=all examples/typed-mismatch.ts` emits a versioned JSON snapshot of the actual supported scanner/parser/binder/checker slice. Stage statuses and internal error IDs are explicit; M4-G5F8C additionally captures bounded primitive assignment relations at their real checker decision sites. Use `--trace-relations` to include successful decisions; missing general relations are never invented. M4-G5F8F publishes source-backed strict-equality proof categories separately in `tsodin.dump/3`, never claiming that possible overlap means an expression evaluates to true. See [Stage dump contract](docs/STAGE_DUMP.md).
 
@@ -52,6 +52,7 @@ odin test src/scanner
 odin test src/context
 odin test src/parser
 odin test src/binder
+odin test src/project
 odin build src/cli -out:tsodin
 ./tsodin --version
 ./tsodin dump --stage=all examples/typed-mismatch.ts
