@@ -48,6 +48,7 @@ jobs:
         run: |
           node tools/oracle/profile.test.mjs
           node tools/oracle/upstream-triage.test.mjs
+          node tools/oracle/official-case.test.mjs
 
       - name: Run scanner subset tests
         run: odin test src/scanner

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync} from "node:fs";
 import {tmpdir} from "node:os";
-import {join, resolve, relative, sep, posix} from "node:path";
+import {join, resolve, posix} from "node:path";
 import {spawnSync} from "node:child_process";
 import {fileURLToPath} from "node:url";
 
@@ -45,9 +45,11 @@ function optionsFromDirectives(global) {
         result.targetVariants=targets;
         break;
       }
-      case "strict": case "noemit": case "alwaysstrict":
-      case "allowunreachablecode": case "allowunusedlabels":
-        result[key]=bool(key,value);break;
+      case "strict": result.strict=bool(key,value);break;
+      case "noemit": result.noEmit=bool(key,value);break;
+      case "alwaysstrict": result.alwaysStrict=bool(key,value);break;
+      case "allowunreachablecode": result.allowUnreachableCode=bool(key,value);break;
+      case "allowunusedlabels": result.allowUnusedLabels=bool(key,value);break;
       case "module":
         if(!allowedModules.has(value))throw Error("unsupported @module");
         result.module=value;break;

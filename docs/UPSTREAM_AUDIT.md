@@ -149,3 +149,16 @@ pinned revision, but the **official Microsoft harness has not been run**.
 Independent valid/error witnesses `checker-typeof-flow-*` are compared for
 diagnostic code and UTF-16 start only, with TS6 full spans supplemental.
 Unreachable/never and compound conditions remain future work.
+
+## Accelerated development direction (10 October 2026)
+
+The original inventory is historical and includes formerly missing TypeId and
+`typeof` behavior now implemented through M4-G5F8X. The current capability
+mapping and dependency-driven execution roadmap live in
+[`ACCELERATED_CAPABILITY_MAP.md`](ACCELERATED_CAPABILITY_MAP.md).
+
+The selective official-case adapter starts from *exact pinned Microsoft source*
+and validates Git blob bytes and a conservative subset of compiler directives.
+It captures the independent TS7 CLI result, but explicitly labels all three
+selected official cases **unsupported by Tsodin**, not as Microsoft conformance
+PASS. The official Microsoft harness and baseline comparison are not claimed.

@@ -24,6 +24,8 @@ assert.deepEqual(parsed.options.map(x=>x.target),["es5","es2015"]);
 assert.deepEqual(parsed.options.map(x=>x.strict),[false,false]);
 assert.equal(parsed.units[0].content,"const a: number = 1;\r\n");
 assert.equal(parsed.units[1].content,"const b: string = 'two';\r\n");
+assert.equal(parseOfficialCase("// @noEmit: false\nlet a=1;","x.ts").options[0].noEmit,
+  false,"supported upstream noEmit directives must remain exact");
 assert.throws(()=>parseOfficialCase("// @target: es5\nconst x=1;\n// @filename: a.ts\nconst x=2;","x.ts"),/source before first/);
 assert.throws(()=>parseOfficialCase("// @filename: ../escape.ts\nlet x=1;","x.ts"),/unsafe/);
 assert.throws(()=>parseOfficialCase("// @filename: a.ts\nlet x=1;\n// @filename: a.ts\nlet x=2;","x.ts"),/duplicate/);
