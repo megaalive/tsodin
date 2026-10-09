@@ -39,6 +39,33 @@
       "expectDiagnostics": false
     },
     {
+      "id": "scanner-leading-zero-01",
+      "path": "tests/oracle/scanner-leading-zero-01",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
+    },
+    {
+      "id": "scanner-leading-zero-00",
+      "path": "tests/oracle/scanner-leading-zero-00",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
+    },
+    {
+      "id": "scanner-leading-zero-08",
+      "path": "tests/oracle/scanner-leading-zero-08",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
+    },
+    {
       "id": "scanner-utf16-crlf",
       "path": "tests/oracle/scanner-utf16-crlf",
       "files": [
