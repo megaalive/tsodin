@@ -72,6 +72,9 @@ jobs:
           set -euo pipefail
           odin build src/cli -out:"$RUNNER_TEMP/tsodin-dump"
           TSODIN_BIN="$RUNNER_TEMP/tsodin-dump" node tools/dump/check.mjs
+          TSODIN_BIN="$RUNNER_TEMP/tsodin-dump" node tools/dump/build-gallery.mjs --write --print
+          node --check lib/stage-lab.mjs
+          node tools/dump/check-gallery.mjs
 
       - name: Validate developer syntax diagnostic trace
         shell: bash
