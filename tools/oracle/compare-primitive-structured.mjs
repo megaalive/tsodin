@@ -88,6 +88,8 @@ const fixtures=[
   // Auxiliary structured spans; TS7 CLI remains the semantic authority.
   ["checker-typeof-flow-valid",0],
   ["checker-typeof-flow-errors",2],
+  ["checker-typeof-never-valid",0],
+  ["checker-typeof-never-errors",4],
   ["checker-var-redeclaration-valid",0],
   ["checker-var-redeclaration-errors",1],
   ["checker-var-redeclaration-flow-errors",1],

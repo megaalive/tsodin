@@ -22,7 +22,10 @@ outside this subset and is **not run as a Tsodin official conformance case**.
 ## Fail closed
 
 This is NOT general TypeScript control-flow analysis. A split producing an
-unreachable/never arm is unsupported until full unreachable flow is modeled.
+unreachable/never arm now supports only direct literal assignments to an
+independent initialized let. These are typechecked (including errors) but
+never transferred into the post-join flow state. Reads of names, nested
+conditions and writes to the guard in a dead arm still fail closed.
 Compound typeof guards, typeof on objects/null/any/unknown, destructuring,
 uninitialized variables, nested scopes/functions, and assignment expressions
 in conditions remain unsupported. All source spans and diagnostics are
@@ -33,6 +36,11 @@ internal; no public TypeScript conformance or checker benchmark is claimed.
 - `odin test src/checker`: true/false arms, inverted guards, reassignment,
   branch joins, negative mismatches and unsupported shapes.
 - TS7.0.2 CLI capture plus direct code and UTF-16 start comparisons:
-  `checker-typeof-flow-{valid,errors}`; TS6 full-span checks are auxiliary.
+  `checker-typeof-flow-{valid,errors}` and
+  `checker-typeof-never-{valid,errors}`; TS6 full-span checks are auxiliary.
+- Upstream source inspected at pinned Microsoft TypeScript
+  `1e4744d68260a7cb91b62b12edc3f6a2187faaf1`; the upstream fixture
+  has class/uninitialized cases outside this subset, so our separately
+  authored CLI witnesses remain independent of an official-suite claim.
 - Bootstrap CI, native trace/Pages smoke and pinned TS7 oracle workflow
   are mandatory merge gates. No public benchmark or conformance score.

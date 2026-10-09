@@ -76,6 +76,8 @@ const fixtures=[
   // M4-G5F8W2: new source-to-source TS7 code/UTF-16 start assertion.
   {id:"checker-typeof-flow-valid",expectedCount:0},
   {id:"checker-typeof-flow-errors",expectedCount:2},
+  {id:"checker-typeof-never-valid",expectedCount:0},
+  {id:"checker-typeof-never-errors",expectedCount:4},
   {id:"checker-var-redeclaration-valid",expectedCount:0},
   {id:"checker-var-redeclaration-errors",expectedCount:1},
   {id:"checker-var-redeclaration-flow-errors",expectedCount:1},
