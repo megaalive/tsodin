@@ -946,3 +946,18 @@ narrowing, CFG completeness, or structural TypeScript compatibility.
 Native regression tests and pinned TS7/auxiliary TS6 witnesses cover positive
 and negative examples. They do not count as Microsoft upstream conformance
 suite passes. Public `tsodin check` and Pages benchmarks remain disabled.
+
+## M4-G5F8W1/W2 — canonical primitive unions and bounded typeof flow
+
+W1 accepts primitive `number | string | boolean` union annotations in the
+scanner/parser/binder/checker pipeline with canonical pool-local `Type_Id`
+relations. W2 adds unary `typeof` and exact both-arm narrowing for supported
+`typeof x ===/!== "number"/"string"/"boolean"` guards on mutable unions,
+with per-branch snapshots, assignment invalidation and canonical joins.
+
+The checker retains monomorphic primitive arrays without allocating a type
+pool for files with no union annotations. Contradictory never arms, objects,
+structural relations and compound typeof conditions still fail closed.
+The TS7.0.2 oracle and TS6 supplemental structured witness compare the
+supported W2 positive and negative cases independently; they do not count as
+official upstream conformance suite passes. See `M4_TYPEOF_FLOW.md`.

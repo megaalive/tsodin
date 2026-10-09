@@ -1,10 +1,11 @@
 # M4-G5F8V — canonical primitive TypeId kernel
 
-The native checker currently carries a compact primitive domain and source-backed
-literal/flow facts. It has **not** gained general unions, type annotations,
-structural assignability, `typeof` parsing, module resolution, or full TypeScript
-compatibility. This slice introduces the separate, tested `src/typecore`
-representation on which those capabilities can be implemented.
+At M4-G5F8V, the native checker carried a compact primitive domain and
+source-backed literal/flow facts but did not yet integrate the canonical pool.
+This slice introduced the separate, tested `src/typecore` foundation.
+M4-G5F8W1 and W2 subsequently connected primitive union annotations and
+bounded `typeof` branch narrowing. General unions, structural assignability,
+module resolution and full TypeScript compatibility remain unsupported.
 
 ## Upstream contracts and boundaries
 
@@ -21,9 +22,10 @@ representation on which those capabilities can be implemented.
 
 This kernel implements only the familiar primitive contracts for
 `never`, `any`, `unknown`, broad `number`/`string`/`boolean`,
-Boolean literals, and their normalized unions. An exact pinned TS7 witness
-demonstrates the desired accepted and rejected source constructs. Tsodin
-cannot yet run that witness through its own parser/checker.
+Boolean literals, and their normalized unions. An exact pinned TS7 oracle-only witness captures desired source constructs;
+the narrower supported production path now has independent end-to-end
+fixtures under `checker-union-annotations-*` and `checker-typeof-flow-*`.
+The original union reduction test is not an official Tsodin conformance pass.
 
 ## Representation
 
@@ -52,8 +54,9 @@ a runtime equality expression.
 `split_typeof` computes both partitions of the exact primitive domain:
 e.g. `number | string | boolean` split on `typeof === "number"`
 becomes `number` and `string | boolean`. Unknown/any inputs remain
-unsupported rather than getting a fabricated complement; joins/assignments
-must later use the checker flow model and real source locations.
+unsupported rather than getting a fabricated complement. W2 consumes this
+operation with explicit branch snapshots, assignment invalidation and joins
+within its proven primitive-only subset.
 
 ## Evidence and next step
 
@@ -64,8 +67,9 @@ must later use the checker flow model and real source locations.
   `tests/oracle/typecore-union-contract-{valid,errors}` capture source
   acceptance/error behavior **as oracle-only fixtures**. They do not
   establish Odinian diagnostic parity or official conformance.
-- Next vertical slice: parser/binder support for `typeof` and primitive
-  union annotations, followed by narrowed assignments and joins under
-  pinned differential assertions. Only then consider replacing the
-  production checker's existing primitive arrays with canonical handles.
+- W1 implemented primitive union annotations; W2 implements bounded
+  `typeof` narrowing, assignment invalidation and union joins.
+  See [W1](M4_UNION_ANNOTATIONS.md) and [W2](M4_TYPEOF_FLOW.md).
+  The production checker still uses primitive fast-path arrays; canonical
+  handles are opt-in only for files with union annotations.
 - Public `tsodin check` and Pages performance claims remain disabled.

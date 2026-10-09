@@ -73,6 +73,9 @@ const fixtures=[
   {id:"checker-remainder-errors",expectedCount:3},
   {id:"checker-annotation-widening-valid",expectedCount:0},
   {id:"checker-annotation-widening-errors",expectedCount:6},
+  // M4-G5F8W2: new source-to-source TS7 code/UTF-16 start assertion.
+  {id:"checker-typeof-flow-valid",expectedCount:0},
+  {id:"checker-typeof-flow-errors",expectedCount:2},
 ];
 function call(cmd,args,cwd){
   const result=spawnSync(cmd,args,{cwd,encoding:"utf8",timeout:45000,maxBuffer:1048576});

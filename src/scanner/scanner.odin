@@ -59,6 +59,8 @@ Token_Kind :: enum {
     Percent,
     // M4-G5F8W1: lone | is supported only in primitive type annotations.
     Bar,
+    // M4-G5F8W2: append-only typeof unary operator.
+    Typeof_Keyword,
 }
 
 Scan_Error :: enum {
@@ -226,6 +228,8 @@ scanner_next :: proc(s: ^Scanner) -> Token {
             kind = .If_Keyword
         } else if lexeme == "else" {
             kind = .Else_Keyword
+        } else if lexeme == "typeof" {
+            kind = .Typeof_Keyword
         }
         return Token{kind=kind, byte_start=start, byte_end=s.offset}
     }

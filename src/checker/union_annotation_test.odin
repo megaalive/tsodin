@@ -78,7 +78,9 @@ union_annotations_fail_closed_for_unsupported_syntax :: proc(t: ^testing.T) {
 
 @(test)
 union_comparisons_must_not_fake_disjoint_primitive_domains :: proc(t: ^testing.T) {
-    input := "let value: number | string = 7; const compared = value === 7;"
+    input := "let flag: boolean = 1 < 2; let value: number | string = 7;" +
+             "if (flag) { value = 2; } else { value = 'text'; }" +
+             "const compared = value === 7;"
     version, ok := source.source_version_create(source.File_Id(949), 1, input)
     testing.expect(t, ok, "valid source")
     defer source.source_version_destroy(&version)

@@ -232,3 +232,12 @@ assert.equal(remainderErrors.status,1,"remainder assignment/domain errors must n
 assert.deepEqual(remainderErrors.diags.map(row=>row[1]),["10","10","12"],
   "source-ordered remainder TS2322 and TS2367 issue mappings");
 console.log("PASS: G5F7C nested mixed Boolean mutation and join witnesses, numeric remainder");
+
+const typeofValid=read("checker-typeof-flow-valid");
+assert.equal(typeofValid.status,0,"typeof union narrowing must work end to end");
+assert.equal(typeofValid.diags.length,0);
+const typeofBad=read("checker-typeof-flow-errors");
+assert.equal(typeofBad.status,1,"incompatible writes in both typeof arms cannot succeed");
+assert.equal(typeofBad.diags.length,2);
+assert.deepEqual(typeofBad.diags.map(x=>x[1]),["10","10"],
+  "both narrowed assignment failures remain internal TS2322 candidates");
