@@ -29,6 +29,17 @@ for(const [id,expected] of [
     item.path==="tests/oracle/"+id && item.files.includes("index.ts"),
     "unary Boolean TS7 projects must be independently captured");
 }
+for(const [id,expected] of [
+  ["checker-logical-facts-valid",false],
+  ["checker-logical-facts-errors",true],
+  ["checker-logical-facts-flow-valid",false],
+]){
+  const item=manifest.projects.find(p=>p.id===id);
+  assert.ok(item && item.expectDiagnostics===expected &&
+    item.path==="tests/oracle/"+id &&
+    item.files.includes("index.ts") && item.files.includes("tsconfig.json"),
+    "Boolean logical oracle project must remain independently captured");
+}
 for(const spelling of ["01","00","08"]){
   const id="scanner-leading-zero-"+spelling;
   const witness=manifest.projects.find(item=>item.id===id);

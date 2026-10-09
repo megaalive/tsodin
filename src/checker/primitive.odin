@@ -744,9 +744,30 @@ check_file_with_relations :: proc(
                     wide_nodes[i] = true
                 } else if (node.operator == .Ampersand_Ampersand || node.operator == .Bar_Bar) &&
                           left == .Boolean && right == .Boolean {
-                    // Logical operators return operand values in TypeScript.
-                    // Restrict to boolean-only cases until truthiness is modeled.
+                    // Logical operators return operands, not a fresh
+                    // comparison Boolean. Pure Boolean operands permit only
+                    // the implied singleton, otherwise a proven-wide domain.
+                    // No eager execution or truthiness conversion is assumed.
                     kind = .Boolean
+                    a, a_known := boolean_fact_value(literal_nodes[node.left], text)
+                    b, b_known := boolean_fact_value(literal_nodes[node.right], text)
+                    if node.operator == .Ampersand_Ampersand {
+                        if (a_known && !a) || (b_known && !b) {
+                            literal_nodes[i] = branch_boolean_fact(false)
+                        } else if a_known && b_known {
+                            literal_nodes[i] = branch_boolean_fact(true)
+                        } else if wide_nodes[node.left] || wide_nodes[node.right] {
+                            wide_nodes[i] = true
+                        }
+                    } else {
+                        if (a_known && a) || (b_known && b) {
+                            literal_nodes[i] = branch_boolean_fact(true)
+                        } else if a_known && b_known {
+                            literal_nodes[i] = branch_boolean_fact(false)
+                        } else if wide_nodes[node.left] || wide_nodes[node.right] {
+                            wide_nodes[i] = true
+                        }
+                    }
                 } else if node.operator == .Equals_Equals_Equals ||
                           node.operator == .Exclamation_Equals_Equals {
                     if left != right {

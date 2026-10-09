@@ -101,6 +101,16 @@ const singletonFlow=read("checker-unary-singleton-flow-errors");
 assert.equal(singletonFlow.status,1,"branch-local inverse singleton comparisons must be diagnosed");
 assert.deepEqual(singletonFlow.diags.map(row=>row[1]),["11","11"],
   "mutation/join do not retain stale branch-local singleton facts");
+const logicalValid=read("checker-logical-facts-valid");
+assert.equal(logicalValid.status,0,"proven Boolean logical operands must typecheck");
+assert.equal(logicalValid.diags.length,0);
+const logicalBad=read("checker-logical-facts-errors");
+assert.equal(logicalBad.status,1,"logical literal contradictions must not be hidden");
+assert.deepEqual(logicalBad.diags.map(row=>row[1]),["11","11","11","11","11","10"],
+  "five logical TS2367 candidates precede a real assignment TS2322 candidate");
+const logicalFlow=read("checker-logical-facts-flow-valid");
+assert.equal(logicalFlow.status,0,"branch mutation and logical joins must typecheck");
+assert.equal(logicalFlow.diags.length,0);
 const flowValid=read("checker-flow-assign-valid");
 assert.equal(flowValid.status,0,"valid straight-line let assignment sequence");
 assert.deepEqual(flowValid.summary,["SUMMARY","7","0","0"]);
