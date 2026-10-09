@@ -75,3 +75,22 @@ union_annotations_fail_closed_for_unsupported_syntax :: proc(t: ^testing.T) {
         source.source_version_destroy(&version)
     }
 }
+
+@(test)
+union_comparisons_must_not_fake_disjoint_primitive_domains :: proc(t: ^testing.T) {
+    input := "let value: number | string = 7; const compared = value === 7;"
+    version, ok := source.source_version_create(source.File_Id(949), 1, input)
+    testing.expect(t, ok, "valid source")
+    defer source.source_version_destroy(&version)
+    ast := parser.parse_expression_program(&version, compat.ts7_profile())
+    defer parser.syntax_report_destroy(&ast)
+    binding := binder.bind_program(&version, &ast)
+    defer binder.binding_report_destroy(&binding)
+    checked := check_file(&version, &ast, &binding)
+    defer report_destroy(&checked)
+    testing.expect(t, ast.complete && binding.complete &&
+                   checked.fatal && !checked.complete &&
+                   len(checked.diagnostics)==1 &&
+                   checked.diagnostics[0].issue==.Unsupported_Expression,
+                   "union comparisons stay unsupported, not falsely disjoint")
+}
