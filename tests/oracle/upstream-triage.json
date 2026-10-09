@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "project": "tsodin",
+  "authority": "microsoft/TypeScript",
+  "discoverySnapshot": "6ad8c56f9b5a9bb910046c56059296311adc24ba",
+  "pinnedSemanticOracle": {
+    "profile": "ts7",
+    "version": "7.0.2",
+    "revision": "1e4744d68260a7cb91b62b12edc3f6a2187faaf1"
+  },
+  "classification": "source_and_harness_inventory_only",
+  "summary": {
+    "officialCasesExecutedByTsodin": 0,
+    "officialConformancePassesClaimed": 0
+  },
+  "cases": [
+    {
+      "id": "arith-invalid-operands",
+      "priority": "P0",
+      "subsystem": "scanner-parser-checker",
+      "status": "partial",
+      "upstreamPath": "tsc/testdata/tests/cases/conformance/expressions/binaryOperators/arithmeticOperator/arithmeticOperatorWithInvalidOperands.ts",
+      "nextAction": "Map accepted/rejected operand domains (number, any, enums, booleans, strings) before extending arithmetic coercions",
+      "verification": "indexed_only_not_executed"
+    },
+    {
+      "id": "annotated-initializers",
+      "priority": "P0",
+      "subsystem": "parser-checker",
+      "status": "partial",
+      "upstreamPath": "tsc/testdata/tests/cases/conformance/statements/VariableStatements/everyTypeWithAnnotationAndInitializer.ts",
+      "nextAction": "Isolate exact const/let annotation and widening/literal semantics in minimal independent TS7 witnesses",
+      "verification": "indexed_only_not_executed"
+    },
+    {
+      "id": "comparison-numeric-literal",
+      "priority": "P0",
+      "subsystem": "checker",
+      "status": "partial",
+      "upstreamPath": "tsc/testdata/tests/cases/conformance/expressions/binaryOperators/comparisonOperator/comparisonOperatorWithNumericLiteral.ts",
+      "nextAction": "Lock overlap/disjoint diagnostics under literal and widened numeric domains",
+      "verification": "indexed_only_not_executed"
+    },
+    {
+      "id": "logical-and-types",
+      "priority": "P1",
+      "subsystem": "checker",
+      "status": "partial",
+      "upstreamPath": "tsc/testdata/tests/cases/conformance/expressions/binaryOperators/logicalAndOperator/logicalAndOperatorWithEveryType.ts",
+      "nextAction": "Introduce truthiness/nullish/unions only after source-backed type domain is represented",
+      "verification": "indexed_only_not_executed"
+    },
+    {
+      "id": "union-reduction",
+      "priority": "P1",
+      "subsystem": "parser-checker",
+      "status": "unsupported",
+      "upstreamPath": "tsc/testdata/tests/cases/conformance/types/union/unionTypeReduction.ts",
+      "nextAction": "Design canonical TypeId and union normalization using a simple semantic model before optimization",
+      "verification": "indexed_only_not_executed"
+    },
+    {
+      "id": "typeof-number-guard",
+      "priority": "P1",
+      "subsystem": "parser-binder-checker",
+      "status": "unsupported",
+      "upstreamPath": "tsc/testdata/tests/cases/conformance/expressions/typeGuards/typeGuardOfFormTypeOfNumber.ts",
+      "nextAction": "Check typeof discriminator and both branch facts against declared primitive unions",
+      "verification": "indexed_only_not_executed"
+    },
+    {
+      "id": "control-flow-if",
+      "priority": "P1",
+      "subsystem": "binder-checker",
+      "status": "partial",
+      "upstreamPath": "tsc/testdata/tests/cases/conformance/controlFlow/controlFlowIfStatement.ts",
+      "nextAction": "Compare branch/assignment/merge behavior; scale from bounded branches to explicit CFG without synthetic success",
+      "verification": "indexed_only_not_executed"
+    },
+    {
+      "id": "discriminated-union",
+      "priority": "P2",
+      "subsystem": "checker",
+      "status": "unsupported",
+      "upstreamPath": "tsc/testdata/tests/cases/conformance/types/union/discriminatedUnionTypes1.ts",
+      "nextAction": "Add discriminant checks after generic type relations, property access and union representation exist",
+      "verification": "indexed_only_not_executed"
+    }
+  ]
+}
