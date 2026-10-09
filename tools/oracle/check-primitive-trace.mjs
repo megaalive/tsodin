@@ -225,7 +225,6 @@ assert.deepEqual(mixedNestedBad.diags.map(x=>x[1]),
   ["11","11","11","11","10","11","11","11","11"],
   "mixed nested disjointness and assignment mismatch preserve source order");
 const remainderValid=read("checker-remainder-valid");
-if(remainderValid.status!==0) console.error("REMAINDER_TRACE",JSON.stringify(remainderValid));
 assert.equal(remainderValid.status,0,"multiplicative remainder source must typecheck");
 assert.equal(remainderValid.diags.length,0);
 const remainderErrors=read("checker-remainder-errors");

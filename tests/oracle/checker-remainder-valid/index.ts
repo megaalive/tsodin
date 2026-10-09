@@ -9,4 +9,4 @@ let adjusted: number = 0;
 adjusted = (a + 4) % 3;
 const first: boolean = remainder === 2;
 const second: boolean = chained !== 0;
-const third: boolean = grouped === 4;
+const third: boolean = (9 % 2) === 4;

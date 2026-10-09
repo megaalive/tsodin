@@ -921,3 +921,8 @@ codes and UTF-16 starting positions; supplemental TS6.0.2 structured
 diagnostics require full category and span parity. No general
 JavaScript coercion semantics or performance improvement is claimed.
 
+
+**Known boundary:** comparisons against explicitly annotated `const`
+number declarations are not yet generally proven-wide by the bounded
+checker; the new oracle fixture compares a computed `%` result directly
+instead of treating that unrelated unsupported proof as implemented.
