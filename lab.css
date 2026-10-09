@@ -85,3 +85,15 @@
 #lab .lab-json::-webkit-scrollbar-thumb:hover {
   background: #aedbff;
 }
+
+/* Type questions are direct Odin decision records, not browser inference. */
+.lab-relation {
+  display:block; width:100%; text-align:left; cursor:pointer;
+  padding:10px 12px; margin:8px 0; font:12px/1.65 ui-monospace,Consolas,monospace;
+  border:1px solid var(--line); border-radius:8px;
+  background:var(--surface-2); color:var(--text);
+  overflow-wrap:anywhere;
+}
+.lab-relation.ok { border-left:3px solid var(--blue); }
+.lab-relation.blocked { border-left:3px solid var(--orange); }
+.lab-relation:hover, .lab-relation:focus-visible { border-color:var(--blue); }

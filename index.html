@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./soft-glass.css?v=20261008-xray-editor">
   <link rel="stylesheet" href="./live.css?v=20261009-live-orbit">
   <script src="./app.js?v=20261009-live-orbit" type="module"></script>
-  <link rel="stylesheet" href="./lab.css?v=20261009-scrollbar-blue">
+  <link rel="stylesheet" href="./lab.css?v=20261009-type-relations">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -192,7 +192,7 @@ const count: number = "wrong";</textarea>
           <details><summary class="lab-muted">Inspect complete structured dump JSON</summary><pre id="lab-json" class="lab-json"></pre></details>
         </article>
       </div>
-      <p class="lab-honesty">The browser independently verifies UTF-8/UTF-16 boundaries, but does not run the Odin compiler. The scanner, expression parser, one-file binder and primitive checker are still partial. Unimplemented type relations, hierarchical scope lookup and unsupported semantics remain unimplemented rather than being simulated. <a class="inline-link" href="https://github.com/megaalive/tsodin/blob/main/docs/STAGE_DUMP.md" target="_blank" rel="noopener noreferrer">Dump contract ↗</a></p>
+      <p class="lab-honesty">The browser independently verifies UTF-8/UTF-16 boundaries, but does not run the Odin compiler. The scanner, expression parser, one-file binder and primitive checker are still partial. Bounded primitive assignment relations are recorded by Odin. General type relations, hierarchical scope lookup and unsupported semantics remain unimplemented rather than being simulated. <a class="inline-link" href="https://github.com/megaalive/tsodin/blob/main/docs/STAGE_DUMP.md" target="_blank" rel="noopener noreferrer">Dump contract ↗</a></p>
     </section>
 
     <section id="principles" class="section shell" data-panel="principles" hidden>

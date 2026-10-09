@@ -14,16 +14,18 @@ main :: proc() {
 
     if len(os.args) == 1 || (len(os.args) == 2 && os.args[1] == "--help") {
         fmt.println("tsodin — experimental Odin TypeScript checker")
-        fmt.println("Usage: tsodin --version | --help | dump --stage=all <file.ts>")
+        fmt.println("Usage: tsodin --version | --help | dump --stage=all [--trace-relations] <file.ts>")
         fmt.println("The check command is not implemented; no compatibility claims.")
         return
     }
 
     if os.args[1] == "dump" {
-        if len(os.args) == 4 && os.args[2] == "--stage=all" && dump.write(os.args[3]) {
-            return
+        if len(os.args) >= 3 && os.args[2] == "--stage=all" {
+            if len(os.args) == 4 && dump.write(os.args[3], false) { return }
+            if len(os.args) == 5 && os.args[3] == "--trace-relations" &&
+               dump.write(os.args[4], true) { return }
         }
-        fmt.eprintln("error: usage: tsodin dump --stage=all <file.ts>")
+        fmt.eprintln("error: usage: tsodin dump --stage=all [--trace-relations] <file.ts>")
         os.exit(2)
     }
 

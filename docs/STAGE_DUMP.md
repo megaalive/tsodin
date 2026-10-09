@@ -1,7 +1,7 @@
-# M4-G5F8A — Evidence-first stage dump
+# M4-G5F8A–C — Evidence-first stage dump
 
 `tsodin dump --stage=all examples/typed-mismatch.ts` serializes **actual**
-Odin stage reports as JSON (`tsodin.dump/1`). It does not run TypeScript,
+Odin stage reports as JSON (`tsodin.dump/2`). It does not run TypeScript,
 claim full TS7 parity, or enable `tsodin check`. Unsupported syntax, names
 and checker semantics are still explicitly marked in each stage.
 
@@ -26,8 +26,12 @@ and checker semantics are still explicitly marked in each stage.
   namespaced as `tsodin.checker.Check_Issue`. In particular issue ID 10 is
   **NOT** a serialized TypeScript diagnostic code. The externally pinned
   TS7.0.2 differential witness maps selected internal kinds independently.
-  `node_types` and `relations` are `not_implemented`. This dump must
-  not invent answers to questions the checker has not traced.
+  `node_types` remains `not_implemented`. Since M4-G5F8C,
+  `types.relations` is a **partial** record of primitive assignments and
+  explicitly annotated variable initializers. Every record originates from
+  the exact boolean compatibility decision used by the checker, linking
+  source/target primitive types to the actual RHS expression node and
+  declaration index. No general assignability engine is claimed.
 - Every stage has both `status` (current implementation coverage, normally
   `partial`) and `outcome` (`complete`, `diagnostics`, `unsupported`)
   for this exact input. A well-formed JSON response can contain a failed
@@ -82,11 +86,43 @@ provenance is therefore the **Git commit containing source, generated JSON
 and passing CI**, rather than a fabricated fixed commit field inside each
 JSON file. No timestamps or reference-code parity badges are emitted.
 
-### Follow-on scope (not yet implemented)
+### Beyond this milestone (not yet implemented)
 
-Generate a versioned gallery from curated `examples/*.ts` using a pinned
-CI/Pages pipeline without manual hand-written traces. Let the client
-present hover-linked token/node/symbol facts, never perform its own fake
-binding or checker inference. When detailed lookup paths and type relations
-exist in the engine, extend a separate versioned schema with exact records
-and positive/negative differential tests.
+Hierarchical scope lookup trails, per-expression type tables, a general
+assignability graph and full TS7 diagnostic-code/message parity remain
+out of scope. Extend the versioned schema only when Odin emits those
+facts from its actual implementation; the Lab must not invent them.
+
+### M4-G5F8C — bounded real type-relation evidence
+
+The `tsodin.dump/2` schema extends dump/1 with
+`stages.types.relations` and `trace_mode`. Relation objects contain
+`source`, `target` (internal `Primitive` enum names), `relation_kind`
+(`Variable` or `Assignment`), `node_index` (postorder RHS root),
+`declaration_index` (original declaration table), `result` (exact
+decision), and source-backed `bytes`/`utf16` spans. Failed checks are
+recorded by default:
+
+```sh
+tsodin dump --stage=all examples/typed-mismatch.ts
+```
+
+To record all actual supported primitive decisions (including successes):
+
+```sh
+tsodin dump --stage=all --trace-relations examples/mixed-boolean.ts
+```
+
+The real Pages gallery deliberately uses `--trace-relations` to teach
+both yes/no decisions. This flag affects only the **developer dump**;
+normal `checker.check_file` does not allocate relation records.
+Unsupported syntax/binding/semantics still fail closed. Relations do
+not include all expression operators, control-flow narrowing, object
+structural types, TS diagnostic codes, hierarchical lookup, or a general
+type graph. The browser must not infer or manufacture missing relations.
+
+Previously published `tsodin.dump/1` is superseded by the explicitly
+versioned v2 data, and the checked-in examples must be regenerated from
+the pinned Odin binary. The schema version is deliberately changed so
+consumers can reject incompatible records instead of silently
+misinterpreting them.
