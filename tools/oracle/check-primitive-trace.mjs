@@ -90,6 +90,17 @@ assert.equal(unaryBad.status,1,"unary Boolean results must preserve disjoint and
 assert.deepEqual(unaryBad.summary,["SUMMARY","5","2","1"]);
 assert.deepEqual(unaryBad.diags.map(row=>row[1]),["10","12"],
   "unary-wide errors retain ordered TS2322 and TS2367 candidates");
+const singletonValid=read("checker-unary-singleton-valid");
+assert.equal(singletonValid.status,0,"proved Boolean unary singleton aliases must typecheck");
+assert.equal(singletonValid.diags.length,0);
+const singletonErrors=read("checker-unary-singleton-errors");
+assert.equal(singletonErrors.status,1,"disjoint inverse singleton comparisons must be diagnosed");
+assert.deepEqual(singletonErrors.diags.map(row=>row[1]),["11","11","11","10"],
+  "unary singleton disjointness and assignability follow source order");
+const singletonFlow=read("checker-unary-singleton-flow-errors");
+assert.equal(singletonFlow.status,1,"branch-local inverse singleton comparisons must be diagnosed");
+assert.deepEqual(singletonFlow.diags.map(row=>row[1]),["11","11"],
+  "mutation/join do not retain stale branch-local singleton facts");
 const flowValid=read("checker-flow-assign-valid");
 assert.equal(flowValid.status,0,"valid straight-line let assignment sequence");
 assert.deepEqual(flowValid.summary,["SUMMARY","7","0","0"]);

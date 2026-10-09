@@ -52,11 +52,12 @@ checker_unary_not_preserves_wide_boolean_domain :: proc(t: ^testing.T) {
     }
 }
 
-// Unknown singleton result of a literal negation is not silently promoted to
-// a wide domain; future literal folding needs its own TS7 witness.
+// An explicitly annotated Boolean const is not retained as an inferred
+// singleton in this bounded checker. Negating it cannot fabricate a fact.
 @(test)
-checker_unary_not_unproved_literal_stays_closed :: proc(t: ^testing.T) {
-    input := "const negated = !true; const comparison = negated === false;"
+checker_unary_not_unproved_annotated_operand_stays_closed :: proc(t: ^testing.T) {
+    input := "const typed: boolean = true; const negated = !typed;" +
+             "const comparison = negated === false;"
     v, ok := source.source_version_create(source.File_Id(836), 1, input)
     testing.expect(t, ok, "valid source version")
     defer source.source_version_destroy(&v)
@@ -71,7 +72,7 @@ checker_unary_not_unproved_literal_stays_closed :: proc(t: ^testing.T) {
                    len(checked.comparisons)==0 &&
                    len(checked.diagnostics)==1 &&
                    checked.diagnostics[0].issue==.Incompatible_Operator,
-                   "unproven unary literal type remains an explicit unsupported comparison")
+                   "unproven annotated const Boolean remains explicitly unsupported")
 }
 
 @(test)
