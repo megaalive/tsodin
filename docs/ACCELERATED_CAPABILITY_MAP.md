@@ -43,6 +43,9 @@
 2. **P0B: project foundation.** Implement verified root-file/config ownership,
    snapshot identities, file modes and explicit unsupported flags; test
    cross-file conflicts and options fail-closed before enabling project checker.
+   Initial bounded slice: reject empty root sets and use a deterministic,
+   collision-tested File_Id preflight table for selected script files.
+   This is *not* tsconfig loading or project type checking.
 3. **P1A: bounded operational `check -p`.** End-to-end semantic correctness
    on a declared subset, with non-zero status for unsupported imports,
    functions, generics, and unresolved symbols. Keep type diagnostics grounded.

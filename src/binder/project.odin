@@ -83,7 +83,18 @@ project_fatal :: proc(r: ^Project_Report, issue: Issue_Kind, file_index: int) {
 // Preflight every file before allocating the symbol table. Distinct logical
 // file IDs are mandatory, and all syntax results must be fully successful.
 // The caller retains ownership of all source versions and ASTs.
+// INVARIANT: a non-empty, power-of-two probe table records only earlier files.
 project_preflight :: proc(files: []Project_File, r: ^Project_Report) -> bool {
+    if len(files) == 0 {
+        // An empty project cannot be treated as a successful checked input.
+        project_fatal(r, .Invalid_Source, -1)
+        return false
+    }
+    capacity := 8
+    for capacity <= len(files)*2 { capacity *= 2 }
+    seen := make([]int, capacity)
+    defer delete(seen)
+    mask := capacity-1
     for f, i in files {
         if f.mode != .Script {
             project_fatal(r, .Unsupported_File_Mode, i)
@@ -103,11 +114,27 @@ project_preflight :: proc(files: []Project_File, r: ^Project_Report) -> bool {
             project_fatal(r, .Syntax_Not_Complete, i)
             return false
         }
-        for previous in 0..<i {
-            if files[previous].source_version.file_id == v.file_id {
+        // Deterministic open addressing replaces O(projectFiles^2) history
+        // scans. File_Id is a stable logical key, independent of source text.
+        // Preserve the previous rule: the SECOND occurrence owns the issue.
+        slot := int(u32(v.file_id)) & mask
+        inserted := false
+        for _ in 0..<capacity {
+            previous := seen[slot]
+            if previous == 0 {
+                seen[slot] = i+1
+                inserted = true
+                break
+            }
+            if files[previous-1].source_version.file_id == v.file_id {
                 project_fatal(r, .Invalid_Source, i)
                 return false
             }
+            slot = (slot+1) & mask
+        }
+        if !inserted {
+            project_fatal(r, .Invalid_Source, i)
+            return false
         }
     }
     return true
