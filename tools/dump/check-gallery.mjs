@@ -81,6 +81,7 @@ for(const example of manifest.examples){
       "Comparison operator must match the original syntax token");
     const moved=structuredClone(trace);
     moved.stages.types.comparisons[0].bytes[0]++;
+    moved.stages.types.comparisons[0].utf16[0]++;
     assert.throws(()=>validateStageDump(moved),/Comparison span/,
       "Moved binary comparison source span must fail");
     if(trace.stages.types.comparisons.length>1){
