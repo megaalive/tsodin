@@ -53,11 +53,31 @@ Type_Relation :: struct {
     result: bool, // the same comparison used by the checker
 }
 
+// Distinct from assignment compatibility: a proof of possible overlap
+// between equality operands, NOT the runtime result of === or !==.
+// No record is emitted when overlap cannot be proven either way.
+Comparison_Proof :: enum {
+    Disjoint_Domains,
+    Disjoint_Literals,
+    Same_Symbol,
+    Same_Literal,
+    Widened_Domain,
+}
+Comparison_Evidence :: struct {
+    left: Primitive,
+    right: Primitive,
+    node_index: int, // postorder equality expression, not either operand
+    operator: scanner.Token_Kind, // strict === or !==
+    proof: Comparison_Proof,
+    overlaps: bool, // describes operand domains, never runtime Boolean value
+}
+
 Report :: struct {
     file_id: source.File_Id,
     generation: u32,
     diagnostics: [dynamic]Diagnostic,
     relations: [dynamic]Type_Relation,
+    comparisons: [dynamic]Comparison_Evidence,
     checked_declarations: int,
     checked_assignments: int,
     complete: bool,
@@ -67,6 +87,7 @@ Report :: struct {
 report_destroy :: proc(r: ^Report) {
     delete(r.diagnostics)
     delete(r.relations)
+    delete(r.comparisons)
     r^ = Report{}
 }
 
@@ -92,6 +113,20 @@ record_relation :: proc(
         source=source_type, target=target_type,
         node_index=node_index, declaration_index=declaration_index,
         relation_kind=kind, result=compatible,
+    })
+}
+
+// PERF: .None exits before append. The regular checker path never owns a
+// comparison evidence buffer; developer traces reuse the existing mode.
+record_comparison :: proc(
+    report: ^Report, mode: Relation_Trace_Mode,
+    left, right: Primitive, node_index: int, op: scanner.Token_Kind,
+    proof: Comparison_Proof, overlaps: bool,
+) {
+    if mode == .None || (mode == .Failures && overlaps) { return }
+    append(&report.comparisons, Comparison_Evidence{
+        left=left, right=right, node_index=node_index,
+        operator=op, proof=proof, overlaps=overlaps,
     })
 }
 
@@ -705,6 +740,8 @@ check_file_with_relations :: proc(
                         // widened either operand. No literal assumptions needed.
                         fail(&result, .Disjoint_Primitive_Domains,
                              node.byte_start, node.byte_end, false)
+                        record_comparison(&result, trace_mode, left, right, i,
+                                          node.operator, .Disjoint_Domains, false)
                         kind = .Boolean
                     } else {
                         // Same primitive domain does NOT prove overlap: TS
@@ -719,13 +756,22 @@ check_file_with_relations :: proc(
                             literal_nodes[node.left], literal_nodes[node.right], text)
                         if same_name || (both_literals && same_value) ||
                            wide_nodes[node.left] || wide_nodes[node.right] {
-                            // At least one operand is proven to have a broad
-                            // base primitive type, which overlaps all values
-                            // of the matching primitive domain.
+                            // These are alternative *proofs of possible overlap*,
+                            // not claims that the equality expression is true.
+                            proof := Comparison_Proof.Widened_Domain
+                            if same_name {
+                                proof = .Same_Symbol
+                            } else if both_literals && same_value {
+                                proof = .Same_Literal
+                            }
+                            record_comparison(&result, trace_mode, left, right, i,
+                                              node.operator, proof, true)
                             kind = .Boolean
                         } else if both_literals {
                             fail(&result, .Disjoint_Literal_Comparison,
                                  node.byte_start, node.byte_end, false)
+                            record_comparison(&result, trace_mode, left, right, i,
+                                              node.operator, .Disjoint_Literals, false)
                             kind = .Boolean
                         }
                     }

@@ -637,3 +637,27 @@ TS7.0.2 code/UTF-16-start differential fixtures and supplemental TS6.0.2
 structured-span evidence. Failures retain their lexical order, including
 TS2367-like disjoint comparisons and a TS2322-like assignment mismatch.
 This is neither full TypeScript parity nor an official conformance score.
+
+## M4-G5F8E — native comparison evidence (internal)
+
+The Odin checker now records a second, opt-in evidence family when it
+actually proves operand-domain overlap or disjointness for strict `===` and
+`!==`. This is **not** the Boolean result of the expression, and it is
+**not** primitive assignability. Evidence identifies the exact binary
+postorder node, both primitive operand domains, operator and proof category:
+`Disjoint_Domains`, `Disjoint_Literals`, `Same_Symbol`,
+`Same_Literal`, or `Widened_Domain`.
+
+The existing trace modes apply: `.Failures` retains proved disjoint
+comparisons; `.All` retains both overlap and disjoint proofs; normal
+`check_file` selects `.None`, leaving the new buffer empty and unallocated.
+Unproved same-domain overlap still fails closed and produces no fabricated
+proof. The report owns the optional records and frees them in
+`report_destroy`. Existing TS7/TS6 differential gates and nested flow
+regressions remain required.
+
+This is an **internal checker-report milestone**, not yet a published dump
+feature: `tsodin.dump/2`, generated gallery traces and the Lab remain
+unchanged. An explicitly versioned future dump schema will expose these
+facts only after the compact contract is validated; no parallel JavaScript
+checker or general CFG is introduced.
