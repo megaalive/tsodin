@@ -66,13 +66,13 @@ time, above 1.0 means higher measured time):
 
 | Fixture | Run 37902658343 | Run 37902837978 | Run 37903234282 |
 |---|---:|---:|---:|
-| checker-primitives-valid | 0.9957× | 0.9580×  0.9728× |
-| checker-boolean-identity-valid | 1.0134× | 1.0236×  1.0306× |
-| checker-negated-identity-valid | 1.0019× | 1.0474×  1.0539× |
-| checker-flow-mixed-rhs-valid | 1.0408× | 1.0531×  1.0589× |
-| checker-flow-mixed-left-valid | 1.0139× | 1.0300×  1.0414× |
-| checker-flow-mixed-nested-errors | 1.0257× | 1.0309×  1.0203× |
-| checker-flow-three-nested-valid | 0.9921× | 0.9914×  1.0082× |
+| checker-primitives-valid | 0.9957× | 0.9580× | 0.9728× |
+| checker-boolean-identity-valid | 1.0134× | 1.0236× | 1.0306× |
+| checker-negated-identity-valid | 1.0019× | 1.0474× | 1.0539× |
+| checker-flow-mixed-rhs-valid | 1.0408× | 1.0531× | 1.0589× |
+| checker-flow-mixed-left-valid | 1.0139× | 1.0300× | 1.0414× |
+| checker-flow-mixed-nested-errors | 1.0257× | 1.0309× | 1.0203× |
+| checker-flow-three-nested-valid | 0.9921× | 0.9914× | 1.0082× |
 
 - [First complete run](https://github.com/megaalive/tsodin/actions/runs/37902658343)
 - [Second complete run](https://github.com/megaalive/tsodin/actions/runs/37902837978)
