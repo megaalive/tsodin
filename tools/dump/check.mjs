@@ -71,7 +71,7 @@ for(const [name,expected] of cases){
     checkSpan(rel,"relation "+i);
     assert.ok(["Number","Text","Boolean"].includes(rel.source));
     assert.ok(["Number","Text","Boolean"].includes(rel.target));
-    assert.ok(["Variable","Assignment"].includes(rel.context));
+    assert.ok(["Variable","Assignment"].includes(rel.relation_kind));
     assert.ok(Number.isInteger(rel.node_index)&&rel.node_index>=0&&
               rel.node_index<data.stages.ast.nodes.length);
     assert.ok(Number.isInteger(rel.declaration_index)&&rel.declaration_index>=0&&
@@ -97,7 +97,7 @@ for(const [name,expected] of cases){
     assert.deepEqual(
       ["Text","Number","Variable",false],
       [data.stages.types.relations[0].source,data.stages.types.relations[0].target,
-       data.stages.types.relations[0].context,data.stages.types.relations[0].result]
+       data.stages.types.relations[0].relation_kind,data.stages.types.relations[0].result]
     );
   }
   if(name==="unsupported-name"){
