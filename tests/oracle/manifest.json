@@ -696,6 +696,24 @@
         "tsconfig.json"
       ],
       "expectDiagnostics": true
+    },
+    {
+      "id": "typecore-union-contract-valid",
+      "path": "tests/oracle/typecore-union-contract-valid",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": false
+    },
+    {
+      "id": "typecore-union-contract-errors",
+      "path": "tests/oracle/typecore-union-contract-errors",
+      "files": [
+        "index.ts",
+        "tsconfig.json"
+      ],
+      "expectDiagnostics": true
     }
   ]
 }
